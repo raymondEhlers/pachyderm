@@ -4,7 +4,7 @@
 
 For usage information, see ``jet_hadron.base.analysisConfig``.
 
-.. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
 # py2/3

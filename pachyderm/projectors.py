@@ -2,7 +2,7 @@
 
 """ Handle generic TH1 and THn projections.
 
-.. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
 # From the future package
@@ -12,7 +12,7 @@ import aenum
 import copy
 import logging
 
-from jet_hadron.base import genericClass
+from pachyderm import genericClass
 
 # Setup logger
 logger = logging.getLogger(__name__)

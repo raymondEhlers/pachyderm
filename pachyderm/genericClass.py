@@ -2,7 +2,7 @@
 
 """ Contains generic classes
 
-.. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
 class EqualityMixin(object):

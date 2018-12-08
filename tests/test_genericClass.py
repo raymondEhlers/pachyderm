@@ -2,14 +2,14 @@
 
 """ Tests for generic class properties.
 
-.. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
 import collections
 import logging
 import pytest
 
-from jet_hadron.base import genericClass
+from pachyderm import genericClass
 
 logger = logging.getLogger(__name__)
 

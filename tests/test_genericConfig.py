@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-# Tests for generic analysis configuration.
-#
-# author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
-# date: 8 May 2018
+""" Tests for generic analysis configuration.
+
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+"""
 
 import collections
 import logging
@@ -11,8 +11,8 @@ import pytest
 from io import StringIO
 import ruamel.yaml
 
-from jet_hadron.base import genericConfig
-from jet_hadron.base import params
+from pachyderm import genericConfig
+from pachyderm import params
 
 logger = logging.getLogger(__name__)
 

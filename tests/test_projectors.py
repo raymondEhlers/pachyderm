@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-""" Test projector functionality
+""" Test projector functionality.
 
-.. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
 import enum
@@ -12,8 +12,8 @@ import pytest
 
 import rootpy.ROOT as ROOT
 
-from jet_hadron.base import projectors
-from jet_hadron.base import utils
+from pachyderm import projectors
+from pachyderm import utils
 
 logger = logging.getLogger(__name__)
 

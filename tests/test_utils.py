@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+""" Tests for the utilities module.
+
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+"""
+
 # From the future package
 from builtins import range
 from future.utils import itervalues
@@ -10,7 +15,7 @@ import os
 import numpy as np
 import pytest
 
-from jet_hadron.base import utils
+from pachyderm import utils
 
 # Setup logger
 logger = logging.getLogger(__name__)
