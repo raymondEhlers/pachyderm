@@ -1,0 +1,45 @@
+build/
+output/
+.ipynb_checkpoints/
+
+# Ignore setup.py related folder
+alice_jet_hadron_correlations.egg-info/
+
+# Ignore pytests cache
+.pytest_cache/
+
+# Profiling
+prof/
+
+# Coverage
+.coverage
+htmlcov/
+
+# Generated html files
+*.html
+
+# Virtual environments
+.py*/
+
+# Ignore filetypes
+*.root
+*.pdf
+*.m4
+*.log
+*.out
+*.err
+*.o
+*.so
+*.d
+G__*.h
+G__*.cxx
+*.lo
+*_Dict.*
+*.dirstamp
+*.png
+*.bak
+*.pyc
+*.swp
+.DS_Store
+.project
+.vscode
