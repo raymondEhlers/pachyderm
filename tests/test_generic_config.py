@@ -11,7 +11,7 @@ import pytest
 from io import StringIO
 import ruamel.yaml
 
-from pachyderm import genericConfig
+from pachyderm import generic_config
 from pachyderm import params
 
 logger = logging.getLogger(__name__)
@@ -96,8 +96,8 @@ def overrideData(config):
         log_yaml_dump(yaml, config)
 
     # Override and simplify the values
-    config = genericConfig.overrideOptions(config, (), ())
-    config = genericConfig.simplifyDataRepresentations(config)
+    config = generic_config.overrideOptions(config, (), ())
+    config = generic_config.simplifyDataRepresentations(config)
 
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("After override:")
@@ -189,7 +189,7 @@ def testLoadConfiguration(loggingMixin, basicConfig):
         f.write(yamlString.encode())
         f.seek(0)
         # Then get the config from the file
-        retrievedConfig = genericConfig.loadConfiguration(f.name)
+        retrievedConfig = generic_config.loadConfiguration(f.name)
 
     assert retrievedConfig == basicConfig
 
@@ -205,7 +205,7 @@ def testLoadConfiguration(loggingMixin, basicConfig):
 
 @pytest.fixture
 def dataSimplificationConfig():
-    """ Simple YAML config to test the data simplification functionality of the genericConfig module.
+    """ Simple YAML config to test the data simplification functionality of the generic_config module.
 
     It povides example configurations entries for numbers, str, list, and dict.
 
@@ -237,7 +237,7 @@ def testDataSimplificationOnBaseTypes(loggingMixin, dataSimplificationConfig):
 
     Here we tests int, float, and str.  They should always stay the same.
     """
-    config = genericConfig.simplifyDataRepresentations(dataSimplificationConfig)
+    config = generic_config.simplifyDataRepresentations(dataSimplificationConfig)
 
     assert config["int"] == 3
     assert config["float"] == 3.14
@@ -249,7 +249,7 @@ def testDataSimplificationOnLists(loggingMixin, dataSimplificationConfig):
     A single entry list should be returned as a string, while a multiple entry list should be
     preserved as is.
     """
-    config = genericConfig.simplifyDataRepresentations(dataSimplificationConfig)
+    config = generic_config.simplifyDataRepresentations(dataSimplificationConfig)
 
     assert config["singleEntryList"] == "hello"
     assert config["multiEntryList"] == ["hello", "world"]
@@ -259,7 +259,7 @@ def testDictDataSimplification(loggingMixin, dataSimplificationConfig):
 
     Dicts should always maintain their structure.
     """
-    config = genericConfig.simplifyDataRepresentations(dataSimplificationConfig)
+    config = generic_config.simplifyDataRepresentations(dataSimplificationConfig)
 
     assert config["singleEntryDict"] == {"hello": "world"}
     assert config["multiEntryDict"] == {"hello": "world", "foo": "bar"}
@@ -288,8 +288,8 @@ iterables:
 def testDetermineSelectionOfIterableValuesFromConfig(loggingMixin, objectCreationConfig):
     """ Test determining which values of an iterable to use. """
     (config, possibleIterables, (eventPlaneAngles, qVectors)) = objectCreationConfig
-    iterables = genericConfig.determineSelectionOfIterableValuesFromConfig(config = config,
-                                                                           possibleIterables = possibleIterables)
+    iterables = generic_config.determineSelectionOfIterableValuesFromConfig(config = config,
+                                                                            possibleIterables = possibleIterables)
 
     assert iterables["eventPlaneAngle"] == eventPlaneAngles
     assert iterables["qVector"] == qVectors
@@ -304,8 +304,8 @@ def testDetermineSelectionOfIterableValuesWithUndefinedIterable(loggingMixin, ob
 
     del possibleIterables["qVector"]
     with pytest.raises(KeyError) as exceptionInfo:
-        genericConfig.determineSelectionOfIterableValuesFromConfig(config = config,
-                                                                   possibleIterables = possibleIterables)
+        generic_config.determineSelectionOfIterableValuesFromConfig(config = config,
+                                                                    possibleIterables = possibleIterables)
     assert exceptionInfo.value.args[0] == "qVector"
 
 def testDetermineSelectionOfIterableValuesWithStringSelection(loggingMixin, objectCreationConfig):
@@ -314,8 +314,8 @@ def testDetermineSelectionOfIterableValuesWithStringSelection(loggingMixin, obje
 
     config["iterables"]["qVector"] = "True"
     with pytest.raises(TypeError) as exceptionInfo:
-        genericConfig.determineSelectionOfIterableValuesFromConfig(config = config,
-                                                                   possibleIterables = possibleIterables)
+        generic_config.determineSelectionOfIterableValuesFromConfig(config = config,
+                                                                    possibleIterables = possibleIterables)
     assert exceptionInfo.value.args[0] is str
 
 @pytest.fixture
@@ -338,14 +338,14 @@ def testCreateObjectsFromIterables(loggingMixin, objectCreationConfig, objectAnd
     (obj, args, formattingOptions) = objectAndCreationArgs
 
     # Get iterables
-    iterables = genericConfig.determineSelectionOfIterableValuesFromConfig(config = config,
-                                                                           possibleIterables = possibleIterables)
+    iterables = generic_config.determineSelectionOfIterableValuesFromConfig(config = config,
+                                                                            possibleIterables = possibleIterables)
 
     # Create the objects.
-    (names, objects) = genericConfig.createObjectsFromIterables(obj = obj,
-                                                                args = args,
-                                                                iterables = iterables,
-                                                                formattingOptions = formattingOptions)
+    (names, objects) = generic_config.createObjectsFromIterables(obj = obj,
+                                                                 args = args,
+                                                                 iterables = iterables,
+                                                                 formattingOptions = formattingOptions)
 
     # Check the names of the iterables.
     assert names == list(iterables)
@@ -367,10 +367,10 @@ def testMissingIterableForObjectCreation(loggingMixin, objectAndCreationArgs):
 
     # Create the objects.
     with pytest.raises(ValueError) as exceptionInfo:
-        (names, objects) = genericConfig.createObjectsFromIterables(obj = obj,
-                                                                    args = args,
-                                                                    iterables = iterables,
-                                                                    formattingOptions = formattingOptions)
+        (names, objects) = generic_config.createObjectsFromIterables(obj = obj,
+                                                                     args = args,
+                                                                     iterables = iterables,
+                                                                     formattingOptions = formattingOptions)
     assert exceptionInfo.value.args[0] == iterables
 
 @pytest.fixture
@@ -405,7 +405,7 @@ noneExample: null
 
     formatting = {"a": "b", "c": 1}
 
-    return (genericConfig.applyFormattingDict(config, formatting), formatting)
+    return (generic_config.applyFormattingDict(config, formatting), formatting)
 
 def testApplyFormattingToBasicTypes(loggingMixin, formattingConfig):
     """ Test applying formatting to basic types. """
@@ -438,7 +438,7 @@ def testUnrollNestedDict(loggingMixin):
     bDict = {"b": cDict.copy()}
     print("bDict: {}".format(bDict))
     testDict = {"a1": bDict.copy(), "a2": bDict.copy()}
-    unroll = genericConfig.unrollNestedDict(testDict)
+    unroll = generic_config.unrollNestedDict(testDict)
 
     assert next(unroll) == (["a1", "b", "c1"], "obj")
     assert next(unroll) == (["a1", "b", "c2"], "obj2")

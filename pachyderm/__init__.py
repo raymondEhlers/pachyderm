@@ -6,8 +6,8 @@
 """
 
 __all__ = [
-    "genericClass",
-    "genericConfig",
+    "generic_class",
+    "generic_config",
     "projectors",
     "utils",
 ]

@@ -12,7 +12,7 @@ import aenum
 import copy
 import logging
 
-from pachyderm import genericClass
+from pachyderm import generic_class
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class TH1AxisType(aenum.Enum):
 
 # TODO: Rename functions to lower case for consistency.
 
-class HistAxisRange(genericClass.EqualityMixin):
+class HistAxisRange(generic_class.EqualityMixin):
     """ Represents the restriction of a range of an axis of a histogram.
 
     An axis can be restricted by multiple HistAxisRange elements (although separate projections are

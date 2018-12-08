@@ -9,7 +9,7 @@ import collections
 import logging
 import pytest
 
-from pachyderm import genericClass
+from pachyderm import generic_class
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def setupEqualityMixin():
     """ Create a basic class for tests of the equality mixin. """
 
-    class equalityMixinTestClass(genericClass.EqualityMixin):
+    class equalityMixinTestClass(generic_class.EqualityMixin):
         def __init__(self, aNumber, aString, aList, aDict):
             self.aNumber = aNumber
             self.aString = aString
