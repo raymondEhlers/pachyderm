@@ -78,7 +78,6 @@ setup(
         # Not required at the moment, but hopefully for the future.
         #"uproot",
         "rootpy",
-        #"root_numpy",  # As of Dec 2018, they have a new tag, but it's not yet on PyPI
     ],
 
     # Include additional files

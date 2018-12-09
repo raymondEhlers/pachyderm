@@ -14,7 +14,6 @@ import logging
 import numpy as np
 import ruamel.yaml
 
-import root_numpy
 import rootpy
 import rootpy.io
 import rootpy.ROOT as ROOT
@@ -147,14 +146,14 @@ def getArrayFromHist(observable):
     except AttributeError:
         hist = observable
     #logger.debug("hist: {}".format(hist))
-    arrayFromHist = root_numpy.hist2array(hist)
     xAxis = hist.GetXaxis()
     # Don't include overflow
     xBins = range(1, xAxis.GetNbins() + 1)
+    array_from_hist = np.array([hist.GetBinContent(i) for i in xBins])
     # NOTE: The bin error is stored with the hist, not the axis.
     errors = np.array([hist.GetBinError(i) for i in xBins])
-    binCenters = np.array([xAxis.GetBinCenter(i) for i in xBins])
-    return {"y": arrayFromHist, "errors": errors, "binCenters": binCenters}
+    bin_centers = np.array([xAxis.GetBinCenter(i) for i in xBins])
+    return {"y": array_from_hist, "errors": errors, "binCenters": bin_centers}
 
 def getArrayFromHist2D(hist, setZeroToNaN = True):
     """ Extract the necessary data from the hist.
@@ -163,7 +162,8 @@ def getArrayFromHist2D(hist, setZeroToNaN = True):
     by removing 0s (which can cause problems when taking logs), and returning the bin centers
     for (X,Y).
 
-    NOTE: This is a different format than the 1D version!
+    Note:
+        This is a different format than the 1D version!
 
     Args:
         hist (ROOT.TH2): Histogram to be converted.
@@ -175,21 +175,24 @@ def getArrayFromHist2D(hist, setZeroToNaN = True):
             are values on a grid (from np.meshgrid)
     """
     # Process the hist into a suitable state
-    (histArray, binEdges) = root_numpy.hist2array(hist, return_edges=True)
-    # Set all 0s to nan to get similar behavior to ROOT. In ROOT, it will basically ignore 0s. This is especially important
-    # for log plots. Matplotlib doesn't handle 0s as well, since it attempts to plot them and then will throw exceptions
-    # when the log is taken.
+    shape = (hist.GetXaxis().GetNbins(), hist.GetYaxis().GetNbins())
+    # To keep consistency with the root_numpy 2D hist format, we transpose the final result
+    # This format has x values as columns.
+    hist_array = np.array([hist.GetBinContent(x) for x in range(1, hist.GetNcells()) if not hist.IsBinUnderflow(x) and not hist.IsBinOverflow(x)]).reshape(shape).T
+    # Set all 0s to nan to get similar behavior to ROOT. In ROOT, it will basically ignore 0s. This is
+    # especially important for log plots. Matplotlib doesn't handle 0s as well, since it attempts to
+    # plot them and then will throw exceptions when the log is taken.
     # By setting to nan, matplotlib basically ignores them similar to ROOT
     # NOTE: This requires a few special functions later which ignore nan when calculating min and max.
     if setZeroToNaN:
-        histArray[histArray == 0] = np.nan
+        hist_array[hist_array == 0] = np.nan
 
     # We want an array of bin centers
     xRange = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
     yRange = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
     X, Y = np.meshgrid(xRange, yRange)
 
-    return (X, Y, histArray)
+    return (X, Y, hist_array)
 
 def getArrayForFit(observables, trackPtBin, jetPtBin):
     """ Get an hist data as a np.ndarray based on selected bins. This is often used
