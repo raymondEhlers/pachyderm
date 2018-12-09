@@ -5,10 +5,6 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-# From the future package
-from builtins import range
-from future.utils import iteritems
-
 import collections
 import logging
 import numpy as np
@@ -208,7 +204,7 @@ def getArrayForFit(observables, trackPtBin, jetPtBin):
     Returns:
         dict: "y": hist data, "errors" : y errors, "binCenters" : x bin centers (Values from `getArrayFromHist()`).
     """
-    for name, observable in iteritems(observables):
+    for name, observable in observables.items():
         if observable.trackPtBin == trackPtBin and observable.jetPtBin == jetPtBin:
             return getArrayFromHist(observable)
 

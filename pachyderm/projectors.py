@@ -5,9 +5,6 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-# From the future package
-from future.utils import iteritems
-
 import copy
 import enum
 import logging
@@ -356,7 +353,7 @@ class HistProjector(object):
             args (list): Additional args to be passed to ProjectionName(...) and OutputKeyName(...)
             kwargs (dict): Additional named args to be passed to ProjectionName(...) and OutputKeyName(...)
         """
-        for key, inputObservable in iteritems(self.observableToProjectFrom):
+        for key, inputObservable in self.observableToProjectFrom.items():
             # Retrieve histogram
             hist = self.GetHist(observable = inputObservable, *args, **kwargs)
 

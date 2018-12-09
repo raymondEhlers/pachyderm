@@ -7,11 +7,6 @@ For usage information, see ``jet_hadron.base.analysisConfig``.
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-# py2/3
-import future.utils
-from future.utils import iteritems
-from future.utils import itervalues
-
 import collections
 import copy
 import enum
@@ -78,7 +73,7 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
 
     # Set the configuration values to those specified in the override options
     # Cannot just use update() on config because we need to maintain the anchors.
-    for k, v in iteritems(overrideDict):
+    for k, v in overrideDict.items():
         # Check if key is there and if it is not None! (The second part is imporatnt)
         if k in config:
             try:
@@ -90,7 +85,7 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
                 if isinstance(config[k], list):
                     # Clear out the existing list entries
                     del config[k][:]
-                    if isinstance(overrideDict[k], future.utils.string_types):
+                    if isinstance(overrideDict[k], str):
                         # We have to treat str carefully because it is an iterable, but it will be expanded as
                         # individual characters if it's treated the same as a list, which is not the desired
                         # behavior! If we wrap it in [], then it will be treated as the only entry in the list
@@ -125,7 +120,7 @@ def simplifyDataRepresentations(config):
     Returns:
         dict-like object: The updated configuration
     """
-    for k, v in iteritems(config):
+    for k, v in config.items():
         if v and isinstance(v, list) and len(v) == 1:
             logger.debug("v: {}".format(v))
             config[k] = v[0]
@@ -192,14 +187,14 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
     """
     iterables = collections.OrderedDict()
     requestedIterables = config["iterables"]
-    for k, v in iteritems(requestedIterables):
+    for k, v in requestedIterables.items():
         if k not in possibleIterables:
             raise KeyError(k, "Cannot find requested iterable in possibleIterables: {possibleIterables}".format(possibleIterables = possibleIterables))
         logger.debug("k: {}, v: {}".format(k, v))
         additionalIterable = []
         enum = possibleIterables[k]
         # Check for a string. This is wrong, and the user should be notified.
-        if isinstance(v, future.utils.string_types):
+        if isinstance(v, str):
             raise TypeError(type(v), "Passed string {v} when must be either bool or list".format(v = v))
         # Allow the possibility to skip
         if v is False:
@@ -256,7 +251,7 @@ def createObjectsFromIterables(obj, args, iterables, formattingOptions):
     objects = collections.OrderedDict()
     names = list(iterables)
     logger.debug("iterables: {iterables}".format(iterables = iterables))
-    for values in itertools.product(*itervalues(iterables)):
+    for values in itertools.product(*iterables.values()):
         logger.debug("Values: {values}".format(values = values))
         tempDict = objects
         for i, val in enumerate(values):
@@ -277,7 +272,7 @@ def createObjectsFromIterables(obj, args, iterables, formattingOptions):
                 logger.debug("objectArgs pre format: {objectArgs}".format(objectArgs = objectArgs))
                 objectArgs = applyFormattingDict(objectArgs, formattingOptions)
                 # Skip printing the config because it is quite long
-                printArgs = {k: v for k, v in iteritems(objectArgs) if k != "config"}
+                printArgs = {k: v for k, v in objectArgs.items() if k != "config"}
                 printArgs["config"] = "..."
                 logger.debug("Constructing obj \"{obj}\" with args: \"{printArgs}\"".format(obj = obj, printArgs = printArgs))
 
@@ -324,7 +319,7 @@ def applyFormattingDict(obj, formatting):
         #else:
         #    logger.debug("Skipping str {} since it appears to be a latex string, which may break the formatting.".format(obj))
     elif isinstance(obj, dict):
-        for k, v in iteritems(obj):
+        for k, v in obj.items():
             # Using indirect access to ensure that the original object is updated.
             obj[k] = applyFormattingDict(v, formatting)
     elif isinstance(obj, list):
@@ -386,7 +381,7 @@ def unrollNestedDict(d, keys = None):
     if keys is None:
         keys = []
     #logger.debug("d: {}".format(d))
-    for k, v in iteritems(d):
+    for k, v in d.items():
         #logger.debug("k: {}, v: {}".format(k, v))
         #logger.debug("keys: {}".format(keys))
         # We need a copy of keys before we append to ensure that we don't

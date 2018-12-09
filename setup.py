@@ -71,11 +71,12 @@ setup(
     # Packages should be installed via pip -r requirements.txt !
     install_requires=[
         "dataclasses",  # Needed for python 3.6
-        "future",
         "ruamel.yaml",
         "numpy",
-        # Not required at the moment, but hopefully for the future.
-        #"uproot",
+        # Depends on ROOT, but that can't be installed through pip.
+        # The dependence is only implicit, so it can actually be installed with it,
+        # but some functionality depends on it being available.
+        #"ROOT"
     ],
 
     # Include additional files
