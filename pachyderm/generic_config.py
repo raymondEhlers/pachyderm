@@ -39,21 +39,23 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
     in selectedOptions.
 
     For the example config,
-    ```
-    config:
-        value: 3
-        override:
-            2.76:
-                track:
-                    value: 5
-    ```
+
+    .. code-block:: yaml
+
+        config:
+            value: 3
+            override:
+                2.76:
+                    track:
+                        value: 5
+
     value will be assigned the value 5 if we are at 2.76 TeV with a track bias, regardless of the event
     activity or leading hadron bias. The order of this configuration is specified by the order of the
     selectedOptions passed. The above example configuration is from the jet-hadron analysis.
 
     Since anchors aren't kept for scalar values, if you want to override an anchored value, you need to
     specify it as a single value in a list (or dict, but list is easier). After the anchor values propagate,
-    single element lists can be converted into scalar values using `simplifyDataRepresentations()`.
+    single element lists can be converted into scalar values using ``simplifyDataRepresentations()``.
 
     Args:
         config (CommentedMap): The dict-like configuration from ruamel.yaml which should be overridden.
@@ -67,8 +69,8 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
     """
     if configContainingOverride is None:
         configContainingOverride = config
-    overrideOptions = configContainingOverride.pop("override")
-    overrideDict = determineOverrideOptions(selectedOptions, overrideOptions, setOfPossibleOptions)
+    override_opts = configContainingOverride.pop("override")
+    overrideDict = determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOptions)
     logger.debug("overrideDict: {}".format(overrideDict))
 
     # Set the configuration values to those specified in the override options
@@ -127,27 +129,27 @@ def simplifyDataRepresentations(config):
 
     return config
 
-def determineOverrideOptions(selectedOptions, overrideOptions, setOfPossibleOptions = ()):
+def determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOptions = ()):
     """ Reusrively extract the dict described in overrideOptions().
 
-    In particular, this searches for selected options in the overrideOptions dict.
+    In particular, this searches for selected options in the override_opts dict.
     It stores only the override options that are selected.
 
     Args:
         selectedOptions (tuple): The options selected for this analysis, in the order defined used
             with overrideOptions() and in the configuration file.
-        overrideOptions (CommentedMap): dict-like object returned by ruamel.yaml which contains the options that
+        override_opts (CommentedMap): dict-like object returned by ruamel.yaml which contains the options that
             should be used to override the configuration options.
         setOfPossibleOptions (tuple of enums): Possible options for the override value categories.
     """
     overrideDict = {}
-    for option in overrideOptions:
+    for option in override_opts:
         # We need to cast the option to a string to effectively compare to the selected option,
         # since only some of the options will already be strings
         if str(option) in list(map(lambda opt: opt.str(), selectedOptions)):
-            overrideDict.update(determineOverrideOptions(selectedOptions, overrideOptions[option], setOfPossibleOptions))
+            overrideDict.update(determineOverrideOptions(selectedOptions, override_opts[option], setOfPossibleOptions))
         else:
-            logger.debug("overrideOptions: {}".format(overrideOptions))
+            logger.debug(f"override_opts: {override_opts}")
             # Look for whether the key is one of the possible but unselected options.
             # If so, we haven't selected it for this analysis, and therefore they should be ignored.
             # NOTE: We compare both the names and value because sometimes the name is not sufficient,
@@ -166,18 +168,18 @@ def determineOverrideOptions(selectedOptions, overrideOptions, setOfPossibleOpti
             if not foundAsPossibleOption:
                 # Store the override value, since it doesn't correspond with a selected option or a possible option
                 # and therefore must be an option that we want to override.
-                logger.debug("Storing override option \"{}\", with value \"{}\"".format(option, overrideOptions[option]))
-                overrideDict[option] = overrideOptions[option]
+                logger.debug(f"Storing override option \"{option}\", with value \"{override_opts[option]}\"")
+                overrideDict[option] = override_opts[option]
             else:
-                logger.debug("Found option \"{}\" as possible option, so skipping!".format(option))
+                logger.debug(f"Found option \"{option}\" as possible option, so skipping!")
 
     return overrideDict
 
 def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
     """ Determine iterable values to use to create objects for a given configuration.
 
-    All values of an iterable can be included be setting the value to `True` (Not as a single value list,
-    but as the only value.). Alternatively, an iterator can be disabled by setting the value to `False`.
+    All values of an iterable can be included be setting the value to ``True`` (Not as a single value list,
+    but as the only value.). Alternatively, an iterator can be disabled by setting the value to ``False``.
 
     Args:
         config (CommentedMap): The dict-like configuration from ruamel.yaml which should be overridden.
@@ -192,7 +194,7 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
             raise KeyError(k, "Cannot find requested iterable in possibleIterables: {possibleIterables}".format(possibleIterables = possibleIterables))
         logger.debug("k: {}, v: {}".format(k, v))
         additionalIterable = []
-        enum = possibleIterables[k]
+        enum_values = possibleIterables[k]
         # Check for a string. This is wrong, and the user should be notified.
         if isinstance(v, str):
             raise TypeError(type(v), "Passed string {v} when must be either bool or list".format(v = v))
@@ -201,11 +203,11 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
             continue
         # Allow the possibility to including all possible values in the enum.
         elif v is True:
-            additionalIterable = list(enum)
+            additionalIterable = list(enum_values)
         else:
             # Otherwise, only take the requested values.
             for el in v:
-                additionalIterable.append(enum[el])
+                additionalIterable.append(enum_values[el])
         # Store for later
         iterables[k] = additionalIterable
 
@@ -218,23 +220,23 @@ def createObjectsFromIterables(obj, args, iterables, formattingOptions):
 
     Each set of values is also included in the object args.
 
-    For example, for an iterables dict `{"a" : ["a1","a2"], "b" : ["b1", "b2"]}`, the function would return:
+    For example, for an iterables dict ``{"a" : ["a1","a2"], "b" : ["b1", "b2"]}``, the function would return:
 
-    ```
-    (
-        ["a", "b"],
-        {
-            "a1" : {
-                "b1" : obj(a = "a1", b = "b1"),
-                "b2" : obj(a = "a1", b = "b2")
-            },
-            "a2" : {
-                "b1" : obj(a = "a2", b = "b1"),
-                "b2" : obj(a = "a2", b = "b2")
+    .. code-block:: python
+
+        (
+            ["a", "b"],
+            {
+                "a1" : {
+                    "b1" : obj(a = "a1", b = "b1"),
+                    "b2" : obj(a = "a1", b = "b2")
+                },
+                "a2" : {
+                    "b1" : obj(a = "a2", b = "b1"),
+                    "b2" : obj(a = "a2", b = "b2")
+                }
             }
-        }
-    )
-    ```
+        )
 
     Args:
         obj (object): The object to be constructed.

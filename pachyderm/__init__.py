@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""" Base package for the jet-hadron correlation analysis.
+""" Physics Analysis Core for Heavy-Ions package, known as Pacyhderm
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
