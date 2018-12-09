@@ -83,6 +83,10 @@ def testSparse():
     # Fill in some strategic values.
     # Wrapper function is for convenience.
     def fill_sparse(one, two, three):
+        # NOTE: For whatever reason, this _has_ to be float64 even though this is a
+        #       SparseF. Apparently switching to a SparseD also works with float64,
+        #       so something strange seems to be happening internally. But since
+        #       float64 works, we stick with it.
         sparse.Fill(np.array([0., 0., one, 0., two, three, 0.], dtype = np.float64))
     fill_values = [
         (4., -2., 10.),
