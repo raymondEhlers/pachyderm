@@ -5,12 +5,12 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+import copy
 import enum
 import dataclasses
 import logging
 import pytest
-
-pytestmark = pytest.mark.ROOT
+from typing import List
 
 from pachyderm import projectors
 from pachyderm import utils
@@ -87,6 +87,7 @@ def testTH1AxisDetermination(loggingMixin, createHistAxisRange, axisType, axis, 
     #       don't really make sense in terms of a hist's dimensions.
     assert axis(hist) == obj.axis(hist)
 
+@pytest.mark.ROOT
 @pytest.mark.parametrize("axisSelection", [
     SparseAxisLabels.axis_two,
     SparseAxisLabels.axis_four,
@@ -174,6 +175,8 @@ class TestsForHistAxisRange():
 
     def testDisagreementWithSetRangeUser(self, loggingMixin, testSparse):
         """ Test the disagreement between SetRange and SetRangeUser when the epsilon shift is not included. """
+        import ROOT
+
         # Setup values
         selectedAxis = SparseAxisLabels.axis_two
         minVal = 2
@@ -212,88 +215,127 @@ class TestsForHistAxisRange():
     def testRetrieveAxisValue(self, loggingMixin, func, value, expected, testSparse):
         """ Test retrieving axis values using ApplyFuncToFindBin(). """
         import ROOT
+
+        # Setup functions
         function_map = {
             "n_bins": ROOT.TAxis.GetNbins,
             "find_bin": ROOT.TAxis.FindBin,
         }
         if func:
             func = function_map[func]
+        # Setup objects
         selectedAxis = SparseAxisLabels.axis_two
         sparse, _ = testSparse
         expectedAxis = sparse.GetAxis(selectedAxis.value)
 
         assert projectors.HistAxisRange.ApplyFuncToFindBin(func, value)(expectedAxis) == expected
 
+def find_non_zero_bins(hist) -> List[int]:
+    """ Helper function to find the non-zero non-overflow bins.
 
-def setup_hist_axis_ranges(hist_range):
-    return projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, hist_range + utils.epsilon)
+    Args:
+        hist (ROOT.TH1): Histogram to check for non-zero bins.
+    Returns:
+        List of the indices of non-zero bins.
+    """
+    non_zero_bins = []
+    for x in range(1, hist.GetNcells()):
+        if hist.GetBinContent(x) != 0 and not hist.IsBinUnderflow(x) and not hist.IsBinOverflow(x):
+            logger.debug(f"non-zero bin at {x}")
+            non_zero_bins.append(x)
 
-import ROOT
+    return non_zero_bins
 
-# Global to allow easier definition of the parametrization
-histAxisRangesNamedTuple = dataclasses.make_dataclass("histAxisRanges", ["xAxis", "yAxis", "zAxis"])
+def setup_hist_axis_range(hist_range: projectors.HistAxisRange) -> projectors.HistAxisRange:
+    """ Helper function to setup HistAxisRange min and max values.
 
-histAxisRanges = histAxisRangesNamedTuple(
+    This exists so we can avoid explicit ROOT dependence.
+
+    Args:
+        hist_range (projectors.HistAxisRange): Range which includes single min and max values which will
+            be used in ``ApplyFuncToFindBin`` function calls that will replace them.
+    Return:
+        Updated hist axis range with the initial value passed to ``ROOT.TAxis.FindBin``.
+    """
+    # Often, ROOT should be imported before this function is called, but we call it here just in case.
+    # Plus, this allows us to be lazy in importing ROOT in the calling functions.
+    import ROOT
+
+    # We don't want to modify the original objects, since we need them to be preserved for other tests.
+    hist_range = copy.copy(hist_range)
+    hist_range.minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, hist_range.minVal + utils.epsilon)
+    hist_range.maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, hist_range.maxVal - utils.epsilon)
+    return hist_range
+
+# Convenient access to hist axis ranges.
+HistAxisRanges = dataclasses.make_dataclass("histAxisRanges", ["xAxis", "yAxis", "zAxis"])
+
+# Hist axis ranges
+# NOTE: We don't define these in the class because we won't be able to access these variables when defining the tests
+# Restricted ranges, but with entries
+hist_axis_ranges = HistAxisRanges(
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.xAxis,
         axisRangeName = "xAxis",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 0.1 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 0.8 - utils.epsilon)),
+        minVal = 0.1,
+        maxVal = 0.8),
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.yAxis,
         axisRangeName = "yAxis",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 0 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 12 - utils.epsilon)),
+        minVal = 0,
+        maxVal = 12),
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.zAxis,
         axisRangeName = "zAxis",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 10 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 60 - utils.epsilon))
+        minVal = 10,
+        maxVal = 60)
 )
-
-histAxisRangesWithNoEntries = histAxisRangesNamedTuple(
+# Restricted ranges with no counts
+hist_axis_ranges_without_entries = HistAxisRanges(
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.xAxis,
         axisRangeName = "xAxisNoEntries",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 0.2 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 0.8 - utils.epsilon)),
+        minVal = 0.2,
+        maxVal = 0.8),
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.yAxis,
         axisRangeName = "yAxisNoEntries",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 4 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 12 - utils.epsilon)),
+        minVal = 4,
+        maxVal = 12),
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.zAxis,
         axisRangeName = "zAxisNoEntries",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 20 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 60 - utils.epsilon))
+        minVal = 20,
+        maxVal = 60)
 )
-
+# Restricted ranges with counts in some entries
+# Focuses only the on y axis.
 # This abuses the names of the axes within the named tuple, but it is rather convenient, so we keep it.
-histAxisRangesRestricted = (
+hist_axis_ranges_restricted = (
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.yAxis,
         axisRangeName = "yAxisLower",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 0 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 4 - utils.epsilon)),
+        minVal = 0,
+        maxVal = 4),
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.yAxis,
         axisRangeName = "yAxisMiddle",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 4 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 8 - utils.epsilon)),
+        minVal = 4,
+        maxVal = 8),
     projectors.HistAxisRange(
         axisType = projectors.TH1AxisType.yAxis,
         axisRangeName = "yAxisUpper",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 8 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 12 - utils.epsilon))
+        minVal = 8,
+        maxVal = 12)
 )
 
 @pytest.mark.ROOT
 class TestProjectorsWithRoot():
-    # TODO: Move definitions in here...
-
+    """ Tests for projectors for TH1 derived histograms. """
     def testProjectors(self, loggingMixin, testRootHists):
         """ Test creation and basic methods of the projection class. """
+        import ROOT  # noqa: F401
+
         # Args
         projectionNameFormat = "{test} world"
         # Create object
@@ -317,15 +359,15 @@ class TestProjectorsWithRoot():
     # PDCA = Projection Dependent Cut Axes
     @pytest.mark.parametrize("use_PDCA, additionalCuts, expectedAdditionalCuts", [
         (False, None, True),
-        (False, histAxisRanges.yAxis, True),
-        (False, histAxisRangesWithNoEntries.yAxis, False),
+        (False, hist_axis_ranges.yAxis, True),
+        (False, hist_axis_ranges_without_entries.yAxis, False),
         (True, None, True),
         (True, [], True),
-        (True, [histAxisRanges.yAxis], True),
-        (True, [histAxisRangesWithNoEntries.yAxis], False),
-        (True, [histAxisRangesRestricted[0], histAxisRangesRestricted[1]], True),
-        (True, [histAxisRangesRestricted[1], histAxisRangesRestricted[0]], True),
-        (True, [histAxisRangesRestricted[1], histAxisRangesRestricted[2]], False)
+        (True, [hist_axis_ranges.yAxis], True),
+        (True, [hist_axis_ranges_without_entries.yAxis], False),
+        (True, [hist_axis_ranges_restricted[0], hist_axis_ranges_restricted[1]], True),
+        (True, [hist_axis_ranges_restricted[1], hist_axis_ranges_restricted[0]], True),
+        (True, [hist_axis_ranges_restricted[1], hist_axis_ranges_restricted[2]], False)
     ], ids = [
         "No AAC selection", "AAC with entries", "AAC with no entries",
         "None PDCA", "Empty PDCA", "PDCA",
@@ -333,13 +375,23 @@ class TestProjectorsWithRoot():
     ])
     # PA = Projection Axes
     @pytest.mark.parametrize("projectionAxes, expectedProjectionAxes", [
-        (histAxisRanges.xAxis, True),
-        (histAxisRangesWithNoEntries.xAxis, False),
+        (hist_axis_ranges.xAxis, True),
+        (hist_axis_ranges_without_entries.xAxis, False),
     ], ids = ["PA with entries", "PA without entries"])
     def testTH2Projection(self, loggingMixin, testRootHists,
                           use_PDCA, additionalCuts, expectedAdditionalCuts,
                           projectionAxes, expectedProjectionAxes):
         """ Test projection of a TH2 to a TH1. """
+        import ROOT   # noqa: F401
+
+        # Setup hist ranges
+        if additionalCuts:
+            if use_PDCA:
+                additionalCuts = [setup_hist_axis_range(cut) for cut in additionalCuts]
+            else:
+                additionalCuts = setup_hist_axis_range(additionalCuts)
+        projectionAxes = setup_hist_axis_range(projectionAxes)
+        # Setup projector
         observableList = {}
         observableToProjectFrom = {"hist2D": testRootHists.hist2D}
         projectionNameFormat = "hist"
@@ -377,22 +429,18 @@ class TestProjectorsWithRoot():
         assert proj.GetXaxis().GetXmax() == 0.8
 
         # Find the non-zero bin content so that it can be checked below.
-        nonZeroBins = []
-        for x in range(1, proj.GetNcells()):
-            if proj.GetBinContent(x) != 0 and not proj.IsBinUnderflow(x) and not proj.IsBinOverflow(x):
-                logger.debug(f"non-zero bin at {x}")
-                nonZeroBins.append(x)
+        non_zero_bins = find_non_zero_bins(hist = proj)
 
         expectedCount = 0
         # It will only be non-zero if all of the expected values are true.
         expectedNonZeroCounts = all([expectedAdditionalCuts, expectedProjectionAxes])
         if expectedNonZeroCounts:
             expectedCount = 1
-        assert len(nonZeroBins) == expectedCount
+        assert len(non_zero_bins) == expectedCount
         # Check the precise bin which was found and the bin value.
         if expectedCount != 0:
             # Only check if we actually expected a count
-            nonZeroBinLocation = next(iter(nonZeroBins))
+            nonZeroBinLocation = next(iter(non_zero_bins))
             # I determined the expected value empirically by looking at the projection.
             assert nonZeroBinLocation == 1
             assert proj.GetBinContent(nonZeroBinLocation) == 1
@@ -400,30 +448,38 @@ class TestProjectorsWithRoot():
     # AAC = Additional Axis Cuts
     @pytest.mark.parametrize("additionalAxisCuts, expectedAdditionalAxisCuts", [
         (None, True),
-        (histAxisRanges.xAxis, True),
-        (histAxisRangesWithNoEntries.xAxis, False)
+        (hist_axis_ranges.xAxis, True),
+        (hist_axis_ranges_without_entries.xAxis, False)
     ], ids = ["No AAC selection", "AAC with entries", "AAC with no entries"])
     # PDCA = Projection Dependent Cut Axes
     @pytest.mark.parametrize("projectionDependentCutAxes, expectedProjectionDependentCutAxes", [
         (None, True),
         ([], True),
-        ([histAxisRanges.yAxis], True),
-        ([histAxisRangesWithNoEntries.yAxis], False),
-        ([histAxisRangesRestricted[0], histAxisRangesRestricted[1]], True),
-        ([histAxisRangesRestricted[1], histAxisRangesRestricted[0]], True),
-        ([histAxisRangesRestricted[1], histAxisRangesRestricted[2]], False)
+        ([hist_axis_ranges.yAxis], True),
+        ([hist_axis_ranges_without_entries.yAxis], False),
+        ([hist_axis_ranges_restricted[0], hist_axis_ranges_restricted[1]], True),
+        ([hist_axis_ranges_restricted[1], hist_axis_ranges_restricted[0]], True),
+        ([hist_axis_ranges_restricted[1], hist_axis_ranges_restricted[2]], False)
     ], ids = ["None PDCA", "Empty PDCA", "PDCA", "PDCA with no entries", "Disconnected PDCA with entries", "Reversed and disconnected PDCA with entries", "Disconnected PDCA with no entries"])
     # PA = Projection Axes
     @pytest.mark.parametrize("projectionAxes, expectedProjectionAxes", [
-        (histAxisRanges.zAxis, True),
-        (histAxisRangesWithNoEntries.zAxis, False)
+        (hist_axis_ranges.zAxis, True),
+        (hist_axis_ranges_without_entries.zAxis, False)
     ], ids = ["PA with entries", "PA without entries"])
     def testTH3ToTH1Projection(self, loggingMixin, testRootHists,
                                additionalAxisCuts, expectedAdditionalAxisCuts,
                                projectionDependentCutAxes, expectedProjectionDependentCutAxes,
                                projectionAxes, expectedProjectionAxes):
         """ Test projection from a TH3 to a TH1 derived class. """
-        # Setup
+        import ROOT  # noqa: F401
+
+        # Setup hist ranges
+        if additionalAxisCuts:
+            additionalAxisCuts = setup_hist_axis_range(additionalAxisCuts)
+        if projectionDependentCutAxes:
+            projectionDependentCutAxes = [setup_hist_axis_range(cut) for cut in projectionDependentCutAxes]
+        projectionAxes = setup_hist_axis_range(projectionAxes)
+        # Setup projector
         observableList = {}
         observableToProjectFrom = {"hist3D": testRootHists.hist3D}
         projectionNameFormat = "hist"
@@ -459,21 +515,18 @@ class TestProjectorsWithRoot():
         assert proj.GetXaxis().GetNbins() == expectedBins
 
         # Find the non-zero bin content so that it can be checked below.
-        nonZeroBins = []
-        for x in range(1, proj.GetXaxis().GetNbins() + 1):
-            if proj.GetBinContent(x) != 0:
-                nonZeroBins.append(x)
+        non_zero_bins = find_non_zero_bins(hist = proj)
 
         expectedCount = 0
         # It will only be non-zero if all of the expected values are true.
         expectedNonZeroCounts = all([expectedAdditionalAxisCuts, expectedProjectionDependentCutAxes, expectedProjectionAxes])
         if expectedNonZeroCounts:
             expectedCount = 1
-        assert len(nonZeroBins) == expectedCount
+        assert len(non_zero_bins) == expectedCount
         # Check the precise bin which was found and the bin value.
         if expectedCount != 0:
             # Only check if we actually expected a count
-            nonZeroBinLocation = next(iter(nonZeroBins))
+            nonZeroBinLocation = next(iter(non_zero_bins))
             # I determined the expected value empirically by looking at the projection.
             assert nonZeroBinLocation == 1
             assert proj.GetBinContent(nonZeroBinLocation) == 1
@@ -483,15 +536,15 @@ class TestProjectorsWithRoot():
     # PDCA = Projection Dependent Cut Axes
     @pytest.mark.parametrize("use_PDCA, additionalCuts, expectedAdditionalCuts", [
         (False, None, True),
-        (False, histAxisRanges.yAxis, True),
-        (False, histAxisRangesWithNoEntries.yAxis, False),
+        (False, hist_axis_ranges.yAxis, True),
+        (False, hist_axis_ranges_without_entries.yAxis, False),
         (True, None, True),
         (True, [], True),
-        (True, [histAxisRanges.yAxis], True),
-        (True, [histAxisRangesWithNoEntries.yAxis], False),
-        (True, [histAxisRangesRestricted[0], histAxisRangesRestricted[1]], True),
-        (True, [histAxisRangesRestricted[1], histAxisRangesRestricted[0]], True),
-        (True, [histAxisRangesRestricted[1], histAxisRangesRestricted[2]], False)
+        (True, [hist_axis_ranges.yAxis], True),
+        (True, [hist_axis_ranges_without_entries.yAxis], False),
+        (True, [hist_axis_ranges_restricted[0], hist_axis_ranges_restricted[1]], True),
+        (True, [hist_axis_ranges_restricted[1], hist_axis_ranges_restricted[0]], True),
+        (True, [hist_axis_ranges_restricted[1], hist_axis_ranges_restricted[2]], False)
     ], ids = [
         "No AAC selection", "AAC with entries", "AAC with no entries",
         "None PDCA", "Empty PDCA", "PDCA",
@@ -499,16 +552,25 @@ class TestProjectorsWithRoot():
     ])
     # PA = Projection Axes
     @pytest.mark.parametrize("projectionAxes, expectedProjectionAxes", [
-        ([histAxisRanges.zAxis, histAxisRanges.xAxis], True),
-        ([histAxisRanges.zAxis, histAxisRangesWithNoEntries.xAxis], False),
-        ([histAxisRangesWithNoEntries.zAxis, histAxisRanges.xAxis], False),
-        ([histAxisRangesWithNoEntries.zAxis, histAxisRangesWithNoEntries.xAxis], False),
+        ([hist_axis_ranges.zAxis, hist_axis_ranges.xAxis], True),
+        ([hist_axis_ranges.zAxis, hist_axis_ranges_without_entries.xAxis], False),
+        ([hist_axis_ranges_without_entries.zAxis, hist_axis_ranges.xAxis], False),
+        ([hist_axis_ranges_without_entries.zAxis, hist_axis_ranges_without_entries.xAxis], False),
     ], ids = ["PA with entries", "PA without entries due to x", "PA without entires due to z", "PA without entries"])
     def testTH3ToTH2Projection(self, loggingMixin, testRootHists,
                                use_PDCA, additionalCuts, expectedAdditionalCuts,
                                projectionAxes, expectedProjectionAxes):
         """ Test projection of a TH3 into a TH2. """
-        # Setup
+        import ROOT  # noqa: F401
+
+        # Setup hist ranges
+        if additionalCuts:
+            if use_PDCA:
+                additionalCuts = [setup_hist_axis_range(cut) for cut in additionalCuts]
+            else:
+                additionalCuts = setup_hist_axis_range(additionalCuts)
+        projectionAxes = [setup_hist_axis_range(cut) for cut in projectionAxes]
+        # Setup projector
         observableList = {}
         observableToProjectFrom = {"hist3D": testRootHists.hist3D}
         projectionNameFormat = "hist"
@@ -549,32 +611,31 @@ class TestProjectorsWithRoot():
         logger.debug(f"x axis min: {proj.GetXaxis().GetXmin()}, y axis min: {proj.GetYaxis().GetXmin()}")
 
         # Find the non-zero bin content so that it can be checked below.
-        nonZeroBins = []
-        for x in range(1, proj.GetNcells()):
-            if proj.GetBinContent(x) != 0 and not proj.IsBinUnderflow(x) and not proj.IsBinOverflow(x):
-                logger.debug(f"non-zero bin at {x}")
-                nonZeroBins.append(x)
+        non_zero_bins = find_non_zero_bins(hist = proj)
 
         expectedCount = 0
         # It will only be non-zero if all of the expected values are true.
         expectedNonZeroCounts = all([expectedAdditionalCuts, expectedProjectionAxes])
         if expectedNonZeroCounts:
             expectedCount = 1
-        assert len(nonZeroBins) == expectedCount
+        assert len(non_zero_bins) == expectedCount
         # Check the precise bin which was found and the bin value.
         if expectedCount != 0:
             # Only check if we actually expected a count
-            nonZeroBinLocation = next(iter(nonZeroBins))
+            nonZeroBinLocation = next(iter(non_zero_bins))
             # I determined the expected value empirically by looking at the projection.
             assert nonZeroBinLocation == 8
             assert proj.GetBinContent(nonZeroBinLocation) == 1
 
     @pytest.mark.parametrize("PDCA_axis", [
-        histAxisRanges.xAxis,
-        histAxisRangesWithNoEntries.xAxis,
+        hist_axis_ranges.xAxis,
+        hist_axis_ranges_without_entries.xAxis,
     ], ids = ["Same range PDCA", "Different range PDCA"])
-    def test_invalid_PDCA_axis(self, loggingMixin, testRootHists, PDCA_axis):
+    def test_invalid_PDCA_axis(loggingMixin, testRootHists, PDCA_axis):
         """ Test catching a PDCA on the same axis as the projection axis. """
+        import ROOT  # noqa: F401
+
+        # Setup projector
         observableList = {}
         observableToProjectFrom = {"hist3D": testRootHists.hist3D}
         projectionNameFormat = "hist"
@@ -586,7 +647,7 @@ class TestProjectorsWithRoot():
         # Set the projection axes.
         # It is invalid even if the ranges are different
         obj.projectionDependentCutAxes.append([PDCA_axis])
-        obj.projectionAxes.append(histAxisRanges.xAxis)
+        obj.projectionAxes.append(hist_axis_ranges.xAxis)
 
         # Perform the projection.
         with pytest.raises(ValueError) as exception_info:
@@ -596,69 +657,67 @@ class TestProjectorsWithRoot():
 
 # Define similar axis and axis seletion structures for the THnSparse.
 # We use some subset of nearly all of these options in the various THn tests.
-sparse_hist_axis_ranges = histAxisRangesNamedTuple(
+sparse_hist_axis_ranges = HistAxisRanges(
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_two,
         axisRangeName = "axis_two",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 2 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 18 - utils.epsilon)),
+        minVal = 2,
+        maxVal = 18),
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_four,
         axisRangeName = "axis_four",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, -8 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 8 - utils.epsilon)),
+        minVal = -8,
+        maxVal = 8),
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_five,
         axisRangeName = "axis_five",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 2 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 20 - utils.epsilon))
+        minVal = 2,
+        maxVal = 20)
 )
-sparse_hist_axis_ranges_with_no_entries = histAxisRangesNamedTuple(
+sparse_hist_axis_ranges_with_no_entries = HistAxisRanges(
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_two,
         axisRangeName = "axis_two_no_entries",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 10 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 18 - utils.epsilon)),
+        minVal = 10,
+        maxVal = 18),
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_four,
         axisRangeName = "axis_four_no_entries",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 4 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 8 - utils.epsilon)),
+        minVal = 4,
+        maxVal = 8),
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_five,
         axisRangeName = "axis_five_no_entires",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 12 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 20 - utils.epsilon))
+        minVal = 12,
+        maxVal = 20)
 )
 # This abuses the names of the axes within the named tuple, but it is rather convenient, so we keep it.
 sparse_hist_axis_ranges_restricted = [
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_four,
         axisRangeName = "axis_four_lower",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, -8 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, -4 - utils.epsilon)),
+        minVal = -8,
+        maxVal = -4),
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_four,
         axisRangeName = "axis_four_lower_middle",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, -4 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 0 - utils.epsilon)),
+        minVal = -4,
+        maxVal = 0),
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_four,
         axisRangeName = "axis_four_upper_middle",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 0 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 4 - utils.epsilon)),
+        minVal = 0,
+        maxVal = 4),
     projectors.HistAxisRange(
         axisType = SparseAxisLabels.axis_four,
         axisRangeName = "axis_four_upper",
-        minVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 4 + utils.epsilon),
-        maxVal = projectors.HistAxisRange.ApplyFuncToFindBin(ROOT.TAxis.FindBin, 8 - utils.epsilon)),
+        minVal = 4,
+        maxVal = 8),
 ]
-
 
 @pytest.mark.ROOT
 class TestsForTHnSparseProjection():
-    # TODO: Move definitions in here...
-
+    """ Tests for projectors for THnSparse derived histograms. """
     # AAC = Additional Axis Cuts
     @pytest.mark.parametrize("additional_axis_cuts, expected_additional_axis_cuts_counts", [
         (None, 1),
@@ -685,10 +744,16 @@ class TestsForTHnSparseProjection():
                             projection_dependent_cut_axes, expected_projection_dependent_cut_axes_counts,
                             projection_axes, expected_projection_axes_counts):
         """ Test projection of a THnSparse into a TH1. """
+        import ROOT  # noqa: F401
+
+        # Setup hist ranges
+        if additional_axis_cuts:
+            additional_axis_cuts = setup_hist_axis_range(additional_axis_cuts)
+        if projection_dependent_cut_axes:
+            projection_dependent_cut_axes = [setup_hist_axis_range(cut) for cut in projection_dependent_cut_axes]
+        projection_axes = setup_hist_axis_range(projection_axes)
         # Setup objects
         sparse, _ = testSparse
-        for cut in [additional_axis_cuts, projection_dependent_cut_axes, projection_axes]:
-            cut = setup_hist_axis_ranges(cut)
         # Setup projector
         observableList = {}
         observableToProjectFrom = {"histSparse": sparse}
