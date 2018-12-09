@@ -1,0 +1,33 @@
+# Needed for python 3.7
+dist: xenial
+language: python
+python:
+    - 3.6
+    - 3.7
+sudo: required
+# Use cache with pip to save time.
+cache: pip
+install:
+    - pip install --upgrade -e .[tests,dev,docs]
+script:
+    # Check code quality
+    - flake8 .
+    # Run the tests
+    - pytest -l -vv --cov=pachyderm --cov-branch -m "not root" --durations=5 --mpl tests/
+    # Check that the docs build successfully
+    - pushd docs && make html && popd
+after_success:
+    # Upload coverage report to codecov.
+    - bash <(curl -s https://codecov.io/bash)
+jobs:
+    include:
+        - stage: deploy
+          python: 3.7
+          deploy:
+              provider: pypi
+              user: rehlers
+              password:
+                  secure: t6FbjYwztf8r9p/wU9U764qL1dAdiLd0TpztKtxpggGaJRFdZCJP/C1ji7YbIyngsFdID+VocdDFbLKtH1eeW3GoHX2jRh6MGfXO6eiGSz6HHnI2RTiUPJyOBVm3exCnFWO4gGyDy3IvPmoZeX8BEa7L7y8PHXFLXO5i45nZOpCg9iHgMCJr/wGWvvxHU/uvDmKxRvYRfarH1IRyGDUFnU917UBY7Sv0yPITVfEctcnkkoymrDUKCAebIYXrpEBF3vSy8vgrv7LLHy5mOlrNF5hBuXujdef8YCL5SB/MhAeTHiN4mlbXwqutHBNfLHcNpSrmfhJ+D+XofMajikgjgFwQDVDL17889TZXAtymQwep+bjH9lEB1lWTnx0J/cAmJD19dn8oTo6C31UCJ5y3Dvqal36mUmYGqS/j0p6o0k1xxzJM+7eIoQ0OHhMXlk6w13TiPL2oH4QMUvuTpSCW9UK2AJJZkS5zsTo3P+KeyleZ+6WkztfDPuDIyhARD4AEaacmWskQjVM0LKLYoKQ6wvX7a1zg2tQ+DtRde83OYpebFShaImf8KkZ6iOnw4iq1rLln86N7Lgw0WuGzIRPJV1WS1h8VxnfNc78jehcDSUimyQNza/K7X2cSP2U1J6ib6cQNnGyE9e5BIqvLwicscDsCJLG/7Ru+Qi4mlJAOAro=
+              distributions: sdist bdist_wheel
+              on:
+                  tags: true
