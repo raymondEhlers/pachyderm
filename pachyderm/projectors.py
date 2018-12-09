@@ -8,8 +8,8 @@
 # From the future package
 from future.utils import iteritems
 
-import aenum
 import copy
+import enum
 import logging
 
 from pachyderm import generic_class
@@ -17,7 +17,7 @@ from pachyderm import generic_class
 # Setup logger
 logger = logging.getLogger(__name__)
 
-class TH1AxisType(aenum.Enum):
+class TH1AxisType(enum.Enum):
     """ Map from (x,y,z) axis to the axis number.
 
     Other enumerations that refer to this enum should refer to the _values_ to ensure
@@ -42,7 +42,7 @@ class HistAxisRange(generic_class.EqualityMixin):
     Args:
         axisRangeName (str): Name of the axis range. Usually some combination of the axis name and
             some sort of description of the range.
-        axisType (aenum.Enum): Enumeration corresponding to the axis to be restricted. The numerical
+        axisType (enum.Enum): Enumeration corresponding to the axis to be restricted. The numerical
             value of the enum should be axis number (for a THnBase).
         minVal (function): Minimum range value for the axis. Usually set via ApplyFuncToFindBin().
         minVal (function): Maximum range value for the axis. Usually set via ApplyFuncToFindBin().

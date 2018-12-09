@@ -73,8 +73,6 @@ setup(
         "dataclasses",  # Needed for python 3.6
         "future",
         "ruamel.yaml",
-        "aenum",
-        "scipy",
         "numpy",
         # Not required at the moment, but hopefully for the future.
         #"uproot",

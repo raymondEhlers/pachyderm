@@ -12,9 +12,9 @@ import future.utils
 from future.utils import iteritems
 from future.utils import itervalues
 
-import aenum
 import collections
 import copy
+import enum
 import itertools
 import logging
 import string
@@ -334,7 +334,7 @@ def applyFormattingDict(obj, formatting):
     elif isinstance(obj, int) or isinstance(obj, float) or obj is None:
         # Skip over this, as there is nothing to be done - we just keep the value.
         pass
-    elif isinstance(obj, aenum.Enum):
+    elif isinstance(obj, enum.Enum):
         # Skip over this, as there is nothing to be done - we just keep the value.
         # This only occurs when the a formatting value has already been transformed
         # into an enuemration.
