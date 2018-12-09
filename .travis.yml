@@ -45,6 +45,8 @@ jobs:
           python: 3.7
         - stage: deploy
           python: 3.7
+          # Always need a script to make Travis happy, so we just notify.
+          script: echo "Deploying to PyPI"
           deploy:
               provider: pypi
               user: rehlers
