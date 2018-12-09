@@ -67,8 +67,8 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
     """
     if configContainingOverride is None:
         configContainingOverride = config
-    overrideOptions = configContainingOverride.pop("override")
-    overrideDict = determineOverrideOptions(selectedOptions, overrideOptions, setOfPossibleOptions)
+    override_opts = configContainingOverride.pop("override")
+    overrideDict = determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOptions)
     logger.debug("overrideDict: {}".format(overrideDict))
 
     # Set the configuration values to those specified in the override options
@@ -127,27 +127,27 @@ def simplifyDataRepresentations(config):
 
     return config
 
-def determineOverrideOptions(selectedOptions, overrideOptions, setOfPossibleOptions = ()):
+def determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOptions = ()):
     """ Reusrively extract the dict described in overrideOptions().
 
-    In particular, this searches for selected options in the overrideOptions dict.
+    In particular, this searches for selected options in the override_opts dict.
     It stores only the override options that are selected.
 
     Args:
         selectedOptions (tuple): The options selected for this analysis, in the order defined used
             with overrideOptions() and in the configuration file.
-        overrideOptions (CommentedMap): dict-like object returned by ruamel.yaml which contains the options that
+        override_opts (CommentedMap): dict-like object returned by ruamel.yaml which contains the options that
             should be used to override the configuration options.
         setOfPossibleOptions (tuple of enums): Possible options for the override value categories.
     """
     overrideDict = {}
-    for option in overrideOptions:
+    for option in override_opts:
         # We need to cast the option to a string to effectively compare to the selected option,
         # since only some of the options will already be strings
         if str(option) in list(map(lambda opt: opt.str(), selectedOptions)):
-            overrideDict.update(determineOverrideOptions(selectedOptions, overrideOptions[option], setOfPossibleOptions))
+            overrideDict.update(determineOverrideOptions(selectedOptions, override_opts[option], setOfPossibleOptions))
         else:
-            logger.debug("overrideOptions: {}".format(overrideOptions))
+            logger.debug(f"override_opts: {override_opts}")
             # Look for whether the key is one of the possible but unselected options.
             # If so, we haven't selected it for this analysis, and therefore they should be ignored.
             # NOTE: We compare both the names and value because sometimes the name is not sufficient,
@@ -166,10 +166,10 @@ def determineOverrideOptions(selectedOptions, overrideOptions, setOfPossibleOpti
             if not foundAsPossibleOption:
                 # Store the override value, since it doesn't correspond with a selected option or a possible option
                 # and therefore must be an option that we want to override.
-                logger.debug("Storing override option \"{}\", with value \"{}\"".format(option, overrideOptions[option]))
-                overrideDict[option] = overrideOptions[option]
+                logger.debug(f"Storing override option \"{option}\", with value \"{override_opts[option]}\"")
+                overrideDict[option] = override_opts[option]
             else:
-                logger.debug("Found option \"{}\" as possible option, so skipping!".format(option))
+                logger.debug(f"Found option \"{option}\" as possible option, so skipping!")
 
     return overrideDict
 
@@ -192,7 +192,7 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
             raise KeyError(k, "Cannot find requested iterable in possibleIterables: {possibleIterables}".format(possibleIterables = possibleIterables))
         logger.debug("k: {}, v: {}".format(k, v))
         additionalIterable = []
-        enum = possibleIterables[k]
+        enum_values = possibleIterables[k]
         # Check for a string. This is wrong, and the user should be notified.
         if isinstance(v, str):
             raise TypeError(type(v), "Passed string {v} when must be either bool or list".format(v = v))
@@ -201,11 +201,11 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
             continue
         # Allow the possibility to including all possible values in the enum.
         elif v is True:
-            additionalIterable = list(enum)
+            additionalIterable = list(enum_values)
         else:
             # Otherwise, only take the requested values.
             for el in v:
-                additionalIterable.append(enum[el])
+                additionalIterable.append(enum_values[el])
         # Store for later
         iterables[k] = additionalIterable
 
