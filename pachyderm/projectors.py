@@ -231,18 +231,18 @@ class HistProjector(object):
 
         This will only show up properly when printed - otherwise the tabs and newlines won't be printed.
         """
-        retVal = "{}: Projection Information:\n".format(self.__class__.__name__)
-        retVal += "\tProjectionNameFormat: \"{projectionNameFormat}\"\n"
-        retVal += "\tProjectionInformation:\n"
-        retVal += "\n".join(["\t\t- " + str("Arg: ") + str(val) for arg, val in self.projectionInformation])
-        retVal += "\tadditionalAxisCuts:\n"
+        retVal = f"{self.__class__.__name__}: Projection Information:\n"
+        retVal += f"\tProjectionNameFormat: \"{self.projectionNameFormat}\""
+        retVal += "\n\tProjectionInformation:\n"
+        retVal += "\n".join(["\t\t- " + str("Arg: ") + str(val) for arg, val in self.projectionInformation.items()])
+        retVal += "\n\tadditionalAxisCuts:\n"
         retVal += "\n".join(["\t\t- " + str(axis) for axis in self.additionalAxisCuts])
-        retVal += "\tprojectionDependentCutAxes:\n"
-        retVal += "\n".join(["\t\t- " + str([",".join(axis.axisName for axis in axisList)]) for axisList in self.projectionDependentCutAxes])
-        retVal += "\tprojectionAxes:\n"
+        retVal += "\n\tprojectionDependentCutAxes:\n"
+        retVal += "\n".join(["\t\t- " + str([",".join(axis.name for axis in axisList)]) for axisList in self.projectionDependentCutAxes])
+        retVal += "\n\tprojectionAxes:\n"
         retVal += "\n".join(["\t\t- " + str(axis) for axis in self.projectionAxes])
 
-        return retVal.format(**self.__dict__)
+        return retVal
 
     def CallProjectionFunction(self, hist):
         """ Calls the actual projection function for the hist.

@@ -342,7 +342,7 @@ class TestProjectorsWithRoot():
         obj = projectors.HistProjector(observableList = {},
                                        observableToProjectFrom = {},
                                        projectionNameFormat = projectionNameFormat,
-                                       projectionInformation = {})
+                                       projectionInformation = {"test": "Hello"})
 
         # These objects should be overridden so they aren't super meaningful, but we can still
         # test to ensure that they provide the basic functionality that is expected.
@@ -353,6 +353,25 @@ class TestProjectorsWithRoot():
                                  projectionName = projectionNameFormat.format(test = "Hello")) == projectionNameFormat.format(test = "Hello")
         assert obj.OutputHist(outputHist = testRootHists.hist1D,
                               inputObservable = testRootHists.hist2D) == testRootHists.hist1D
+
+        # Checking printing of the projector settings.
+        # Add one additional per selection entry so we have something to print.
+        obj.additionalAxisCuts.append("my_axis")
+        obj.projectionDependentCutAxes.append([hist_axis_ranges_without_entries.xAxis])
+        obj.projectionAxes.append("projection_axis")
+        # It is rather minimal, but that is fine since it is only printed information.
+        expected_str = "HistProjector: Projection Information:\n"
+        expected_str += f"\tProjectionNameFormat: \"{projectionNameFormat}\"\n"
+        expected_str += "\tProjectionInformation:\n"
+        expected_str += "\n".join(["\t\t- " + str("Arg: ") + str(val) for arg, val in {"test": "Hello"}.items()])
+        expected_str += "\n\tadditionalAxisCuts:\n"
+        expected_str += "\t\t- my_axis"
+        expected_str += "\n\tprojectionDependentCutAxes:\n"
+        expected_str += "\t\t- ['xAxisNoEntries']"
+        expected_str += "\n\tprojectionAxes:\n"
+        expected_str += "\t\t- projection_axis"
+
+        assert str(obj) == expected_str
 
     # Other axes:
     # AAC = Additional Axis Cuts
