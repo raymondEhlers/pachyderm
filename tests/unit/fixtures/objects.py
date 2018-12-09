@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 
 @pytest.fixture
-@pytest.mark.ROOT
 def testRootHists():
     """ Create minimal TH*F hists in 1D, 2D, and 3D. Each has been filled once.
 
@@ -42,7 +41,6 @@ def testRootHists():
     return RootHists(hist1D = hist, hist2D = hist2D, hist3D = hist3D)
 
 @pytest.fixture
-@pytest.mark.ROOT
 def testSparse():
     """ Create a THnSparseF for testing.
 
