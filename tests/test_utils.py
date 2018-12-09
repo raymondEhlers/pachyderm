@@ -77,7 +77,13 @@ def retrieveRootList(testRootHists):
     mainList["innerList"] = innerDict
     expected["mainList"] = mainList
 
-    return (filename, l1, expected)
+    yield (filename, l1, expected)
+
+    # We need to call Clear() because we reference the same histograms in both the main list
+    # the inner list. If we don't explicitly call it on the main list, it may be called on the
+    # inner list first, which will then lead to the hists being undefined when Clear() is called
+    # on the main list later.
+    l1.Clear()
 
 @pytest.mark.ROOT
 class TestRetrievingHistgramsFromAList():
