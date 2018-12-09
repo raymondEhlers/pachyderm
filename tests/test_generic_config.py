@@ -6,13 +6,13 @@
 """
 
 import collections
+import enum
 import logging
 import pytest
 from io import StringIO
 import ruamel.yaml
 
 from pachyderm import generic_config
-from pachyderm import params
 
 logger = logging.getLogger(__name__)
 
@@ -264,12 +264,30 @@ def testDictDataSimplification(loggingMixin, dataSimplificationConfig):
     assert config["singleEntryDict"] == {"hello": "world"}
     assert config["multiEntryDict"] == {"hello": "world", "foo": "bar"}
 
+class reaction_plane_orientation(enum.Enum):
+    """ Example enumeration for testing. This represents RP orientation. """
+    inPlane = 0
+    midPlane = 1
+    outOfPlane = 2
+    all = 3
+
+class qvector(enum.Enum):
+    """ Example enumeration for testing. This represents the q vector. """
+    all = 0
+    bottom10 = 1
+    top10 = 2
+
+class collision_energy(enum.Enum):
+    """ Example enumeration for testing. This represents collision system energies. """
+    twoSevenSix = 2.76
+    fiveZeroTwo = 5.02
+
 @pytest.fixture
 def objectCreationConfig():
     """ Configuration to test creating objects based on the stored values. """
     config = """
 iterables:
-    eventPlaneAngle:
+    reaction_plane_orientation:
         - inPlane
         - midPlane
     qVector: True
@@ -279,19 +297,19 @@ iterables:
     config = yaml.load(config)
 
     possibleIterables = collections.OrderedDict()
-    possibleIterables["eventPlaneAngle"] = params.eventPlaneAngle
-    possibleIterables["qVector"] = params.qVector
-    possibleIterables["collisionEnergy"] = params.collisionEnergy
+    possibleIterables["reaction_plane_orientation"] = reaction_plane_orientation
+    possibleIterables["qVector"] = qvector
+    possibleIterables["collisionEnergy"] = collision_energy
 
-    return (config, possibleIterables, ([params.eventPlaneAngle.inPlane, params.eventPlaneAngle.midPlane], list(params.qVector)))
+    return (config, possibleIterables, ([reaction_plane_orientation.inPlane, reaction_plane_orientation.midPlane], list(qvector)))
 
 def testDetermineSelectionOfIterableValuesFromConfig(loggingMixin, objectCreationConfig):
     """ Test determining which values of an iterable to use. """
-    (config, possibleIterables, (eventPlaneAngles, qVectors)) = objectCreationConfig
+    (config, possibleIterables, (reaction_plane_orientations, qVectors)) = objectCreationConfig
     iterables = generic_config.determineSelectionOfIterableValuesFromConfig(config = config,
                                                                             possibleIterables = possibleIterables)
 
-    assert iterables["eventPlaneAngle"] == eventPlaneAngles
+    assert iterables["reaction_plane_orientation"] == reaction_plane_orientations
     assert iterables["qVector"] == qVectors
     # Collision Energy should _not_ be included! It was only a possible iterator.
     # Check in two ways.
@@ -300,7 +318,7 @@ def testDetermineSelectionOfIterableValuesFromConfig(loggingMixin, objectCreatio
 
 def testDetermineSelectionOfIterableValuesWithUndefinedIterable(loggingMixin, objectCreationConfig):
     """ Test determining which values of an iterable to use when an iterable is not defined. """
-    (config, possibleIterables, (eventPlaneAngles, qVectors)) = objectCreationConfig
+    (config, possibleIterables, (reaction_plane_orientations, qVectors)) = objectCreationConfig
 
     del possibleIterables["qVector"]
     with pytest.raises(KeyError) as exceptionInfo:
@@ -310,7 +328,7 @@ def testDetermineSelectionOfIterableValuesWithUndefinedIterable(loggingMixin, ob
 
 def testDetermineSelectionOfIterableValuesWithStringSelection(loggingMixin, objectCreationConfig):
     """ Test trying to determine values with a string. This is not allowed, so it should raise an exception. """
-    (config, possibleIterables, (eventPlaneAngles, qVectors)) = objectCreationConfig
+    (config, possibleIterables, (reaction_plane_orientations, qVectors)) = objectCreationConfig
 
     config["iterables"]["qVector"] = "True"
     with pytest.raises(TypeError) as exceptionInfo:
@@ -324,17 +342,17 @@ def objectAndCreationArgs():
     # Define fake object. We don't use a mock because we need to instantiate the object
     # in the function that is being tested. This is not super straightforward with mock,
     # so instead we create a test object by hand.
-    obj = collections.namedtuple("testObj", ["eventPlaneAngle", "qVector", "a", "b", "optionsFmt"])
+    obj = collections.namedtuple("testObj", ["reaction_plane_orientation", "qVector", "a", "b", "optionsFmt"])
     # Include args that depend on the iterable values to ensure that they are varied properly!
-    args = {"a": 1, "b": "{fmt}", "optionsFmt": "{eventPlaneAngle}_{qVector}"}
-    formattingOptions = {"fmt": "formatted", "optionsFmt": "{eventPlaneAngle}_{qVector}"}
+    args = {"a": 1, "b": "{fmt}", "optionsFmt": "{reaction_plane_orientation}_{qVector}"}
+    formattingOptions = {"fmt": "formatted", "optionsFmt": "{reaction_plane_orientation}_{qVector}"}
 
     return (obj, args, formattingOptions)
 
 def testCreateObjectsFromIterables(loggingMixin, objectCreationConfig, objectAndCreationArgs):
     """ Test object creation from a set of iterables. """
     # Collect variables
-    (config, possibleIterables, (eventPlaneAngles, qVectors)) = objectCreationConfig
+    (config, possibleIterables, (reaction_plane_orientations, qVectors)) = objectCreationConfig
     (obj, args, formattingOptions) = objectAndCreationArgs
 
     # Get iterables
@@ -350,14 +368,14 @@ def testCreateObjectsFromIterables(loggingMixin, objectCreationConfig, objectAnd
     # Check the names of the iterables.
     assert names == list(iterables)
     # Check the precise values passed to the object.
-    for epAngle in eventPlaneAngles:
+    for rp_angle in reaction_plane_orientations:
         for qVector in qVectors:
-            createdObject = objects[epAngle][qVector]
-            assert createdObject.eventPlaneAngle == epAngle
+            createdObject = objects[rp_angle][qVector]
+            assert createdObject.reaction_plane_orientation == rp_angle
             assert createdObject.qVector == qVector
             assert createdObject.a == args["a"]
             assert createdObject.b == formattingOptions["fmt"]
-            assert createdObject.optionsFmt == formattingOptions["optionsFmt"].format(eventPlaneAngle = epAngle, qVector = qVector)
+            assert createdObject.optionsFmt == formattingOptions["optionsFmt"].format(reaction_plane_orientation = rp_angle, qVector = qVector)
 
 def testMissingIterableForObjectCreation(loggingMixin, objectAndCreationArgs):
     """ Test object creation when the iterables are missing. """

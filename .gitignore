@@ -3,7 +3,7 @@ output/
 .ipynb_checkpoints/
 
 # Ignore setup.py related folder
-alice_jet_hadron_correlations.egg-info/
+pachyderm.egg-info/
 
 # Ignore pytests cache
 .pytest_cache/
@@ -20,6 +20,7 @@ htmlcov/
 
 # Virtual environments
 .py*/
+.pachyderm/
 
 # Ignore filetypes
 *.root
