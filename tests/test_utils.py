@@ -5,11 +5,6 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-# From the future package
-from builtins import range
-from future.utils import itervalues
-
-import collections
 import logging
 import os
 import numpy as np
@@ -74,8 +69,8 @@ def retrieveRootList(testRootHists):
     # Create expected values
     # See the docstring for an explanation of the format.
     expected = {}
-    innerDict = collections.OrderedDict()
-    mainList = collections.OrderedDict()
+    innerDict = {}
+    mainList = {}
     for h in hists:
         innerDict[h.GetName()] = h
         mainList[h.GetName()] = h
@@ -101,7 +96,7 @@ class TestRetrievingHistgramsFromAList():
         outputInnerList = output.pop("innerList")
         expectedInnerList = expected.pop("innerList")
         for (o, e) in [(output, expected), (outputInnerList, expectedInnerList)]:
-            for oHist, eHist in zip(itervalues(o), itervalues(e)):
+            for oHist, eHist in zip(o.values(), e.values()):
                 oValues = [oHist.GetBinContent(i) for i in range(0, oHist.GetXaxis().GetNbins() + 2)]
                 eValues = [eHist.GetBinContent(i) for i in range(0, eHist.GetXaxis().GetNbins() + 2)]
                 assert np.allclose(oValues, eValues)
