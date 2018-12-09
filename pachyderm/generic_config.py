@@ -39,21 +39,23 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
     in selectedOptions.
 
     For the example config,
-    ```
-    config:
-        value: 3
-        override:
-            2.76:
-                track:
-                    value: 5
-    ```
+
+    .. code-block:: yaml
+
+        config:
+            value: 3
+            override:
+                2.76:
+                    track:
+                        value: 5
+
     value will be assigned the value 5 if we are at 2.76 TeV with a track bias, regardless of the event
     activity or leading hadron bias. The order of this configuration is specified by the order of the
     selectedOptions passed. The above example configuration is from the jet-hadron analysis.
 
     Since anchors aren't kept for scalar values, if you want to override an anchored value, you need to
     specify it as a single value in a list (or dict, but list is easier). After the anchor values propagate,
-    single element lists can be converted into scalar values using `simplifyDataRepresentations()`.
+    single element lists can be converted into scalar values using ``simplifyDataRepresentations()``.
 
     Args:
         config (CommentedMap): The dict-like configuration from ruamel.yaml which should be overridden.
@@ -176,8 +178,8 @@ def determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOption
 def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
     """ Determine iterable values to use to create objects for a given configuration.
 
-    All values of an iterable can be included be setting the value to `True` (Not as a single value list,
-    but as the only value.). Alternatively, an iterator can be disabled by setting the value to `False`.
+    All values of an iterable can be included be setting the value to ``True`` (Not as a single value list,
+    but as the only value.). Alternatively, an iterator can be disabled by setting the value to ``False``.
 
     Args:
         config (CommentedMap): The dict-like configuration from ruamel.yaml which should be overridden.
@@ -218,23 +220,23 @@ def createObjectsFromIterables(obj, args, iterables, formattingOptions):
 
     Each set of values is also included in the object args.
 
-    For example, for an iterables dict `{"a" : ["a1","a2"], "b" : ["b1", "b2"]}`, the function would return:
+    For example, for an iterables dict ``{"a" : ["a1","a2"], "b" : ["b1", "b2"]}``, the function would return:
 
-    ```
-    (
-        ["a", "b"],
-        {
-            "a1" : {
-                "b1" : obj(a = "a1", b = "b1"),
-                "b2" : obj(a = "a1", b = "b2")
-            },
-            "a2" : {
-                "b1" : obj(a = "a2", b = "b1"),
-                "b2" : obj(a = "a2", b = "b2")
+    .. code-block:: python
+
+        (
+            ["a", "b"],
+            {
+                "a1" : {
+                    "b1" : obj(a = "a1", b = "b1"),
+                    "b2" : obj(a = "a1", b = "b2")
+                },
+                "a2" : {
+                    "b1" : obj(a = "a2", b = "b1"),
+                    "b2" : obj(a = "a2", b = "b2")
+                }
             }
-        }
-    )
-    ```
+        )
 
     Args:
         obj (object): The object to be constructed.
