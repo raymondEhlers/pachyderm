@@ -260,86 +260,128 @@ class HistProjector(object):
         projectedHist = None
         if hasattr(hist, "ProjectionND") and hasattr(hist, "Projection"):
             # THnBase defines ProjectionND and Projection, so we will use those as proxies.
-            # THnBase projections args are given as a list of axes, followed by any possible options.
-            projectionAxes = [axis.axisType.value for axis in self.projectionAxes]
-
-            # Handle ROOT THnBase quirk...
-            # 2D projection are called as (y, x, options), so we should reverse the order so it performs as expected
-            if len(projectionAxes) == 2:
-                # Reverses in place
-                projectionAxes.reverse()
-
-            # Test calculating errors
-            # Add "E" to ensure that errors will be calculated
-            args = projectionAxes + ["E"]
-            # Do the actual projection
-            logger.debug("hist: {0} args: {1}".format(hist.GetName(), args))
-
-            if len(projectionAxes) > 3:
-                # Project into a THnBase object.
-                projectedHist = hist.ProjectionND(*args)
-            else:
-                # Project a TH1 derived object.
-                projectedHist = hist.Projection(*args)
+            projectedHist = self._project_THn(hist = hist)
         elif hasattr(hist, "ProjectionZ") and hasattr(hist, "Project3D"):
             # TH3 defines ProjectionZ and Project3D, so we will use those as proxies.
-            # Axis length validation
-            if len(self.projectionAxes) < 1 or len(self.projectionAxes) > 2:
-                raise ValueError(len(self.projectionAxes), "Invalid number of axes")
-
-            # Need to concatenate the names of the axes together
-            projectionAxisName = ""
-            for axis in self.projectionAxes:
-                # [:1] returns just the first letter. For example, we could get "xy" if the first axis as xAxis and the second was yAxis
-                # NOTE: Careful. This depends on the name of the enumerated values!!!
-                # TODO: Remove this dependency. This is not very safe.
-                projectionAxisName += axis.name[:1]
-
-            # Handle ROOT Project3D quirk...
-            # 2D projection are called as (y, x, options), so we should reverse the order so it performs as expected
-            # NOTE: This isn't well documented in TH3. It is instead described in THnBase.Projection(...)
-            if len(self.projectionAxes) == 2:
-                # Reverse the axes
-                projectionAxisName = projectionAxisName[::-1]
-
-            # Do the actual projection
-            logger.info("Projecting onto axes \"{0}\" from hist {1}".format(projectionAxisName, hist.GetName()))
-            projectedHist = hist.Project3D(projectionAxisName)
+            projectedHist = self._project_TH3(hist = hist)
         elif hasattr(hist, "ProjectionX") and hasattr(hist, "ProjectionY"):
             # TH2 defines ProjectionX and ProjectionY, so we will use those as proxies.
-            if len(self.projectionAxes) != 1:
-                raise ValueError(len(self.projectionAxes), "Invalid number of axes")
-
-            #logger.debug("self.projectionAxes[0].axis: {}, axis range name: {}, axisType: {}".format(self.projectionAxes[0].axis, self.projectionAxes[0].name , self.projectionAxes[0].axisType))
-            # NOTE: We cannot use TH3.ProjectionZ(...) because it has different sematnics than ProjectionX and ProjectionY.
-            #       In particular, it doesn't respect the axis limits of axis onto which it is projected.
-            #       So we have to separate the projection by histogram type as opposed to axis length.
-            projectionFuncMap = {
-                TH1AxisType.xAxis.value: hist.ProjectionX,
-                TH1AxisType.yAxis.value: hist.ProjectionY
-            }
-
-            # Determine the axisType value
-            # Use try here instead of checking for a particular type to protect against type changes (say in the enum)
-            try:
-                # Try to extract the value from an enum
-                axisType = self.projectionAxes[0].axisType.value
-            except ValueError:
-                # Seems that we received an int, so just use that value
-                axisType = self.axisType
-
-            #if not isinstance(axisType, TH1AxisType):
-            #    axisType = axisType.value
-            projectionFunc = projectionFuncMap[axisType]
-
-            # Do the actual projection
-            logger.info("Projecting onto axis range {} from hist {}".format(self.projectionAxes[0].name, hist.GetName()))
-            projectedHist = projectionFunc()
+            projectedHist = self._project_TH2(hist = hist)
         else:
             raise TypeError(type(hist), f"Could not recognize hist {hist} of type {hist.GetClass().GetName()}")
 
         # Cleanup restricted axes
         self.CleanupCuts(hist, cutAxes = self.projectionAxes)
+
+        return projectedHist
+
+    def _project_THn(self, hist):
+        """ Perform the actual THn -> THn or TH1 projection.
+
+        This projection could be to 1D, 2D, 3D, or ND.
+
+        Args:
+            hist (ROOT.THnBase): Histogram from which the projections should be performed.
+        Returns:
+            ROOT.THnBase or ROOT.TH1: The projected histogram.
+        """
+        # THnBase projections args are given as a list of axes, followed by any possible options.
+        projectionAxes = [axis.axisType.value for axis in self.projectionAxes]
+
+        # Handle ROOT THnBase quirk...
+        # 2D projection are called as (y, x, options), so we should reverse the order so it performs as expected
+        if len(projectionAxes) == 2:
+            # Reverses in place
+            projectionAxes.reverse()
+
+        # Test calculating errors
+        # Add "E" to ensure that errors will be calculated
+        args = projectionAxes + ["E"]
+        # Do the actual projection
+        logger.debug("hist: {0} args: {1}".format(hist.GetName(), args))
+
+        if len(projectionAxes) > 3:
+            # Project into a THnBase object.
+            projectedHist = hist.ProjectionND(*args)
+        else:
+            # Project a TH1 derived object.
+            projectedHist = hist.Projection(*args)
+
+        return projectedHist
+
+    def _project_TH3(self, hist):
+        """ Perform the actual TH3 -> TH1 projection.
+
+        This projection could be to 1D or 2D.
+
+        Args:
+            hist (ROOT.TH3): Histogram from which the projections should be performed.
+        Returns:
+            ROOT.TH1: The projected histogram.
+        """
+        # Axis length validation
+        if len(self.projectionAxes) < 1 or len(self.projectionAxes) > 2:
+            raise ValueError(len(self.projectionAxes), "Invalid number of axes")
+
+        # Need to concatenate the names of the axes together
+        projectionAxisName = ""
+        for axis in self.projectionAxes:
+            # [:1] returns just the first letter. For example, we could get "xy" if the first axis as xAxis and the second was yAxis
+            # NOTE: Careful. This depends on the name of the enumerated values!!!
+            # TODO: Remove this dependency. This is not very safe.
+            projectionAxisName += axis.name[:1]
+
+        # Handle ROOT Project3D quirk...
+        # 2D projection are called as (y, x, options), so we should reverse the order so it performs as expected
+        # NOTE: This isn't well documented in TH3. It is instead described in THnBase.Projection(...)
+        if len(self.projectionAxes) == 2:
+            # Reverse the axes
+            projectionAxisName = projectionAxisName[::-1]
+
+        # Do the actual projection
+        logger.info("Projecting onto axes \"{0}\" from hist {1}".format(projectionAxisName, hist.GetName()))
+        projectedHist = hist.Project3D(projectionAxisName)
+
+        return projectedHist
+
+    def _project_TH2(self, hist):
+        """ Perform the actual TH2 -> TH1 projection.
+
+        This projection can only be to 1D.
+
+        Args:
+            hist (ROOT.TH2): Histogram from which the projections should be performed.
+        Returns:
+            ROOT.TH1: The projected histogram.
+        """
+        if len(self.projectionAxes) != 1:
+            raise ValueError(len(self.projectionAxes), "Invalid number of axes")
+
+        #logger.debug("self.projectionAxes[0].axis: {}, axis range name: {}, axisType: {}".format(self.projectionAxes[0].axis, self.projectionAxes[0].name , self.projectionAxes[0].axisType))
+        # NOTE: We cannot use TH3.ProjectionZ(...) because it has different sematnics than ProjectionX and ProjectionY.
+        #       In particular, it doesn't respect the axis limits of axis onto which it is projected.
+        #       So we have to separate the projection by histogram type as opposed to axis length.
+        projectionFuncMap = {
+            TH1AxisType.xAxis.value: hist.ProjectionX,
+            TH1AxisType.yAxis.value: hist.ProjectionY
+        }
+
+        # Determine the axisType value
+        # Use try here instead of checking for a particular type to protect against type changes (say in the enum)
+        try:
+            # Try to extract the value from an enum
+            axisType = self.projectionAxes[0].axisType.value
+        except ValueError:
+            # Seems that we received an int, so just use that value
+            axisType = self.axisType
+
+        #if not isinstance(axisType, TH1AxisType):
+        #    axisType = axisType.value
+        projectionFunc = projectionFuncMap[axisType]
+
+        # Do the actual projection
+        logger.info("Projecting onto axis range {} from hist {}".format(self.projectionAxes[0].name, hist.GetName()))
+        projectedHist = projectionFunc()
 
         return projectedHist
 
