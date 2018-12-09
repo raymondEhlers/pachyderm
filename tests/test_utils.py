@@ -21,6 +21,7 @@ from pachyderm import utils
 logger = logging.getLogger(__name__)
 
 @pytest.fixture
+@pytest.mark.ROOT
 def retrieveRootList(testRootHists):
     """ Create an set of lists to load for a ROOT file.
 
@@ -38,8 +39,7 @@ def retrieveRootList(testRootHists):
                                            ('test', Hist('test_3'))]))])}
     ```
     """
-    import rootpy.ROOT as ROOT
-    import rootpy.io
+    import ROOT
 
     # Create values for the test
     # We only use 1D hists so we can do the comparison effectively.
@@ -62,11 +62,15 @@ def retrieveRootList(testRootHists):
     filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testFiles", "testOpeningList.root")
     # Create the file if needed.
     if not os.path.exists(filename):
+        current_directory = ROOT.TDirectory.CurrentDirectory()
         lCopy = l1.Clone("tempMainList")
         # The objects will be destroyed when l is written.
         # However, we write it under the l name to ensure it is read corectly later
-        with rootpy.io.root_open(filename, "RECREATE") as f:  # noqa: F841
-            lCopy.Write(l1.GetName(), ROOT.TObject.kSingleKey)
+        f = ROOT.TFile(filename, "RECREATE")
+        f.cd()
+        lCopy.Write(l1.GetName(), ROOT.TObject.kSingleKey)
+        f.Close()
+        current_directory.cd()
 
     # Create expected values
     # See the docstring for an explanation of the format.
@@ -108,7 +112,7 @@ def testGetNonExistentList(loggingMixin, retrieveRootList):
     output = utils.getHistogramsInList(filename, "nonExistent")
     assert output is None
 
-def testRetrieveObject(loggingMixin, retrieveRootList):
+def test_retrieve_object(loggingMixin, retrieveRootList):
     """ Test for retrieving a list of histograms from a ROOT file.
 
     NOTE: One would normally expect to have the hists in the first level of the dict, but
@@ -118,7 +122,7 @@ def testRetrieveObject(loggingMixin, retrieveRootList):
     (filename, rootList, expected) = retrieveRootList
 
     output = {}
-    utils.retrieveObject(output, rootList)
+    utils.retrieve_object(output, rootList)
 
     assert output == expected
 

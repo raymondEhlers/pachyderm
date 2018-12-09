@@ -10,7 +10,7 @@ import dataclasses
 import logging
 import pytest
 
-import rootpy.ROOT as ROOT
+import ROOT
 
 from pachyderm import projectors
 from pachyderm import utils

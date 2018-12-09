@@ -14,10 +14,6 @@ import logging
 import numpy as np
 import ruamel.yaml
 
-import rootpy
-import rootpy.io
-import rootpy.ROOT as ROOT
-
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -41,32 +37,39 @@ def getHistogramsInList(filename, listName = "AliAnalysisTaskJetH_tracks_caloClu
         dict: Contains hists with keys as their names. Lists are recurisvely added, mirroing
             the structure under which the hists were stored.
     """
-    hists = collections.OrderedDict()
-    with rootpy.io.root_open(filename, "READ") as fIn:
-        try:
-            histList = fIn.Get(listName)
-        except rootpy.io.file.DoesNotExist:
-            logger.critical("Could not find list with name \"{}\". Possible names include:".format(listName))
-            fIn.ls()
-            return None
+    import ROOT
 
-        for obj in histList:
-            retrieveObject(hists, obj)
+    hists = collections.OrderedDict()
+    fIn = ROOT.TFile(filename, "READ")
+    hist_list = fIn.Get(listName)
+    if not hist_list:
+        logger.critical("Could not find list with name \"{}\". Possible names include:".format(listName))
+        fIn.ls()
+        return None
+
+    # Retrieve objects in the hist list
+    for obj in hist_list:
+        retrieve_object(hists, obj)
+
+    # Cleanup
+    fIn.Close()
 
     return hists
 
-def retrieveObject(outputDict, obj):
+def retrieve_object(output_dict, obj):
     """ Function to recusrively retrieve histograms from a list in a ROOT file.
     SetDirectory(0) is applied to TH1 derived hists and python is explicitly given
     ownership of the retrieved objects.
 
     Args:
-        outputDict (dict): Dict under which hists should be stored.
+        output_dict (dict): Dict under which hists should be stored.
         obj (ROOT.TObject derived): Object(s) to be stored. If it is a collection,
             it will be recursed through.
     Returns:
-        None: Changes in the dict are reflected in the outputDict which was passed.
+        None: Changes in the dict are reflected in the output_dict which was passed.
     """
+    import ROOT
+
     # Store TH1 or THn
     if isinstance(obj, ROOT.TH1) or isinstance(obj, ROOT.THnBase):
         # Ensure that it is not lost after the file is closed
@@ -80,14 +83,14 @@ def retrieveObject(outputDict, obj):
         ROOT.SetOwnership(obj, True)
 
         # Store the objects
-        outputDict[obj.GetName()] = obj
+        output_dict[obj.GetName()] = obj
 
     # Recurse over lists
     if isinstance(obj, ROOT.TCollection):
         # Keeping it in order simply makes it easier to follow
-        outputDict[obj.GetName()] = collections.OrderedDict()
-        for objTemp in list(obj):
-            retrieveObject(outputDict[obj.GetName()], objTemp)
+        output_dict[obj.GetName()] = collections.OrderedDict()
+        for obj_temp in list(obj):
+            retrieve_object(output_dict[obj.GetName()], obj_temp)
 
 def readYAML(filename, fileAccessMode = "r"):
     """ Read the YAML file at filename. Uses the roundtrip mode.

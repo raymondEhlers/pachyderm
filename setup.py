@@ -70,6 +70,7 @@ setup(
     # This is usually the minimal set of the required packages.
     # Packages should be installed via pip -r requirements.txt !
     install_requires=[
+        "dataclasses",  # Needed for python 3.6
         "future",
         "ruamel.yaml",
         "aenum",
@@ -77,7 +78,6 @@ setup(
         "numpy",
         # Not required at the moment, but hopefully for the future.
         #"uproot",
-        "rootpy",
     ],
 
     # Include additional files
