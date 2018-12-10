@@ -73,6 +73,7 @@ setup(
         "dataclasses",  # Needed for python 3.6
         "ruamel.yaml",
         "numpy",
+        "uproot",
         # Depends on ROOT, but that can't be installed through pip.
         # The dependence is only implicit, so it can actually be installed with it,
         # but some functionality depends on it being available.
