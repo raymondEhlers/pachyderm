@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Pachyderm's documentation!
-=====================================
+Welcome to the Pachyderm documentation!
+=======================================
 
 .. toctree::
    :maxdepth: 2
@@ -14,7 +14,10 @@ Welcome to Pachyderm's documentation!
    about.md
    tests.md
 
-Documentation on the modules of the Pachyderm package are available below.
+**Pachyderm** provides core physics analysis functionality for a number of other packages, including the
+`Reaction Plane Fit <https://github.com/raymondEhlers/reactionPlaneFit>`__ and `ALICE Jet-hadron analysis
+<https://github.com/raymondEhlers/alice-jet-hadron>`__  packages. Documentation on the modules of the
+Pachyderm package are available below. For further information on this package, see the :doc:`README <about>`.
 
 .. toctree::
    :maxdepth: 3
