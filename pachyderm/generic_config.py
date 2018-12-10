@@ -259,7 +259,7 @@ def createObjectsFromIterables(obj, args, iterables, formattingOptions):
         for i, val in enumerate(values):
             args[names[i]] = val
             logger.debug("i: {i}, val: {val}".format(i = i, val = repr(val)))
-            # TODO: Change from val.filenameStr() to -> str(val)
+            # Convert the value, regardless of type, into a string that can be displayed.
             formattingOptions[names[i]] = str(val)
             # We should construct the object once we get to the last value
             if i != len(values) - 1:

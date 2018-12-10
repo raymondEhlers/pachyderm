@@ -24,8 +24,6 @@ class TH1AxisType(enum.Enum):
     yAxis = 1
     zAxis = 2
 
-# TODO: Rename functions to lower case for consistency.
-
 class HistAxisRange(generic_class.EqualityMixin):
     """ Represents the restriction of a range of an axis of a histogram.
 
@@ -192,20 +190,18 @@ class HistProjector(object):
         Thus, they should be avoided by the user when storing projection information
 
     Args:
-        observableList (dict): Where the projected hists will be stored. They will be stored under the dict key
-            determined by OutputKeyName(...).
-        observableToProjectFrom (dict): The observables which should be used to project from. The dict key is
-            passed to ProjectionName(...) as "inputKey".
+        observable_dict (dict): Where the projected hists will be stored. They will be stored under the dict
+            key determined by OutputKeyName(...).
+        observables_to_project_from (dict): The observables which should be used to project from. The dict
+            key is passed to ProjectionName(...) as "inputKey".
         projectionNameFormat (str): Format string to determine the projected hist name.
         projectionInformation (dict): Keyword arguments to be passed to ProjectionName(...) to determine
             the name of the projected histogram.
     """
-    def __init__(self, observableList, observableToProjectFrom, projectionNameFormat, projectionInformation = None):
+    def __init__(self, observable_dict, observables_to_project_from, projectionNameFormat, projectionInformation = None):
         # Input and output lists
-        # TODO: Rename observableList to observableDict
-        self.observableList = observableList
-        # TODO: Rename observableToProjectFrom to observablesToProjectFrom
-        self.observableToProjectFrom = observableToProjectFrom
+        self.observable_dict = observable_dict
+        self.observables_to_project_from = observables_to_project_from
         # Output hist name format
         self.projectionNameFormat = projectionNameFormat
         # Additional projection information to help create names, input/output objects, etc
@@ -326,10 +322,15 @@ class HistProjector(object):
         # Need to concatenate the names of the axes together
         projectionAxisName = ""
         for axis in self.projectionAxes:
-            # [:1] returns just the first letter. For example, we could get "xy" if the first axis as xAxis and the second was yAxis
-            # NOTE: Careful. This depends on the name of the enumerated values!!!
-            # TODO: Remove this dependency. This is not very safe.
-            projectionAxisName += axis.name[:1]
+            # [:1] returns just the first letter. For example, we could get "xy" if the first axis as
+            # xAxis and the second was yAxis.
+            # NOTE: Careful. This depends on the name of the enumerated values!!! Since this isn't terribly
+            #       safe, we then perform additonal validation on the same to ensure that it is one of the
+            #       expected axis names.
+            proj_axis_name = axis.name[:1]
+            if proj_axis_name not in ["x", "y", "z"]:
+                raise ValueError("Projection axis name {proj_axis_name} is not 'x', 'y', or 'z'. Please check your configuration.")
+            projectionAxisName += proj_axis_name
 
         # Handle ROOT Project3D quirk...
         # 2D projection are called as (y, x, options), so we should reverse the order so it performs as expected
@@ -395,7 +396,7 @@ class HistProjector(object):
             args (list): Additional args to be passed to ProjectionName(...) and OutputKeyName(...)
             kwargs (dict): Additional named args to be passed to ProjectionName(...) and OutputKeyName(...)
         """
-        for key, inputObservable in self.observableToProjectFrom.items():
+        for key, inputObservable in self.observables_to_project_from.items():
             # Retrieve histogram
             hist = self.GetHist(observable = inputObservable, *args, **kwargs)
 
@@ -454,7 +455,7 @@ class HistProjector(object):
             outputHistArgs = projectionNameArgs
             outputHistArgs.update({"outputHist": outputHist, "projectionName": projectionName})
             outputKeyName = self.OutputKeyName(*args, **outputHistArgs)
-            self.observableList[outputKeyName] = self.OutputHist(*args, **outputHistArgs)
+            self.observable_dict[outputKeyName] = self.OutputHist(*args, **outputHistArgs)
 
             # Cleanup cuts
             self.CleanupCuts(hist, cutAxes = self.additionalAxisCuts)

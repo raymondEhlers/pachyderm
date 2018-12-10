@@ -339,8 +339,8 @@ class TestProjectorsWithRoot():
         # Args
         projectionNameFormat = "{test} world"
         # Create object
-        obj = projectors.HistProjector(observableList = {},
-                                       observableToProjectFrom = {},
+        obj = projectors.HistProjector(observable_dict = {},
+                                       observables_to_project_from = {},
                                        projectionNameFormat = projectionNameFormat,
                                        projectionInformation = {"test": "Hello"})
 
@@ -411,11 +411,11 @@ class TestProjectorsWithRoot():
                 additionalCuts = setup_hist_axis_range(additionalCuts)
         projectionAxes = setup_hist_axis_range(projectionAxes)
         # Setup projector
-        observableList = {}
-        observableToProjectFrom = {"hist2D": testRootHists.hist2D}
+        observable_dict = {}
+        observables_to_project_from = {"hist2D": testRootHists.hist2D}
         projectionNameFormat = "hist"
-        obj = projectors.HistProjector(observableList = observableList,
-                                       observableToProjectFrom = observableToProjectFrom,
+        obj = projectors.HistProjector(observable_dict = observable_dict,
+                                       observables_to_project_from = observables_to_project_from,
                                        projectionNameFormat = projectionNameFormat,
                                        projectionInformation = {})
 
@@ -437,11 +437,11 @@ class TestProjectorsWithRoot():
         obj.Project()
 
         # Check the output.
-        assert len(observableList) == 1
-        proj = next(iter(observableList.values()))
+        assert len(observable_dict) == 1
+        proj = next(iter(observable_dict.values()))
         assert proj.GetName() == "hist"
 
-        logger.debug("observableList: {}, proj.GetEntries(): {}".format(observableList, proj.GetEntries()))
+        logger.debug("observable_dict: {}, proj.GetEntries(): {}".format(observable_dict, proj.GetEntries()))
 
         # Check the axes (they should be in the same order that they are defined above).
         # Use the axis max as a proxy (this function name sux).
@@ -499,11 +499,11 @@ class TestProjectorsWithRoot():
             projectionDependentCutAxes = [setup_hist_axis_range(cut) for cut in projectionDependentCutAxes]
         projectionAxes = setup_hist_axis_range(projectionAxes)
         # Setup projector
-        observableList = {}
-        observableToProjectFrom = {"hist3D": testRootHists.hist3D}
+        observable_dict = {}
+        observables_to_project_from = {"hist3D": testRootHists.hist3D}
         projectionNameFormat = "hist"
-        obj = projectors.HistProjector(observableList = observableList,
-                                       observableToProjectFrom = observableToProjectFrom,
+        obj = projectors.HistProjector(observable_dict = observable_dict,
+                                       observables_to_project_from = observables_to_project_from,
                                        projectionNameFormat = projectionNameFormat,
                                        projectionInformation = {})
 
@@ -521,11 +521,11 @@ class TestProjectorsWithRoot():
         obj.Project()
 
         # Check the basic output.
-        assert len(observableList) == 1
-        proj = next(iter(observableList.values()))
+        assert len(observable_dict) == 1
+        proj = next(iter(observable_dict.values()))
         assert proj.GetName() == "hist"
 
-        logger.debug("observableList: {}, proj.GetEntries(): {}".format(observableList, proj.GetEntries()))
+        logger.debug("observable_dict: {}, proj.GetEntries(): {}".format(observable_dict, proj.GetEntries()))
 
         expectedBins = 5
         # If we don't expect a count, we've restricted the range further, so we need to reflect this in our check.
@@ -590,11 +590,11 @@ class TestProjectorsWithRoot():
                 additionalCuts = setup_hist_axis_range(additionalCuts)
         projectionAxes = [setup_hist_axis_range(cut) for cut in projectionAxes]
         # Setup projector
-        observableList = {}
-        observableToProjectFrom = {"hist3D": testRootHists.hist3D}
+        observable_dict = {}
+        observables_to_project_from = {"hist3D": testRootHists.hist3D}
         projectionNameFormat = "hist"
-        obj = projectors.HistProjector(observableList = observableList,
-                                       observableToProjectFrom = observableToProjectFrom,
+        obj = projectors.HistProjector(observable_dict = observable_dict,
+                                       observables_to_project_from = observables_to_project_from,
                                        projectionNameFormat = projectionNameFormat,
                                        projectionInformation = {})
 
@@ -617,11 +617,11 @@ class TestProjectorsWithRoot():
         obj.Project()
 
         # Check the basic output.
-        assert len(observableList) == 1
-        proj = next(iter(observableList.values()))
+        assert len(observable_dict) == 1
+        proj = next(iter(observable_dict.values()))
         assert proj.GetName() == "hist"
 
-        logger.debug("observableList: {}, proj.GetEntries(): {}".format(observableList, proj.GetEntries()))
+        logger.debug("observable_dict: {}, proj.GetEntries(): {}".format(observable_dict, proj.GetEntries()))
 
         # Check the axes (they should be in the same order that they are defined above).
         # Use the axis max as a proxy (this function name sux).
@@ -655,11 +655,11 @@ class TestProjectorsWithRoot():
         import ROOT  # noqa: F401
 
         # Setup projector
-        observableList = {}
-        observableToProjectFrom = {"hist3D": testRootHists.hist3D}
+        observable_dict = {}
+        observables_to_project_from = {"hist3D": testRootHists.hist3D}
         projectionNameFormat = "hist"
-        obj = projectors.HistProjector(observableList = observableList,
-                                       observableToProjectFrom = observableToProjectFrom,
+        obj = projectors.HistProjector(observable_dict = observable_dict,
+                                       observables_to_project_from = observables_to_project_from,
                                        projectionNameFormat = projectionNameFormat,
                                        projectionInformation = {})
 
@@ -774,11 +774,11 @@ class TestsForTHnSparseProjection():
         # Setup objects
         sparse, _ = testSparse
         # Setup projector
-        observableList = {}
-        observableToProjectFrom = {"histSparse": sparse}
+        observable_dict = {}
+        observables_to_project_from = {"histSparse": sparse}
         projectionNameFormat = "hist"
-        obj = projectors.HistProjector(observableList = observableList,
-                                       observableToProjectFrom = observableToProjectFrom,
+        obj = projectors.HistProjector(observable_dict = observable_dict,
+                                       observables_to_project_from = observables_to_project_from,
                                        projectionNameFormat = projectionNameFormat,
                                        projectionInformation = {})
 
@@ -796,10 +796,10 @@ class TestsForTHnSparseProjection():
         obj.Project()
 
         # Basic output checks.
-        assert len(observableList) == 1
-        proj = next(iter(observableList.values()))
+        assert len(observable_dict) == 1
+        proj = next(iter(observable_dict.values()))
         assert proj.GetName() == "hist"
-        logger.debug("observableList: {}, proj.GetEntries(): {}".format(observableList, proj.GetEntries()))
+        logger.debug("observable_dict: {}, proj.GetEntries(): {}".format(observable_dict, proj.GetEntries()))
 
         # Find the non-zero bin content so that it can be checked below.
         non_zero_bins = []
