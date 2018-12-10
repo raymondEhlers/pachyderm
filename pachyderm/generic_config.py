@@ -350,7 +350,6 @@ def unrollNestedDict(d, keys = None):
 
     As an example, consider the input:
 
-    ```
     >>> d = {
     ...    "a1" : {
     ...        "b" : {
@@ -372,7 +371,6 @@ def unrollNestedDict(d, keys = None):
     >>> next(unroll) == (["a1", "b", "c12"], "obj2")
     ...
     >>> next(unroll) == (["a2", "b", "c3"], "obj3") # Last result.
-    ```
 
     Args:
         d (dict): Analysis dictionary to unroll (flatten)
