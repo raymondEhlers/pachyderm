@@ -26,15 +26,15 @@ author = 'Raymond Ehlers'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-def getVersion():
-    versionModule = {}
+def get_version():
+    version_module = {}
     with open(os.path.join("..", "pachyderm", "version.py")) as f:
-        exec(f.read(), versionModule)
-    return versionModule["__version__"]
+        exec(f.read(), version_module)
+    return version_module["__version__"]
 # The short X.Y version
-version = getVersion()
+version = get_version()
 # The full version, including alpha/beta/rc tags
-release = getVersion()
+release = get_version()
 
 
 # -- General configuration ---------------------------------------------------

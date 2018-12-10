@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""" Physics Analysis Core for Heavy-Ions package, known as Pacyhderm
+""" Physics Analysis Core for Heavy-Ions package, known as Pachyderm.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """

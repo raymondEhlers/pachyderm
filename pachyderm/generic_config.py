@@ -25,7 +25,7 @@ def loadConfiguration(filename):
     Returns:
         dict-like: dict-like object containing the loaded configuration
     """
-    # Initialize the YAML object in the roundtrip mode
+    # Initialize the YAML object in the round trip mode
     # NOTE: "typ" is a not a typo. It stands for "type"
     yaml = ruamel.yaml.YAML(typ = "rt")
 
@@ -35,8 +35,9 @@ def loadConfiguration(filename):
     return config
 
 def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContainingOverride = None):
-    """ Determine override options for a particluar configuration, searching following the order specified
-    in selectedOptions.
+    """ Determine override options for a particular configuration.
+
+    The options are determined by searching following the order specified in selectedOptions.
 
     For the example config,
 
@@ -71,12 +72,12 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
         configContainingOverride = config
     override_opts = configContainingOverride.pop("override")
     overrideDict = determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOptions)
-    logger.debug("overrideDict: {}".format(overrideDict))
+    logger.debug(f"overrideDict: {overrideDict}")
 
     # Set the configuration values to those specified in the override options
     # Cannot just use update() on config because we need to maintain the anchors.
     for k, v in overrideDict.items():
-        # Check if key is there and if it is not None! (The second part is imporatnt)
+        # Check if key is there and if it is not None! (The second part is important)
         if k in config:
             try:
                 # We can't check for the anchor - we just have to try to access it.
@@ -104,15 +105,15 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
                 # If no anchor, just overwrite the value at this key
                 config[k] = v
         else:
-            raise KeyError(k, "Trying to override key \"{}\" that it is not in the config.".format(k))
+            raise KeyError(k, f"Trying to override key \"{k}\" that it is not in the config.")
 
     return config
 
 def simplifyDataRepresentations(config):
     """ Convert one entry lists to the scalar value
 
-    This step is necessary because anchors are not kept for scalar values - just for lists and dicts.
-    Now that we are done with all of our anchor refernces, we can convert these single entry lists to
+    This step is necessary because anchors are not kept for scalar values - just for lists and dictionaries.
+    Now that we are done with all of our anchor references, we can convert these single entry lists to
     just the scalar entry, which is more usable.
 
     Some notes on anchors in ruamel.yaml are here: https://stackoverflow.com/a/48559644
@@ -130,7 +131,7 @@ def simplifyDataRepresentations(config):
     return config
 
 def determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOptions = ()):
-    """ Reusrively extract the dict described in overrideOptions().
+    """ Recursively extract the dict described in overrideOptions().
 
     In particular, this searches for selected options in the override_opts dict.
     It stores only the override options that are selected.
@@ -214,9 +215,10 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
     return iterables
 
 def createObjectsFromIterables(obj, args, iterables, formattingOptions):
-    """ Create objects for each set of values based on the given arguments. The values are available as
-    keys in a nested dictionary which store the objects. The values must be convertable to a str()
-    so they can be included in the formatting dictionary.
+    """ Create objects for each set of values based on the given arguments.
+
+    The values are available as keys in a nested dictionary which store the objects. The values
+    must be convertible to a str() so they can be included in the formatting dictionary.
 
     Each set of values is also included in the object args.
 
@@ -271,12 +273,12 @@ def createObjectsFromIterables(obj, args, iterables, formattingOptions):
                 # NOTE: We don't need to do this for iterable value names because they will be overwritten
                 #       for each object.
                 objectArgs = copy.deepcopy(args)
-                logger.debug("objectArgs pre format: {objectArgs}".format(objectArgs = objectArgs))
+                logger.debug(f"objectArgs pre format: {objectArgs}")
                 objectArgs = applyFormattingDict(objectArgs, formattingOptions)
-                # Skip printing the config because it is quite long
+                # Skip printing the full config because it is quite long
                 printArgs = {k: v for k, v in objectArgs.items() if k != "config"}
                 printArgs["config"] = "..."
-                logger.debug("Constructing obj \"{obj}\" with args: \"{printArgs}\"".format(obj = obj, printArgs = printArgs))
+                logger.debug(f"Constructing obj \"{obj}\" with args: \"{printArgs}\"")
 
                 # Create and store the object
                 tempDict[val] = obj(**objectArgs)
@@ -284,7 +286,7 @@ def createObjectsFromIterables(obj, args, iterables, formattingOptions):
     # If nothing has been created at this point, then we are didn't iterating over anything and something
     # has gone wrong.
     if not objects:
-        raise ValueError(iterables, "There are appear to be no iterables to use in creating objects.")
+        raise ValueError(iterables, "There appear to be no iterables to use in creating objects.")
 
     return (names, objects)
 
@@ -314,7 +316,7 @@ def applyFormattingDict(obj, formatting):
         # see: https://stackoverflow.com/a/17215533
         # If a more sophisticated solution is needed,
         # see: https://ashwch.github.io/handling-missing-keys-in-str-format-map.html
-        # Note that we can't use format_map becuase it is python 3.2+ only.
+        # Note that we can't use format_map because it is python 3.2+ only.
         # The solution below works in py 2/3
         if "$" not in obj:
             obj = string.Formatter().vformat(obj, (), formattingDict(**formatting))
@@ -333,8 +335,8 @@ def applyFormattingDict(obj, formatting):
         pass
     elif isinstance(obj, enum.Enum):
         # Skip over this, as there is nothing to be done - we just keep the value.
-        # This only occurs when the a formatting value has already been transformed
-        # into an enuemration.
+        # This only occurs when a formatting value has already been transformed
+        # into an enumeration.
         pass
     else:
         # This may or may not be expected, depending on the particular value.

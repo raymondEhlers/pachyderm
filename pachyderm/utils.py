@@ -22,15 +22,17 @@ epsilon = 1e-5
 # Utility functions
 ###################
 def getHistogramsInList(filename, listName = "AliAnalysisTaskJetH_tracks_caloClusters_clusbias5R2GA"):
-    """ Get histograms from the file and make them available in a dict. Lists are recusrively explored,
-    with all lists converted to dicts, such that the return dict only contains hists and dicts of hists
-    (ie there are no ROOT TCollection derived objects).
+    """ Get histograms from the file and make them available in a dict.
+
+    Lists are recursively explored, with all lists converted to dictionaries, such that the return
+    dictionaries which only contains hists and dictionaries of hists (ie there are no ROOT ``TCollection``
+    derived objects).
 
     Args:
         filename (str): Filename of the ROOT file containing the list.
         listName (str): Name of the list to retrieve.
     Returns:
-        dict: Contains hists with keys as their names. Lists are recurisvely added, mirroing
+        dict: Contains hists with keys as their names. Lists are recursively added, mirroring
             the structure under which the hists were stored.
     """
     import ROOT
@@ -53,8 +55,9 @@ def getHistogramsInList(filename, listName = "AliAnalysisTaskJetH_tracks_caloClu
     return hists
 
 def retrieve_object(output_dict, obj):
-    """ Function to recusrively retrieve histograms from a list in a ROOT file.
-    SetDirectory(0) is applied to TH1 derived hists and python is explicitly given
+    """ Function to recursively retrieve histograms from a list in a ROOT file.
+
+    ``SetDirectory(True)`` is applied to TH1 derived hists and python is explicitly given
     ownership of the retrieved objects.
 
     Args:
@@ -73,7 +76,7 @@ def retrieve_object(output_dict, obj):
         if isinstance(obj, ROOT.TH1):
             obj.SetDirectory(0)
 
-        # Explictily note that python owns the object
+        # Explicitly note that python owns the object
         # From more on memory management with ROOT and python, see:
         # https://root.cern.ch/root/html/guides/users-guide/PythonRuby.html#memory-handling
         ROOT.SetOwnership(obj, True)
@@ -88,14 +91,16 @@ def retrieve_object(output_dict, obj):
         for obj_temp in list(obj):
             retrieve_object(output_dict[obj.GetName()], obj_temp)
 
-def readYAML(filename, fileAccessMode = "r"):
-    """ Read the YAML file at filename. Uses the roundtrip mode.
+def readYAML(filename: str, fileAccessMode: str = "r") -> dict:
+    """ Read the YAML file at filename.
+
+    Uses the round trip mode.
 
     Args:
         filename (str): Filename of the YAML file to be read.
         fileAccessMode (str): Mode under which the file should be opened
     Returns:
-        dict-like: Dict containing the paramaters read from the YAML file.
+        dict-like: Dict containing the parameters read from the YAML file.
     """
     parameters = None
     with open(filename, fileAccessMode) as f:
@@ -104,13 +109,17 @@ def readYAML(filename, fileAccessMode = "r"):
         parameters = yaml.load(f)
     return parameters
 
-def writeYAML(parameters, filename, fileAccessMode = "w"):
-    """ Write the given output dict to file using YAML. Uses the roundtrip mode.
+def writeYAML(parameters: dict, filename: str, fileAccessMode: str = "w"):
+    """ Write the given output dict to file using YAML.
+
+    Uses the round trip mode.
 
     Args:
         parameters (dict): Output parameters to be written to the YAML file.
         filename (str): Filename of the YAML file to write.
         fileAccessMode (str): Mode under which the file should be opened
+    Returns:
+        None.
     """
     with open(filename, fileAccessMode) as f:
         yaml = ruamel.yaml.YAML(typ = "rt")
