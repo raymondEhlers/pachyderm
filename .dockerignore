@@ -1,6 +1,5 @@
 # Prevents docker from copying useless information to the daemon
 # Ingore basically all directories except for docs/, pachyderm/, and tests/
-.git/
 pachyderm.egg-info/
 .pytest_cache/
 # Virtualenvs
