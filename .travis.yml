@@ -45,13 +45,13 @@ jobs:
           python: 3.7
         - stage: deploy
           python: 3.7
-          # Always need a script to make Travis happy, so we just notify.
-          script: echo "Deploying to PyPI"
+          # Always need a script to make Travis happy, so we effectively use a no-op.
+          script: true
           deploy:
               provider: pypi
               user: rehlers
               password:
-                  secure: t6FbjYwztf8r9p/wU9U764qL1dAdiLd0TpztKtxpggGaJRFdZCJP/C1ji7YbIyngsFdID+VocdDFbLKtH1eeW3GoHX2jRh6MGfXO6eiGSz6HHnI2RTiUPJyOBVm3exCnFWO4gGyDy3IvPmoZeX8BEa7L7y8PHXFLXO5i45nZOpCg9iHgMCJr/wGWvvxHU/uvDmKxRvYRfarH1IRyGDUFnU917UBY7Sv0yPITVfEctcnkkoymrDUKCAebIYXrpEBF3vSy8vgrv7LLHy5mOlrNF5hBuXujdef8YCL5SB/MhAeTHiN4mlbXwqutHBNfLHcNpSrmfhJ+D+XofMajikgjgFwQDVDL17889TZXAtymQwep+bjH9lEB1lWTnx0J/cAmJD19dn8oTo6C31UCJ5y3Dvqal36mUmYGqS/j0p6o0k1xxzJM+7eIoQ0OHhMXlk6w13TiPL2oH4QMUvuTpSCW9UK2AJJZkS5zsTo3P+KeyleZ+6WkztfDPuDIyhARD4AEaacmWskQjVM0LKLYoKQ6wvX7a1zg2tQ+DtRde83OYpebFShaImf8KkZ6iOnw4iq1rLln86N7Lgw0WuGzIRPJV1WS1h8VxnfNc78jehcDSUimyQNza/K7X2cSP2U1J6ib6cQNnGyE9e5BIqvLwicscDsCJLG/7Ru+Qi4mlJAOAro=
+                  secure: ccA9Supmt5iw3XXi5tUaMR5M63sx0Oo21DnfNkiR9MMadb3il9u4iLTV7IzaXOzAuLBkW/WNcATpGQAYrj9Vo0okUwOnOCnku+1A6XTE2BVDnUOt9tZ1bvAVIUeiIc3APlbjmdPbnowgJblwERXA8JmjSHLY7zEZeDoXLv9rjlCEfEB2HYP037zUQDznqvavJft61J8piQYvdgVjeSMod0kVW1TIZ6tpwQQ1vSvP7sR3p7/Xn1rZKSJLf2CVHCOU/owQTtKVQ0PYA4p2tlNhEkB4csv7MFaGNtrwGDy7BWMJw2coyxNgW68DobcAQL0H8TZSi0Q1UJKBjr8qLjkvYMAhzX0ykjtVA6uQ8PB0+qa/+qVwe6hbg+Ln9nWd7cgI8RUQliIXsOPAp0pdioqOQOk8fIiNhiLLcyqWC2jtxvbk1uHNsypMeeBs9JgmV2udGPVxGWSA9UtV2i1dCMdepUd5woi4eVWGKetQD1rHvek8h1fT+24DwyqzvWHDC0alUx7sUbkPvu+V8hUwYwJw+fG0J4YaL6Now8SceQ85ZOxZlqoNVe9jNPUoHgYdXaTW3m6KdVZXgth794Y6CJdEOhvEbcWepYSLP3Cvf5divGxoHA/P6Yy5qXj1Fzs2FSI1ad98qTvlh6d/jeUvBSivxjbGyvTAC8V6Txg9/IaOQlM=
               distributions: sdist bdist_wheel
               on:
                   tags: true
