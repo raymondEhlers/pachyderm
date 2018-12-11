@@ -23,6 +23,6 @@ COPY --chown=overwatch:overwatch . ${PACHYDERM_ROOT}
 
 # TEMP: As of 12 Dec 2018, lz4 will fail to install because there is an empty "pkgconfig" directory in the $ROOTSYS/lib directory
 #       Posted an issuen to lz4: https://github.com/python-lz4/python-lz4/issues/158.
-RUN pip install pkconfig
+RUN pip install --user --upgrade --no-cache-dir pkgconfig
 # Install pachyderm.
 RUN pip install --user --upgrade --no-cache-dir -e .[tests,dev,docs]
