@@ -29,7 +29,7 @@ def get_histograms_in_list(filename: str, listName: str = "AliAnalysisTaskJetH_t
     """
     import ROOT
 
-    hists = {}
+    hists: dict = {}
     fIn = ROOT.TFile(filename, "READ")
     hist_list = fIn.Get(listName)
     if not hist_list:

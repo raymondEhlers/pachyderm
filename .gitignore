@@ -8,6 +8,9 @@ pachyderm.egg-info/
 # Ignore pytests cache
 .pytest_cache/
 
+# Ignore mypy cache
+.mypy_cache/
+
 # Profiling
 prof/
 

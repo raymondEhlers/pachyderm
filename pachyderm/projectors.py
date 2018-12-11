@@ -229,13 +229,13 @@ class HistProjector(object):
 
         # Axes
         # Cuts for axes which are not projected
-        self.additionalAxisCuts = []
+        self.additionalAxisCuts: list = []
         # Axes cuts which depend on the projection axes
         # ie. If we want to change the range of the axis that we are projecting
         # For example, we may want to project an axis non-continuously (say, -1 - 0.5, 0.5 - 1)
-        self.projectionDependentCutAxes = []
+        self.projectionDependentCutAxes: list = []
         # Axes to actually project
-        self.projectionAxes = []
+        self.projectionAxes: list = []
 
     # Printing functions
     def __str__(self):
