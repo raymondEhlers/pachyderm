@@ -2,7 +2,7 @@
 # NOTE: This could also be used for running pachyderm, but it wouldn't be terribly useful.
 # We use the Overwatch base image so we don't have to deal with setting up ROOT.
 # All we need to know is that the user is named "overwatch".
-FROM rehlers/overwatch-base:py3.6.6
+FROM rehlers/overwatch-base:py3.6.7
 LABEL maintainer="Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University"
 
 # Setup environment
