@@ -6,6 +6,7 @@
 """
 
 import collections
+import dataclasses
 import enum
 import logging
 import pytest
@@ -345,50 +346,57 @@ def objectAndCreationArgs():
     obj = collections.namedtuple("testObj", ["reaction_plane_orientation", "qVector", "a", "b", "optionsFmt"])
     # Include args that depend on the iterable values to ensure that they are varied properly!
     args = {"a": 1, "b": "{fmt}", "optionsFmt": "{reaction_plane_orientation}_{qVector}"}
-    formattingOptions = {"fmt": "formatted", "optionsFmt": "{reaction_plane_orientation}_{qVector}"}
+    formatting_options = {"fmt": "formatted", "optionsFmt": "{reaction_plane_orientation}_{qVector}"}
 
-    return (obj, args, formattingOptions)
+    return (obj, args, formatting_options)
 
 def testCreateObjectsFromIterables(loggingMixin, objectCreationConfig, objectAndCreationArgs):
     """ Test object creation from a set of iterables. """
     # Collect variables
     (config, possibleIterables, (reaction_plane_orientations, qVectors)) = objectCreationConfig
-    (obj, args, formattingOptions) = objectAndCreationArgs
+    (obj, args, formatting_options) = objectAndCreationArgs
 
     # Get iterables
-    iterables = generic_config.determineSelectionOfIterableValuesFromConfig(config = config,
-                                                                            possibleIterables = possibleIterables)
+    iterables = generic_config.determineSelectionOfIterableValuesFromConfig(
+        config = config,
+        possibleIterables = possibleIterables
+    )
 
     # Create the objects.
-    (names, objects) = generic_config.createObjectsFromIterables(obj = obj,
-                                                                 args = args,
-                                                                 iterables = iterables,
-                                                                 formattingOptions = formattingOptions)
+    (key_index, names, objects) = generic_config.create_objects_from_iterables(
+        obj = obj,
+        args = args,
+        iterables = iterables,
+        formatting_options = formatting_options,
+        key_index_name = "KeyIndex",
+    )
 
     # Check the names of the iterables.
     assert names == list(iterables)
     # Check the precise values passed to the object.
     for rp_angle in reaction_plane_orientations:
         for qVector in qVectors:
-            createdObject = objects[rp_angle][qVector]
+            createdObject = objects[key_index(reaction_plane_orientation = rp_angle, qVector = qVector)]
             assert createdObject.reaction_plane_orientation == rp_angle
             assert createdObject.qVector == qVector
             assert createdObject.a == args["a"]
-            assert createdObject.b == formattingOptions["fmt"]
-            assert createdObject.optionsFmt == formattingOptions["optionsFmt"].format(reaction_plane_orientation = rp_angle, qVector = qVector)
+            assert createdObject.b == formatting_options["fmt"]
+            assert createdObject.optionsFmt == formatting_options["optionsFmt"].format(reaction_plane_orientation = rp_angle, qVector = qVector)
 
 def testMissingIterableForObjectCreation(loggingMixin, objectAndCreationArgs):
     """ Test object creation when the iterables are missing. """
-    (obj, args, formattingOptions) = objectAndCreationArgs
+    (obj, args, formatting_options) = objectAndCreationArgs
     # Create empty iterables for this test.
     iterables = {}
 
     # Create the objects.
     with pytest.raises(ValueError) as exceptionInfo:
-        (names, objects) = generic_config.createObjectsFromIterables(obj = obj,
-                                                                     args = args,
-                                                                     iterables = iterables,
-                                                                     formattingOptions = formattingOptions)
+        (names, objects) = generic_config.create_objects_from_iterables(
+            obj = obj,
+            args = args,
+            iterables = iterables,
+            formatting_options = formatting_options
+        )
     assert exceptionInfo.value.args[0] == iterables
 
 @pytest.fixture
@@ -450,18 +458,71 @@ def testApplyFormattingSkipLatex(loggingMixin, formattingConfig):
 
     assert config["latexLike"] == r"$latex_{like \mathrm{x}}$"
 
-def testUnrollNestedDict(loggingMixin):
-    """ Test unrolling the analysis dictionary. """
-    cDict = {"c1": "obj", "c2": "obj2", "c3": "obj3"}
-    bDict = {"b": cDict.copy()}
-    print("bDict: {}".format(bDict))
-    testDict = {"a1": bDict.copy(), "a2": bDict.copy()}
-    unroll = generic_config.unrollNestedDict(testDict)
+@pytest.fixture
+def setup_analysis_iterator(loggingMixin):
+    """ Setup for testing iteration over analysis objects. """
+    KeyIndex = dataclasses.make_dataclass("KeyIndex", ["a", "b", "c"], frozen = True)
+    test_dict = {
+        KeyIndex(a = "a1", b = "b1", c = "c"): "obj1",
+        KeyIndex(a = "a1", b = "b2", c = "c"): "obj2",
+        KeyIndex(a = "a2", b = "b1", c = "c"): "obj3",
+        KeyIndex(a = "a2", b = "b2", c = "c"): "obj4",
+    }
 
-    assert next(unroll) == (["a1", "b", "c1"], "obj")
-    assert next(unroll) == (["a1", "b", "c2"], "obj2")
-    assert next(unroll) == (["a1", "b", "c3"], "obj3")
-    assert next(unroll) == (["a2", "b", "c1"], "obj")
-    assert next(unroll) == (["a2", "b", "c2"], "obj2")
-    assert next(unroll) == (["a2", "b", "c3"], "obj3")
+    return KeyIndex, test_dict
+
+def test_iterate_with_no_selected_items(setup_analysis_iterator):
+    """ Test iterating over analysis objects without any selection. """
+    KeyIndex, test_dict = setup_analysis_iterator
+
+    # Create the iterator
+    object_iter = generic_config.iterate_with_selected_objects(
+        analysis_objects = test_dict,
+    )
+
+    # Iterate over it.
+    assert next(object_iter) == (KeyIndex(a = "a1", b = "b1", c = "c"), "obj1")
+    assert next(object_iter) == (KeyIndex(a = "a1", b = "b2", c = "c"), "obj2")
+    assert next(object_iter) == (KeyIndex(a = "a2", b = "b1", c = "c"), "obj3")
+    assert next(object_iter) == (KeyIndex(a = "a2", b = "b2", c = "c"), "obj4")
+    # It should be exhausted now.
+    with pytest.raises(StopIteration):
+        next(object_iter)
+
+def test_iterate_with_selected_items(setup_analysis_iterator):
+    """ Test iterating over analysis objects with a selection. """
+    # Setup
+    KeyIndex, test_dict = setup_analysis_iterator
+
+    # Create the iterator
+    object_iter = generic_config.iterate_with_selected_objects(
+        analysis_objects = test_dict,
+        a = "a1",
+    )
+
+    # Iterate over it.
+    assert next(object_iter) == (KeyIndex(a = "a1", b = "b1", c = "c"), "obj1")
+    assert next(object_iter) == (KeyIndex(a = "a1", b = "b2", c = "c"), "obj2")
+    # It should be exhausted now.
+    with pytest.raises(StopIteration):
+        next(object_iter)
+
+def test_iterate_with_multiple_selected_items(setup_analysis_iterator):
+    """ Test iterating over analysis objects with multiple selections. """
+    # Setup
+    KeyIndex, test_dict = setup_analysis_iterator
+
+    # Create the iterator
+    object_iter = generic_config.iterate_with_selected_objects(
+        analysis_objects = test_dict,
+        a = "a1",
+        b = "b2",
+    )
+
+    # Iterate over it.
+    assert next(object_iter) == (KeyIndex(a = "a1", b = "b2", c = "c"), "obj2")
+    # It should be exhausted now.
+    with pytest.raises(StopIteration):
+        next(object_iter)
+
 

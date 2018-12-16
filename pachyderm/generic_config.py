@@ -9,11 +9,13 @@ For usage information, see ``jet_hadron.base.analysisConfig``.
 
 import collections
 import copy
+import dataclasses
 import enum
 import itertools
 import logging
 import string
 import ruamel.yaml
+from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -214,81 +216,102 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
 
     return iterables
 
-def createObjectsFromIterables(obj, args, iterables, formattingOptions):
+def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_options: dict, key_index_name: str = "KeyIndex") -> Tuple[object, List[str], dict]:
     """ Create objects for each set of values based on the given arguments.
 
-    The values are available as keys in a nested dictionary which store the objects. The values
-    must be convertible to a str() so they can be included in the formatting dictionary.
+    The iterable values are available under a key index ``dataclass`` which is used to index the returned
+    dictionary. The names of the fields are determined by the keys of iterables dictionary. The values are
+    the newly created object. Note that the iterable values must be convertible to a str() so they can be
+    included in the formatting dictionary.
 
     Each set of values is also included in the object args.
 
-    For example, for an iterables dict ``{"a" : ["a1","a2"], "b" : ["b1", "b2"]}``, the function would return:
+    As a basic example,
 
     .. code-block:: python
 
+        >>> create_objects_from_iterables(
+        ...     obj = obj,
+        ...     args = {},
+        ...     iterables = {"a" : ["a1","a2"], "b" : ["b1", "b2"]},
+        ...     formatting_options = {}
+        ... )
         (
+            KeyIndex,
             ["a", "b"],
             {
-                "a1" : {
-                    "b1" : obj(a = "a1", b = "b1"),
-                    "b2" : obj(a = "a1", b = "b2")
-                },
-                "a2" : {
-                    "b1" : obj(a = "a2", b = "b1"),
-                    "b2" : obj(a = "a2", b = "b2")
-                }
+                KeyIndex(a = "a1", b = "b1"): obj(a = "a1", b = "b1"),
+                KeyIndex(a = "a1", b = "b2"): obj(a = "a1", b = "b2"),
+                KeyIndex(a = "a2", b = "b1"): obj(a = "a2", b = "b1"),
+                KeyIndex(a = "a2", b = "b2"): obj(a = "a2", b = "b2"),
             }
         )
 
     Args:
         obj (object): The object to be constructed.
-        args (collections.OrderedDict): Arguments to be passed to the object to create it.
-        iterables (collections.OrderedDict): Iterables to be used to create the objects, with entries of the form
-            "nameOfIterable" : iterable.
-        formattingOptions (dict): Values to apply to format strings in the arguments.
+        args: Arguments to be passed to the object to create it.
+        iterables: Iterables to be used to create the objects, with entries of the form
+            ``"nameOfIterable": iterable``.
+        formatting_options (dict): Values to be used in formatting strings in the arguments.
+        key_obj_name (str): Name of the iterable key object.
     Returns:
-        (list, collections.OrderedDict): Roughly, (names, objects). Specifically, the list is the names
-            of the iterables used. The ordered dict entries are of the form of a nested dict, with each
-            object available at the iterable values used to constructed it. For example,
-            output["a"]["b"] == obj(a = "a", b = "b", ...). For a full example, see above.
+        (object, list, dict): Roughly, (KeyIndex, names, objects). Specifically, the key_index is a
+            new dataclass which defines the parameters used to create the object, names is the names
+            of the iterables used. The dictionary keys are KeyIndex objects which describe the iterable
+            arguments passed to the object, while the values are the newly constructed arguments. See the
+            example above.
     """
-    objects = collections.OrderedDict()
+    # Setup
+    objects = {}
     names = list(iterables)
     logger.debug("iterables: {iterables}".format(iterables = iterables))
+    # Create the key index object, where the name of each field is the name of each iterable.
+    KeyIndex = dataclasses.make_dataclass(
+        key_index_name,
+        [(name, type(iterable)) for name, iterable in iterables.items()],
+        frozen = True
+    )
+    # ``itertools.product`` produces all possible permutations of the iterables values.
+    # NOTE: Product preserves the order of the iterables values, which is important for properly
+    #       assigning the values to the ``KeyIndex``.
     for values in itertools.product(*iterables.values()):
-        logger.debug("Values: {values}".format(values = values))
-        tempDict = objects
-        for i, val in enumerate(values):
-            args[names[i]] = val
-            logger.debug("i: {i}, val: {val}".format(i = i, val = repr(val)))
-            # Convert the value, regardless of type, into a string that can be displayed.
-            formattingOptions[names[i]] = str(val)
-            # We should construct the object once we get to the last value
-            if i != len(values) - 1:
-                tempDict = tempDict.setdefault(val, collections.OrderedDict())
-            else:
-                # Apply formatting options
-                # Need a deep copy to ensure that the iterable dependent values in the formatting are
-                # properly set for each object individually.
-                # NOTE: We don't need to do this for iterable value names because they will be overwritten
-                #       for each object.
-                objectArgs = copy.deepcopy(args)
-                logger.debug(f"objectArgs pre format: {objectArgs}")
-                objectArgs = applyFormattingDict(objectArgs, formattingOptions)
-                # Skip printing the full config because it is quite long
-                printArgs = {k: v for k, v in objectArgs.items() if k != "config"}
-                printArgs["config"] = "..."
-                logger.debug(f"Constructing obj \"{obj}\" with args: \"{printArgs}\"")
+        logger.debug(f"Values: {values}")
+        # Skip if we don't have a sufficient set of values to create an object.
+        if not values:
+            continue
 
-                # Create and store the object
-                tempDict[val] = obj(**objectArgs)
+        # Add in the values into the arguments and formatting options.
+        # NOTE: We don't need a deep copy for the iterable values in the args and formatting options
+        #       because the values will be overwritten for each object.
+        for name, val in zip(names, values):
+            # We want to keep the original value for the arguments.
+            args[name] = val
+            # Here, we convert the value, regardless of type, into a string that can be displayed.
+            formatting_options[name] = str(val)
+
+        # Apply formatting options
+        # Need a deep copy to ensure that the iterable dependent values in the formatting are
+        # properly set for each object individually.
+        # NOTE: We don't need a deep copy do this for iterable value names because they will be overwritten
+        #       for each object. See above.
+        object_args = copy.deepcopy(args)
+        logger.debug(f"object_args pre format: {object_args}")
+        object_args = applyFormattingDict(object_args, formatting_options)
+        # Print our results for debugging purposes. However, we skip printing the full
+        # config because it is quite long
+        printArgs = {k: v for k, v in object_args.items() if k != "config"}
+        printArgs["config"] = "..."
+        logger.debug(f"Constructing obj \"{obj}\" with args: \"{printArgs}\"")
+
+        # Finally create the object.
+        objects[KeyIndex(*values)] = obj(**object_args)
 
     # If nothing has been created at this point, then we are didn't iterating over anything and something
     # has gone wrong.
     if not objects:
         raise ValueError(iterables, "There appear to be no iterables to use in creating objects.")
 
-    return (names, objects)
+    return (KeyIndex, names, objects)
 
 class formattingDict(dict):
     """ Dict to handle missing keys when formatting a string. It returns the missing key
@@ -344,61 +367,20 @@ def applyFormattingDict(obj, formatting):
 
     return obj
 
-def unrollNestedDict(d, keys = None):
-    """ Unroll (flatten) an analysis object dictionary to get the objects and corresponding keys.
-
-    This function yields the keys to get to the analysis object, as well as the object itself. Note
-    that this function is designed to be called recursively.
-
-    As an example, consider the input:
-
-    >>> d = {
-    ...    "a1" : {
-    ...        "b" : {
-    ...            "c1" : "obj",
-    ...            "c2" : "obj2",
-    ...            "c3" : "obj3"
-    ...        }
-    ...    }
-    ...    "a2" : {
-    ...        "b" : {
-    ...            "c1" : "obj",
-    ...            "c2" : "obj2",
-    ...            "c3" : "obj3"
-    ...        }
-    ...    }
-    ... }
-    >>> unroll = unrollNestedDict(d)
-    >>> next(unroll) == (["a1", "b", "c1"], "obj")
-    >>> next(unroll) == (["a1", "b", "c12"], "obj2")
-    ...
-    >>> next(unroll) == (["a2", "b", "c3"], "obj3") # Last result.
+def iterate_with_selected_objects(analysis_objects: Dict[Any, Any], **selections: Dict[str, Any]) -> Any:
+    """ Iterate over an analysis dictionary with selected attributes.
 
     Args:
-        d (dict): Analysis dictionary to unroll (flatten)
-        keys (list): Keys navigated to get to the analysis object
-    Returns:
-        tuple: (list of keys to get to the object, the object)
+        analysis_objects: Analysis objects dictionary.
+        selections: Keyword arguments used to select attributes from the analysis dictionary.
+    Yields:
+        object: Matching analysis object.
     """
-    if keys is None:
-        keys = []
-    #logger.debug("d: {}".format(d))
-    for k, v in d.items():
-        #logger.debug("k: {}, v: {}".format(k, v))
-        #logger.debug("keys: {}".format(keys))
-        # We need a copy of keys before we append to ensure that we don't
-        # have the final keys build up (ie. first yield [a], next [a, b], then [a, b, c], etc...)
-        copyOfKeys = keys[:]
-        copyOfKeys.append(k)
+    for key_index, obj in analysis_objects.items():
+        # If selections is empty, we return every object. If it's not empty, then we only want to return
+        # objects which are selected in through the selections.
+        selected_obj = not selections or all([getattr(key_index, selector) == selected_value for selector, selected_value in selections.items()])
 
-        if isinstance(v, dict):
-            #logger.debug("v is a dict!")
-            # Could be `yield from`, but then it wouldn't work in python 2.
-            # We take a small performance hit here, but it's fine.
-            # See: https://stackoverflow.com/a/38254338
-            for val in unrollNestedDict(d = v, keys = copyOfKeys):
-                yield val
-        else:
-            #logger.debug("Yielding {}".format(v))
-            yield (copyOfKeys, v)
+        if selected_obj:
+            yield key_index, obj
 
