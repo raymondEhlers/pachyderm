@@ -37,6 +37,7 @@ setup(
     author_email="raymond.ehlers@cern.ch",
 
     url="https://github.com/raymondEhlers/pachyderm",
+    license="BSD 3-Clause",
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
