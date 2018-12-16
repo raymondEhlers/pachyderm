@@ -2,7 +2,7 @@
 dist: xenial
 language: python
 sudo: required
-_testsScript: &testsScript
+_testScript: &testScript
     language: python
     # Use cache with pip to save time.
     cache: pip
@@ -11,6 +11,8 @@ _testsScript: &testsScript
     script:
         # Check code quality
         - flake8 .
+        # Static type checking
+        - mypy --ignore-missing-imports pachyderm
         # Run the tests
         - pytest -l -vv --cov=pachyderm --cov-branch -m "not ROOT" --durations=5 tests/
         # Check that the docs build successfully
@@ -28,7 +30,8 @@ jobs:
               # So we can see that the have the expected images
               - docker images
           script:
-              # Other tests are covered by the test stage, so we just want to test and uplaod coverage here.
+              # Other tests (flake8, etc) are covered by the test stage, so we just want to test and
+              # uplaod coverage here.
               # Setup coverage
               - ci_env=`bash <(curl -s https://codecov.io/env)`
               # Run tests and upload coverage
@@ -38,10 +41,10 @@ jobs:
         # Standard tests without ROOT
         # We give these the same name so the tests will run in parallel
         - stage: test
-          <<: *testsScript
+          <<: *testScript
           python: 3.6
         - stage: test
-          <<: *testsScript
+          <<: *testScript
           python: 3.7
         - stage: deploy
           python: 3.7
