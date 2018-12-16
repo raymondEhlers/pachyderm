@@ -2,6 +2,21 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1] - 15 December 2018
+
+### Added
+
+- Added `mypy` to Travis CI checks. See: `2c6f7dc0`.
+
+### Changed
+
+- Reworked iteration over analysis dictionaries. See: `0ead6db8`.
+- Updated overwatch-base python version. See: `39fede7e`.
+
+### Fixed
+
+- Existing typing issues identified by `mypy`.
+
 ## [1.0] - 10 December 2018
 
 ### Added
