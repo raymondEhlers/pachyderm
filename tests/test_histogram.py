@@ -112,8 +112,9 @@ class TestRetrievingHistgramsFromAList():
         """ Test for retrieving a list which doesn't exist from a ROOT file. """
         (filename, root_list, expected) = retrieve_root_list
 
-        output = histogram.get_histograms_in_list(filename, "nonExistent")
-        assert output is None
+        with pytest.raises(ValueError) as exception_info:
+            histogram.get_histograms_in_list(filename, "nonExistent")
+        assert "nonExistent" in exception_info.value.args[0]
 
     def test_retrieve_object(self, loggingMixin, retrieve_root_list):
         """ Test for retrieving a list of histograms from a ROOT file.
