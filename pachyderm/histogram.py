@@ -36,7 +36,7 @@ def get_histograms_in_list(filename: str, listName: str = "AliAnalysisTaskJetH_t
     hist_list = fIn.Get(listName)
     if not hist_list:
         fIn.ls()
-        raise ValueError("Could not find list with name \"{listName}\". Possible names are listed above.")
+        raise ValueError(f"Could not find list with name \"{listName}\". Possible names are listed above.")
 
     # Retrieve objects in the hist list
     for obj in hist_list:
