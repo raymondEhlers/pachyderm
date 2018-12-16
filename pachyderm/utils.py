@@ -73,8 +73,9 @@ def movingAverage(arr: np.ndarray, n: int = 3) -> np.ndarray:
     return ret[n - 1:] / n
 
 def getArrayForFit(observables: dict, trackPtBin: int, jetPtBin: int) -> histogram.Histogram1D:
-    """ Get an hist data as a np.ndarray based on selected bins. This is often used
-    to retrieve data for fitting.
+    """ Get a Histogram1D associated with the selected jet and track pt bins.
+
+    This is often used to retrieve data for fitting.
 
     Args:
         observables (dict): The observables from which the hist should be retrieved.
@@ -82,8 +83,11 @@ def getArrayForFit(observables: dict, trackPtBin: int, jetPtBin: int) -> histogr
         jetPtbin (int): Jet pt bin of the desired hist.
     Returns:
         Histogram1D: Converted TH1 or uproot histogram.
+    Raises:
+        ValueError: If the requested observable couldn't be found.
     """
     for name, observable in observables.items():
         if observable.trackPtBin == trackPtBin and observable.jetPtBin == jetPtBin:
             return histogram.Histogram1D.from_existing_hist(observable.hist)
 
+    raise ValueError("Cannot find fit with jet pt bin {jetPtBin} and track pt bin {trackPtBin}")

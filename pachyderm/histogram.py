@@ -26,6 +26,8 @@ def get_histograms_in_list(filename: str, listName: str = "AliAnalysisTaskJetH_t
     Returns:
         dict: Contains hists with keys as their names. Lists are recursively added, mirroring
             the structure under which the hists were stored.
+    Raises:
+        ValueError: If the list could not be found in the given file.
     """
     import ROOT
 
@@ -33,9 +35,8 @@ def get_histograms_in_list(filename: str, listName: str = "AliAnalysisTaskJetH_t
     fIn = ROOT.TFile(filename, "READ")
     hist_list = fIn.Get(listName)
     if not hist_list:
-        logger.critical("Could not find list with name \"{}\". Possible names include:".format(listName))
         fIn.ls()
-        return None
+        raise ValueError("Could not find list with name \"{listName}\". Possible names are listed above.")
 
     # Retrieve objects in the hist list
     for obj in hist_list:
