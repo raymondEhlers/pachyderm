@@ -2,6 +2,20 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2] - 17 December 2018
+
+### Added
+
+- Include `--ignore-missing-includes` when running `mypy` automatically. See: `0ac7d0bd`.
+- Full type annotations for the package. See: `a83372b1`.
+
+### Changed
+
+- Fully updated API naming scheme to follow python conventions. See: `cd097f3b`, `c7bedc6b`, `68048970`, and
+  `7d8b1ca9`.
+- Remove `pkgconfig` workaround introduced in `4a3c6216` since `python-lz4` merged in an alternative
+  [approach](https://github.com/python-lz4/python-lz4/pull/160) to workaround the issue. See: `755c276a`.
+
 ## [1.1] - 15 December 2018
 
 ### Added
