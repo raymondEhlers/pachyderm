@@ -2,12 +2,11 @@
 
 """ Analysis configuration base module.
 
-For usage information, see ``jet_hadron.base.analysisConfig``.
+For usage information, see ``jet_hadron.base.analysis_config``.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-import collections
 import copy
 import dataclasses
 import enum
@@ -19,7 +18,7 @@ from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
-def loadConfiguration(filename):
+def load_configuration(filename):
     """ Load an analysis configuration from a file.
 
     Args:
@@ -36,10 +35,10 @@ def loadConfiguration(filename):
 
     return config
 
-def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContainingOverride = None):
+def override_options(config, selected_options, set_of_possible_options, config_containing_override = None):
     """ Determine override options for a particular configuration.
 
-    The options are determined by searching following the order specified in selectedOptions.
+    The options are determined by searching following the order specified in selected_options.
 
     For the example config,
 
@@ -54,31 +53,31 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
 
     value will be assigned the value 5 if we are at 2.76 TeV with a track bias, regardless of the event
     activity or leading hadron bias. The order of this configuration is specified by the order of the
-    selectedOptions passed. The above example configuration is from the jet-hadron analysis.
+    selected_options passed. The above example configuration is from the jet-hadron analysis.
 
     Since anchors aren't kept for scalar values, if you want to override an anchored value, you need to
     specify it as a single value in a list (or dict, but list is easier). After the anchor values propagate,
-    single element lists can be converted into scalar values using ``simplifyDataRepresentations()``.
+    single element lists can be converted into scalar values using ``simplify_data_representations()``.
 
     Args:
         config (CommentedMap): The dict-like configuration from ruamel.yaml which should be overridden.
-        selectedOptions (tuple): The selected analysis options. They will be checked in the order with which
+        selected_options (tuple): The selected analysis options. They will be checked in the order with which
             they are passed, so make certain that it matches the order in the configuration file!
-        setOfPossibleOptions (tuple of enums): Possible options for the override value categories.
-        configContainingOverride (CommentedMap): The dict-like config containing the override options in a map called
+        set_of_possible_options (tuple of enums): Possible options for the override value categories.
+        config_containing_override (CommentedMap): The dict-like config containing the override options in a map called
             "override". If it is not specified, it will look for it in the main config.
     Returns:
         dict-like object: The updated configuration
     """
-    if configContainingOverride is None:
-        configContainingOverride = config
-    override_opts = configContainingOverride.pop("override")
-    overrideDict = determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOptions)
-    logger.debug(f"overrideDict: {overrideDict}")
+    if config_containing_override is None:
+        config_containing_override = config
+    override_opts = config_containing_override.pop("override")
+    override_dict = determine_override_options(selected_options, override_opts, set_of_possible_options)
+    logger.debug(f"override_dict: {override_dict}")
 
     # Set the configuration values to those specified in the override options
     # Cannot just use update() on config because we need to maintain the anchors.
-    for k, v in overrideDict.items():
+    for k, v in override_dict.items():
         # Check if key is there and if it is not None! (The second part is important)
         if k in config:
             try:
@@ -90,19 +89,19 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
                 if isinstance(config[k], list):
                     # Clear out the existing list entries
                     del config[k][:]
-                    if isinstance(overrideDict[k], str):
+                    if isinstance(override_dict[k], str):
                         # We have to treat str carefully because it is an iterable, but it will be expanded as
                         # individual characters if it's treated the same as a list, which is not the desired
                         # behavior! If we wrap it in [], then it will be treated as the only entry in the list
-                        config[k].append(overrideDict[k])
+                        config[k].append(override_dict[k])
                     else:
-                        # Here we just assign all entries of the list to all entries of overrideDict[k]
-                        config[k].extend(overrideDict[k])
+                        # Here we just assign all entries of the list to all entries of override_dict[k]
+                        config[k].extend(override_dict[k])
                 elif isinstance(config[k], dict):
                     # Clear out the existing entries because we are trying to replace everything
                     # Then we can simply update the dict with our new values
                     config[k].clear()
-                    config[k].update(overrideDict[k])
+                    config[k].update(override_dict[k])
             except AttributeError:
                 # If no anchor, just overwrite the value at this key
                 config[k] = v
@@ -111,7 +110,7 @@ def overrideOptions(config, selectedOptions, setOfPossibleOptions, configContain
 
     return config
 
-def simplifyDataRepresentations(config):
+def simplify_data_representations(config):
     """ Convert one entry lists to the scalar value
 
     This step is necessary because anchors are not kept for scalar values - just for lists and dictionaries.
@@ -132,53 +131,53 @@ def simplifyDataRepresentations(config):
 
     return config
 
-def determineOverrideOptions(selectedOptions, override_opts, setOfPossibleOptions = ()):
-    """ Recursively extract the dict described in overrideOptions().
+def determine_override_options(selected_options, override_opts, set_of_possible_options = ()):
+    """ Recursively extract the dict described in override_options().
 
     In particular, this searches for selected options in the override_opts dict.
     It stores only the override options that are selected.
 
     Args:
-        selectedOptions (tuple): The options selected for this analysis, in the order defined used
-            with overrideOptions() and in the configuration file.
+        selected_options (tuple): The options selected for this analysis, in the order defined used
+            with override_options() and in the configuration file.
         override_opts (CommentedMap): dict-like object returned by ruamel.yaml which contains the options that
             should be used to override the configuration options.
-        setOfPossibleOptions (tuple of enums): Possible options for the override value categories.
+        set_of_possible_options (tuple of enums): Possible options for the override value categories.
     """
-    overrideDict = {}
+    override_dict = {}
     for option in override_opts:
         # We need to cast the option to a string to effectively compare to the selected option,
         # since only some of the options will already be strings
-        if str(option) in list(map(lambda opt: opt.str(), selectedOptions)):
-            overrideDict.update(determineOverrideOptions(selectedOptions, override_opts[option], setOfPossibleOptions))
+        if str(option) in list(map(lambda opt: opt.str(), selected_options)):
+            override_dict.update(determine_override_options(selected_options, override_opts[option], set_of_possible_options))
         else:
             logger.debug(f"override_opts: {override_opts}")
             # Look for whether the key is one of the possible but unselected options.
             # If so, we haven't selected it for this analysis, and therefore they should be ignored.
             # NOTE: We compare both the names and value because sometimes the name is not sufficient,
             #       such as in the case of the energy (because a number is not allowed to be a field name.)
-            foundAsPossibleOption = False
-            for possibleOptions in setOfPossibleOptions:
+            found_as_possible_option = False
+            for possible_options in set_of_possible_options:
                 # Same type of comparison as above, but for all possible options instead of the selected options.
-                if str(option) in list(map(lambda opt: opt.str(), possibleOptions)):
-                    foundAsPossibleOption = True
+                if str(option) in list(map(lambda opt: opt.str(), possible_options)):
+                    found_as_possible_option = True
                 # Below is more or less equivalent to the above (although .str() hides the details or whether
                 # we should compare to the name or the value in the enum and only compares against the designated value).
-                #for possibleOpt in possibleOptions:
-                    #if possibleOpt.name == option or possibleOpt.value == option:
-                    #    foundAsPossibleOption = True
+                #for possible_opt in possible_options:
+                    #if possible_opt.name == option or possible_opt.value == option:
+                    #    found_as_possible_option = True
 
-            if not foundAsPossibleOption:
+            if not found_as_possible_option:
                 # Store the override value, since it doesn't correspond with a selected option or a possible option
                 # and therefore must be an option that we want to override.
                 logger.debug(f"Storing override option \"{option}\", with value \"{override_opts[option]}\"")
-                overrideDict[option] = override_opts[option]
+                override_dict[option] = override_opts[option]
             else:
                 logger.debug(f"Found option \"{option}\" as possible option, so skipping!")
 
-    return overrideDict
+    return override_dict
 
-def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
+def determine_selection_of_iterable_values_from_config(config, possible_iterables):
     """ Determine iterable values to use to create objects for a given configuration.
 
     All values of an iterable can be included be setting the value to ``True`` (Not as a single value list,
@@ -186,18 +185,18 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
 
     Args:
         config (CommentedMap): The dict-like configuration from ruamel.yaml which should be overridden.
-        possibleIterables (collections.OrderedDict): Key value pairs of names of enumerations and their values.
+        possible_iterables (dict): Key value pairs of names of enumerations and their values.
     Returns:
-        collections.OrderedDict: Iterables values that were requested in the config.
+        dict: Iterables values that were requested in the config.
     """
-    iterables = collections.OrderedDict()
-    requestedIterables = config["iterables"]
-    for k, v in requestedIterables.items():
-        if k not in possibleIterables:
-            raise KeyError(k, "Cannot find requested iterable in possibleIterables: {possibleIterables}".format(possibleIterables = possibleIterables))
-        logger.debug("k: {}, v: {}".format(k, v))
-        additionalIterable = []
-        enum_values = possibleIterables[k]
+    iterables = {}
+    requested_iterables = config["iterables"]
+    for k, v in requested_iterables.items():
+        if k not in possible_iterables:
+            raise KeyError(k, f"Cannot find requested iterable in possible_iterables: {possible_iterables}")
+        logger.debug(f"k: {k}, v: {v}")
+        additional_iterable = []
+        enum_values = possible_iterables[k]
         # Check for a string. This is wrong, and the user should be notified.
         if isinstance(v, str):
             raise TypeError(type(v), "Passed string {v} when must be either bool or list".format(v = v))
@@ -206,13 +205,13 @@ def determineSelectionOfIterableValuesFromConfig(config, possibleIterables):
             continue
         # Allow the possibility to including all possible values in the enum.
         elif v is True:
-            additionalIterable = list(enum_values)
+            additional_iterable = list(enum_values)
         else:
             # Otherwise, only take the requested values.
             for el in v:
-                additionalIterable.append(enum_values[el])
+                additional_iterable.append(enum_values[el])
         # Store for later
-        iterables[k] = additionalIterable
+        iterables[k] = additional_iterable
 
     return iterables
 
@@ -251,7 +250,7 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         obj (object): The object to be constructed.
         args: Arguments to be passed to the object to create it.
         iterables: Iterables to be used to create the objects, with entries of the form
-            ``"nameOfIterable": iterable``.
+            ``"name_of_iterable": iterable``.
         formatting_options (dict): Values to be used in formatting strings in the arguments.
         key_obj_name (str): Name of the iterable key object.
     Returns:
@@ -296,12 +295,12 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         #       for each object. See above.
         object_args = copy.deepcopy(args)
         logger.debug(f"object_args pre format: {object_args}")
-        object_args = applyFormattingDict(object_args, formatting_options)
+        object_args = apply_formatting_dict(object_args, formatting_options)
         # Print our results for debugging purposes. However, we skip printing the full
         # config because it is quite long
-        printArgs = {k: v for k, v in object_args.items() if k != "config"}
-        printArgs["config"] = "..."
-        logger.debug(f"Constructing obj \"{obj}\" with args: \"{printArgs}\"")
+        print_args = {k: v for k, v in object_args.items() if k != "config"}
+        print_args["config"] = "..."
+        logger.debug(f"Constructing obj \"{obj}\" with args: \"{print_args}\"")
 
         # Finally create the object.
         objects[KeyIndex(*values)] = obj(**object_args)
@@ -313,13 +312,13 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
 
     return (KeyIndex, names, objects)
 
-class formattingDict(dict):
+class formatting_dict(dict):
     """ Dict to handle missing keys when formatting a string. It returns the missing key
     for later use in formatting. See: https://stackoverflow.com/a/17215533 """
     def __missing__(self, key):
         return "{" + key + "}"
 
-def applyFormattingDict(obj, formatting):
+def apply_formatting_dict(obj, formatting):
     """ Recursively apply a formatting dict to all strings in a configuration.
 
     Note that it skips applying the formatting if the string appears to contain latex (specifically,
@@ -342,17 +341,17 @@ def applyFormattingDict(obj, formatting):
         # Note that we can't use format_map because it is python 3.2+ only.
         # The solution below works in py 2/3
         if "$" not in obj:
-            obj = string.Formatter().vformat(obj, (), formattingDict(**formatting))
+            obj = string.Formatter().vformat(obj, (), formatting_dict(**formatting))
         #else:
         #    logger.debug("Skipping str {} since it appears to be a latex string, which may break the formatting.".format(obj))
     elif isinstance(obj, dict):
         for k, v in obj.items():
             # Using indirect access to ensure that the original object is updated.
-            obj[k] = applyFormattingDict(v, formatting)
+            obj[k] = apply_formatting_dict(v, formatting)
     elif isinstance(obj, list):
         for i, el in enumerate(obj):
             # Using indirect access to ensure that the original object is updated.
-            obj[i] = applyFormattingDict(el, formatting)
+            obj[i] = apply_formatting_dict(el, formatting)
     elif isinstance(obj, int) or isinstance(obj, float) or obj is None:
         # Skip over this, as there is nothing to be done - we just keep the value.
         pass
