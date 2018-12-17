@@ -22,25 +22,25 @@ epsilon = 1e-5
 ###################
 # Utility functions
 ###################
-def readYAML(filename: str, fileAccessMode: str = "r") -> dict:
+def read_YAML(filename: str, file_access_mode: str = "r") -> dict:
     """ Read the YAML file at filename.
 
     Uses the round trip mode.
 
     Args:
         filename (str): Filename of the YAML file to be read.
-        fileAccessMode (str): Mode under which the file should be opened
+        file_access_mode (str): Mode under which the file should be opened
     Returns:
         dict-like: Dict containing the parameters read from the YAML file.
     """
     parameters = None
-    with open(filename, fileAccessMode) as f:
+    with open(filename, file_access_mode) as f:
         yaml = ruamel.yaml.YAML(typ = "rt")
         yaml.default_flow_style = False
         parameters = yaml.load(f)
     return parameters
 
-def writeYAML(parameters: dict, filename: str, fileAccessMode: str = "w") -> None:
+def write_YAML(parameters: dict, filename: str, file_access_mode: str = "w") -> None:
     """ Write the given output dict to file using YAML.
 
     Uses the round trip mode.
@@ -48,16 +48,16 @@ def writeYAML(parameters: dict, filename: str, fileAccessMode: str = "w") -> Non
     Args:
         parameters (dict): Output parameters to be written to the YAML file.
         filename (str): Filename of the YAML file to write.
-        fileAccessMode (str): Mode under which the file should be opened
+        file_access_mode (str): Mode under which the file should be opened
     Returns:
         None.
     """
-    with open(filename, fileAccessMode) as f:
+    with open(filename, file_access_mode) as f:
         yaml = ruamel.yaml.YAML(typ = "rt")
         yaml.default_flow_style = False
         yaml.dump(parameters, f)
 
-def movingAverage(arr: np.ndarray, n: int = 3) -> np.ndarray:
+def moving_average(arr: np.ndarray, n: int = 3) -> np.ndarray:
     """ Calculate the moving overage over an array.
 
     Algorithm from: https://stackoverflow.com/a/14314054
@@ -72,22 +72,22 @@ def movingAverage(arr: np.ndarray, n: int = 3) -> np.ndarray:
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
 
-def getArrayForFit(observables: dict, trackPtBin: int, jetPtBin: int) -> histogram.Histogram1D:
+def get_array_for_fit(observables: dict, track_pt_bin: int, jet_pt_bin: int) -> histogram.Histogram1D:
     """ Get a Histogram1D associated with the selected jet and track pt bins.
 
     This is often used to retrieve data for fitting.
 
     Args:
         observables (dict): The observables from which the hist should be retrieved.
-        trackPtBin (int): Track pt bin of the desired hist.
-        jetPtbin (int): Jet pt bin of the desired hist.
+        track_pt_bin (int): Track pt bin of the desired hist.
+        jet_ptbin (int): Jet pt bin of the desired hist.
     Returns:
         Histogram1D: Converted TH1 or uproot histogram.
     Raises:
         ValueError: If the requested observable couldn't be found.
     """
     for name, observable in observables.items():
-        if observable.trackPtBin == trackPtBin and observable.jetPtBin == jetPtBin:
+        if observable.track_pt_bin == track_pt_bin and observable.jet_pt_bin == jet_pt_bin:
             return histogram.Histogram1D.from_existing_hist(observable.hist)
 
-    raise ValueError("Cannot find fit with jet pt bin {jetPtBin} and track pt bin {trackPtBin}")
+    raise ValueError("Cannot find fit with jet pt bin {jet_pt_bin} and track pt bin {track_pt_bin}")

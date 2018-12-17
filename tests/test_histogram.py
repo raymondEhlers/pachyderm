@@ -17,7 +17,7 @@ from pachyderm import histogram
 logger = logging.getLogger(__name__)
 
 @pytest.fixture
-def retrieve_root_list(testRootHists):
+def retrieve_root_list(test_root_hists):
     """ Create an set of lists to load for a ROOT file.
 
     NOTE: Not using a mock since I'd like to the real objects and storing
@@ -41,7 +41,7 @@ def retrieve_root_list(testRootHists):
     # This is difficult because root hists don't handle operator==
     # very well. Identical hists will be not equal in smoe cases...
     hists = []
-    h = testRootHists.hist1D
+    h = test_root_hists.hist1D
     for i in range(3):
         hists.append(h.Clone("{}_{}".format(h.GetName(), i)))
     l1 = ROOT.TList()
@@ -70,13 +70,13 @@ def retrieve_root_list(testRootHists):
     # Create expected values
     # See the docstring for an explanation of the format.
     expected = {}
-    innerDict = {}
-    mainList = {}
+    inner_dict = {}
+    main_list = {}
     for h in hists:
-        innerDict[h.GetName()] = h
-        mainList[h.GetName()] = h
-    mainList["innerList"] = innerDict
-    expected["mainList"] = mainList
+        inner_dict[h.GetName()] = h
+        main_list[h.GetName()] = h
+    main_list["innerList"] = inner_dict
+    expected["mainList"] = main_list
 
     yield (filename, l1, expected)
 
@@ -88,27 +88,27 @@ def retrieve_root_list(testRootHists):
 
 @pytest.mark.ROOT
 class TestRetrievingHistgramsFromAList():
-    def test_get_histograms_in_list(self, loggingMixin, retrieve_root_list):
+    def test_get_histograms_in_list(self, logging_mixin, retrieve_root_list):
         """ Test for retrieving a list of histograms from a ROOT file. """
         (filename, root_list, expected) = retrieve_root_list
 
         output = histogram.get_histograms_in_list(filename, "mainList")
 
-        # The first level of the output is removed by `getHistogramsInList()`
+        # The first level of the output is removed by `get_histograms_in_list()`
         expected = expected["mainList"]
 
         # This isn't the most sophisticated way of comparsion, but bin-by-bin is sufficient for here.
         # We take advantage that we know the structure of the file so we don't need to handle recursion
         # or higher dimensional hists.
-        outputInnerList = output.pop("innerList")
-        expectedInnerList = expected.pop("innerList")
-        for (o, e) in [(output, expected), (outputInnerList, expectedInnerList)]:
+        output_inner_list = output.pop("innerList")
+        expected_inner_list = expected.pop("innerList")
+        for (o, e) in [(output, expected), (output_inner_list, expected_inner_list)]:
             for oHist, eHist in zip(o.values(), e.values()):
                 oValues = [oHist.GetBinContent(i) for i in range(0, oHist.GetXaxis().GetNbins() + 2)]
                 eValues = [eHist.GetBinContent(i) for i in range(0, eHist.GetXaxis().GetNbins() + 2)]
                 assert np.allclose(oValues, eValues)
 
-    def test_get_non_existent_list(self, loggingMixin, retrieve_root_list):
+    def test_get_non_existent_list(self, logging_mixin, retrieve_root_list):
         """ Test for retrieving a list which doesn't exist from a ROOT file. """
         (filename, root_list, expected) = retrieve_root_list
 
@@ -116,11 +116,11 @@ class TestRetrievingHistgramsFromAList():
             histogram.get_histograms_in_list(filename, "nonExistent")
         assert "nonExistent" in exception_info.value.args[0]
 
-    def test_retrieve_object(self, loggingMixin, retrieve_root_list):
+    def test_retrieve_object(self, logging_mixin, retrieve_root_list):
         """ Test for retrieving a list of histograms from a ROOT file.
 
         NOTE: One would normally expect to have the hists in the first level of the dict, but
-              this is actually taken care of in `getHistogramsInList()`, so we need to avoid
+              this is actually taken care of in `get_histograms_in_list()`, so we need to avoid
               doing it in the tests here.
         """
         (filename, root_list, expected) = retrieve_root_list
@@ -150,23 +150,23 @@ def setup_histogram_conversion():
                                      y = np.array([0, 0, 0, 2, 0, 0, 0, 0, 3, 0]),
                                      errors_squared = np.array([0, 0, 0, 4, 0, 0, 0, 0, 3, 0]))
 
-    histName = "rootHist"
+    hist_name = "rootHist"
     filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testFiles", "convertHist.root")
     if not os.path.exists(filename):
         # Need to create the initial histogram.
         # This shouldn't happen very often, as the file is stored in the repository.
         import ROOT
-        rootHist = ROOT.TH1F(histName, histName, 10, 0, 10)
-        rootHist.Fill(3, 2)
+        root_hist = ROOT.TH1F(hist_name, hist_name, 10, 0, 10)
+        root_hist.Fill(3, 2)
         for _ in range(3):
-            rootHist.Fill(8)
+            root_hist.Fill(8)
 
         # Write out with normal ROOT so we can avoid further dependencies
         fOut = ROOT.TFile(filename, "RECREATE")
-        rootHist.Write()
+        root_hist.Write()
         fOut.Close()
 
-    return filename, histName, expected
+    return filename, hist_name, expected
 
 def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1D) -> bool:
     """ Helper function to compare a given Histogram against expected values.
@@ -195,12 +195,12 @@ def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1
 @pytest.mark.ROOT
 def test_ROOT_hist_to_histogram(setup_histogram_conversion):
     """ Check conversion of a read in ROOT file via ROOT to a Histogram object. """
-    filename, histName, expected = setup_histogram_conversion
+    filename, hist_name, expected = setup_histogram_conversion
 
     # Setup and read histogram
     import ROOT
     fIn = ROOT.TFile(filename, "READ")
-    input_hist = fIn.Get(histName)
+    input_hist = fIn.Get(hist_name)
 
     assert check_hist(input_hist, expected) is True
 
@@ -209,11 +209,11 @@ def test_ROOT_hist_to_histogram(setup_histogram_conversion):
 
 def test_uproot_hist_to_histogram(setup_histogram_conversion):
     """ Check conversion of a read in ROOT file via uproot to a Histogram object. """
-    filename, histName, expected = setup_histogram_conversion
+    filename, hist_name, expected = setup_histogram_conversion
 
     # Retrieve the stored histogram via uproot
     uproot_file = uproot.open(filename)
-    input_hist = uproot_file[histName]
+    input_hist = uproot_file[hist_name]
 
     assert check_hist(input_hist, expected) is True
 
@@ -222,22 +222,22 @@ def test_uproot_hist_to_histogram(setup_histogram_conversion):
 
 @pytest.mark.ROOT
 class TestWithRootHists():
-    def test_get_array_from_hist(self, loggingMixin, testRootHists):
+    def test_get_array_from_hist(self, logging_mixin, test_root_hists):
         """ Test getting numpy arrays from a 1D hist.
 
         Note:
             This test is from the legacy get_array_from_hist(...) function. This functionality is
             superceded by Histogram1D.from_existing_hist(...), but we leave this test for good measure.
         """
-        hist = testRootHists.hist1D
+        hist = test_root_hists.hist1D
         hist_array = histogram.Histogram1D.from_existing_hist(hist)
 
         # Determine expected values
-        xBins = range(1, hist.GetXaxis().GetNbins() + 1)
+        x_bins = range(1, hist.GetXaxis().GetNbins() + 1)
         expected_hist_array = histogram.Histogram1D(
-            x = np.array([hist.GetXaxis().GetBinCenter(i) for i in xBins]),
-            y = np.array([hist.GetBinContent(i) for i in xBins]),
-            errors_squared = np.array([hist.GetBinError(i) for i in xBins])**2,
+            x = np.array([hist.GetXaxis().GetBinCenter(i) for i in x_bins]),
+            y = np.array([hist.GetBinContent(i) for i in x_bins]),
+            errors_squared = np.array([hist.GetBinError(i) for i in x_bins])**2,
             #errors_squared = np.array(hist.GetSumw2()),
         )
 
@@ -251,23 +251,23 @@ class TestWithRootHists():
     @pytest.mark.parametrize("set_zero_to_NaN", [
         False, True
     ], ids = ["Keep zeroes as zeroes", "Set zeroes to NaN"])
-    def test_get_array_from_hist2D(self, loggingMixin, set_zero_to_NaN, testRootHists):
+    def test_get_array_from_hist2D(self, logging_mixin, set_zero_to_NaN, test_root_hists):
         """ Test getting numpy arrays from a 2D hist. """
-        hist = testRootHists.hist2D
+        hist = test_root_hists.hist2D
         hist_array = histogram.get_array_from_hist2D(hist = hist, set_zero_to_NaN = set_zero_to_NaN)
 
         # Determine expected values
-        xRange = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
-        yRange = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
-        expectedX, expectedY = np.meshgrid(xRange, yRange)
-        expectedHistArray = np.array([hist.GetBinContent(x, y) for x in range(1, hist.GetXaxis().GetNbins() + 1) for y in range(1, hist.GetYaxis().GetNbins() + 1)], dtype=np.float32).reshape(hist.GetXaxis().GetNbins(), hist.GetYaxis().GetNbins())
+        x_range = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
+        y_range = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
+        expected_x, expected_y = np.meshgrid(x_range, y_range)
+        expected_hist_array = np.array([hist.GetBinContent(x, y) for x in range(1, hist.GetXaxis().GetNbins() + 1) for y in range(1, hist.GetYaxis().GetNbins() + 1)], dtype=np.float32).reshape(hist.GetXaxis().GetNbins(), hist.GetYaxis().GetNbins())
         if set_zero_to_NaN:
-            expectedHistArray[expectedHistArray == 0] = np.nan
+            expected_hist_array[expected_hist_array == 0] = np.nan
 
-        assert np.array_equal(hist_array[0], expectedX)
-        assert np.array_equal(hist_array[1], expectedY)
+        assert np.array_equal(hist_array[0], expected_x)
+        assert np.array_equal(hist_array[1], expected_y)
         # Need to use the special `np.testing.assert_array_equal()` to properly
         # handle comparing NaN in the array. It returns _None_ if it is successful,
         # so we compare against that. It will raise an exception if they disagree
-        assert np.testing.assert_array_equal(hist_array[2], expectedHistArray) is None
+        assert np.testing.assert_array_equal(hist_array[2], expected_hist_array) is None
 

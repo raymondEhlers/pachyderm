@@ -13,7 +13,7 @@ from typing import Tuple
 # Setup logger
 logger = logging.getLogger(__name__)
 
-def get_histograms_in_list(filename: str, listName: str = "AliAnalysisTaskJetH_tracks_caloClusters_clusbias5R2GA") -> dict:
+def get_histograms_in_list(filename: str, list_name: str = "AliAnalysisTaskJetH_tracks_caloClusters_clusbias5R2GA") -> dict:
     """ Get histograms from the file and make them available in a dict.
 
     Lists are recursively explored, with all lists converted to dictionaries, such that the return
@@ -22,7 +22,7 @@ def get_histograms_in_list(filename: str, listName: str = "AliAnalysisTaskJetH_t
 
     Args:
         filename (str): Filename of the ROOT file containing the list.
-        listName (str): Name of the list to retrieve.
+        list_name (str): Name of the list to retrieve.
     Returns:
         dict: Contains hists with keys as their names. Lists are recursively added, mirroring
             the structure under which the hists were stored.
@@ -33,10 +33,10 @@ def get_histograms_in_list(filename: str, listName: str = "AliAnalysisTaskJetH_t
 
     hists: dict = {}
     fIn = ROOT.TFile(filename, "READ")
-    hist_list = fIn.Get(listName)
+    hist_list = fIn.Get(list_name)
     if not hist_list:
         fIn.ls()
-        raise ValueError(f"Could not find list with name \"{listName}\". Possible names are listed above.")
+        raise ValueError(f"Could not find list with name \"{list_name}\". Possible names are listed above.")
 
     # Retrieve objects in the hist list
     for obj in hist_list:
@@ -120,10 +120,10 @@ class Histogram1D:
         (y, edges) = hist.numpy()
 
         # Assume uniform bin size
-        binSize = (hist.high - hist.low) / hist.numbins
+        bin_size = (hist.high - hist.low) / hist.numbins
         # Shift all of the edges to the center of the bins
         # (and drop the last value, which is now invalid)
-        x = edges[:-1] + binSize / 2.0
+        x = edges[:-1] + bin_size / 2.0
 
         # Also retrieve errors from sumw2.
         # If more sophistication is needed, we can modify this to follow the approach to
@@ -150,12 +150,12 @@ class Histogram1D:
         if hist.GetSumw2N() == 0:
             hist.Sumw2(True)
 
-        xAxis = hist.GetXaxis()
+        x_axis = hist.GetXaxis()
         # Don't include overflow
-        xBins = range(1, xAxis.GetNbins() + 1)
-        x = np.array([xAxis.GetBinCenter(i) for i in xBins])
+        x_bins = range(1, x_axis.GetNbins() + 1)
+        x = np.array([x_axis.GetBinCenter(i) for i in x_bins])
         # NOTE: The y value and bin error are stored with the hist, not the axis.
-        y = np.array([hist.GetBinContent(i) for i in xBins])
+        y = np.array([hist.GetBinContent(i) for i in x_bins])
         errors = np.array(hist.GetSumw2())
         # Exclude the under/overflow binsov
         errors = errors[1:-1]
@@ -226,9 +226,9 @@ def get_array_from_hist2D(hist, set_zero_to_NaN: bool = True):
         hist_array[hist_array == 0] = np.nan
 
     # We want an array of bin centers
-    xRange = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
-    yRange = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
-    X, Y = np.meshgrid(xRange, yRange)
+    x_range = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
+    y_range = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
+    X, Y = np.meshgrid(x_range, y_range)
 
     return (X, Y, hist_array)
 
