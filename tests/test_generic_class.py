@@ -36,7 +36,7 @@ def setupEqualityMixin():
 
     return (testClass, expectedClass)
 
-def testEqualityMixin(loggingMixin, setupEqualityMixin):
+def testEqualityMixin(logging_mixin, setupEqualityMixin):
     """ Test the equality mixin with the same classes. """
     testClass, expectedClass = setupEqualityMixin
 
@@ -73,7 +73,7 @@ def testEqualityMixin(loggingMixin, setupEqualityMixin):
     testClass.aList = expectedClass.aList
     testClass.aDict = expectedClass.aDict
 
-def testEqualityMixinAgainstOtherClasses(loggingMixin, setupEqualityMixin):
+def testEqualityMixinAgainstOtherClasses(logging_mixin, setupEqualityMixin):
     """ Test the quality mixin against other classes, for which comparions are not implemented. """
     testClass, expectedClass = setupEqualityMixin
 

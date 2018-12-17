@@ -105,7 +105,7 @@ def override_data(config):
 
     return config
 
-def test_override_retrieve_unrelated_value(loggingMixin, basic_config):
+def test_override_retrieve_unrelated_value(logging_mixin, basic_config):
     """ Test retrieving a basic value unrelated to the overridden data. """
     (basic_config, yaml_string) = basic_config
 
@@ -115,7 +115,7 @@ def test_override_retrieve_unrelated_value(loggingMixin, basic_config):
 
     assert basic_config[value_name] == value_before_override
 
-def test_override_with_basic_config(loggingMixin, basic_config):
+def test_override_with_basic_config(logging_mixin, basic_config):
     """ Test override with the basic config.  """
     (basic_config, yaml_string) = basic_config
     basic_config = override_data(basic_config)
@@ -123,7 +123,7 @@ def test_override_with_basic_config(loggingMixin, basic_config):
     # This value is overridden directly
     assert basic_config["test3"] == "test6"
 
-def test_basic_anchor_override(loggingMixin, basic_config):
+def test_basic_anchor_override(logging_mixin, basic_config):
     """ Test overriding with an anchor.
 
     When an anchor refernce is overridden, we expect that the anchor value is updated.
@@ -136,7 +136,7 @@ def test_basic_anchor_override(loggingMixin, basic_config):
     assert basic_config["responseTaskName"] == "AliJetResponseMaker_{cent}histos"
     assert basic_config["test4"] == "test6"
 
-def test_advanced_anchor_override(loggingMixin, basic_config):
+def test_advanced_anchor_override(logging_mixin, basic_config):
     """ Test overriding a anchored value with another anchor.
 
     When an override value is using an anchor value, we expect that value to propagate fully.
@@ -147,7 +147,7 @@ def test_advanced_anchor_override(loggingMixin, basic_config):
     # This value is overridden indirectly, from another referenced value.
     assert basic_config["responseTaskName"] == basic_config["pythiaInfoAfterEventSelectionTaskName"]
 
-def test_for_unmatched_keys(loggingMixin, basic_config):
+def test_for_unmatched_keys(logging_mixin, basic_config):
     """ Test for an unmatched key in the override field (ie without a match in the config).
 
     Such an unmatched key should cause a `KeyError` exception, which we catch.
@@ -162,7 +162,7 @@ def test_for_unmatched_keys(loggingMixin, basic_config):
     # This is the value that we expected to fail.
     assert exception_info.value.args[0] == "test_exception"
 
-def test_complex_object_override(loggingMixin, basic_config):
+def test_complex_object_override(logging_mixin, basic_config):
     """ Test override with complex objects.
 
     In particular, test with lists, dicts.
@@ -173,7 +173,7 @@ def test_complex_object_override(loggingMixin, basic_config):
     assert basic_config["testList"] == [3, 4]
     assert basic_config["testDict"] == {3: 4}
 
-def test_load_configuration(loggingMixin, basic_config):
+def test_load_configuration(logging_mixin, basic_config):
     """ Test that loading yaml goes according to expectations. This may be somewhat trivial, but it
     is still important to check in case ruamel.yaml changes APIs or defaults.
 
@@ -232,7 +232,7 @@ multiEntryDict:
 
     return data
 
-def test_data_simplification_on_base_types(loggingMixin, data_simplification_config):
+def test_data_simplification_on_base_types(logging_mixin, data_simplification_config):
     """ Test the data simplification function on base types.
 
     Here we tests int, float, and str.  They should always stay the same.
@@ -243,7 +243,7 @@ def test_data_simplification_on_base_types(loggingMixin, data_simplification_con
     assert config["float"] == 3.14
     assert config["str"] == "hello"
 
-def test_data_simplification_on_lists(loggingMixin, data_simplification_config):
+def test_data_simplification_on_lists(logging_mixin, data_simplification_config):
     """ Test the data simplification function on lists.
 
     A single entry list should be returned as a string, while a multiple entry list should be
@@ -254,7 +254,7 @@ def test_data_simplification_on_lists(loggingMixin, data_simplification_config):
     assert config["singleEntryList"] == "hello"
     assert config["multiEntryList"] == ["hello", "world"]
 
-def test_dict_data_simplification(loggingMixin, data_simplification_config):
+def test_dict_data_simplification(logging_mixin, data_simplification_config):
     """ Test the data simplification function on dicts.
 
     Dicts should always maintain their structure.
@@ -303,7 +303,7 @@ iterables:
 
     return (config, possible_iterables, ([reaction_plane_orientation.inPlane, reaction_plane_orientation.midPlane], list(qvector)))
 
-def test_determine_selection_of_iterable_values_from_config(loggingMixin, object_creation_config):
+def test_determine_selection_of_iterable_values_from_config(logging_mixin, object_creation_config):
     """ Test determining which values of an iterable to use. """
     (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
     iterables = generic_config.determine_selection_of_iterable_values_from_config(
@@ -318,7 +318,7 @@ def test_determine_selection_of_iterable_values_from_config(loggingMixin, object
     assert "collisionEnergy" not in iterables
     assert len(iterables) == 2
 
-def test_determine_selection_of_iterable_values_with_undefined_iterable(loggingMixin, object_creation_config):
+def test_determine_selection_of_iterable_values_with_undefined_iterable(logging_mixin, object_creation_config):
     """ Test determining which values of an iterable to use when an iterable is not defined. """
     (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
 
@@ -330,7 +330,7 @@ def test_determine_selection_of_iterable_values_with_undefined_iterable(loggingM
         )
     assert exception_info.value.args[0] == "qVector"
 
-def test_determine_selection_of_iterable_values_with_string_selection(loggingMixin, object_creation_config):
+def test_determine_selection_of_iterable_values_with_string_selection(logging_mixin, object_creation_config):
     """ Test trying to determine values with a string.
 
     This is not allowed, so it should raise an exception.
@@ -358,7 +358,7 @@ def object_and_creation_args():
 
     return (obj, args, formatting_options)
 
-def test_create_objects_from_iterables(loggingMixin, object_creation_config, object_and_creation_args):
+def test_create_objects_from_iterables(logging_mixin, object_creation_config, object_and_creation_args):
     """ Test object creation from a set of iterables. """
     # Collect variables
     (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
@@ -391,7 +391,7 @@ def test_create_objects_from_iterables(loggingMixin, object_creation_config, obj
             assert created_object.b == formatting_options["fmt"]
             assert created_object.options_fmt == formatting_options["options_fmt"].format(reaction_plane_orientation = rp_angle, qVector = qVector)
 
-def test_missing_iterable_for_object_creation(loggingMixin, object_and_creation_args):
+def test_missing_iterable_for_object_creation(logging_mixin, object_and_creation_args):
     """ Test object creation when the iterables are missing. """
     (obj, args, formatting_options) = object_and_creation_args
     # Create empty iterables for this test.
@@ -441,7 +441,7 @@ noneExample: null
 
     return (generic_config.apply_formatting_dict(config, formatting), formatting)
 
-def test_apply_formatting_to_basic_types(loggingMixin, formatting_config):
+def test_apply_formatting_to_basic_types(logging_mixin, formatting_config):
     """ Test applying formatting to basic types. """
     config, formatting_dict = formatting_config
 
@@ -451,7 +451,7 @@ def test_apply_formatting_to_basic_types(loggingMixin, formatting_config):
     assert config["format"] == formatting_dict["a"]
     assert config["noFormatBecauseNoFormatter"] == "{noFormatHere}"
 
-def test_apply_formatting_to_iterable_types(loggingMixin, formatting_config):
+def test_apply_formatting_to_iterable_types(logging_mixin, formatting_config):
     """ Test applying formatting to iterable types. """
     config, formatting_dict = formatting_config
 
@@ -460,14 +460,14 @@ def test_apply_formatting_to_iterable_types(loggingMixin, formatting_config):
     # NOTE: The extra str() call is because the formated string needs to be compared against a str.
     assert config["dict2"]["dict"] == {"str": "do nothing", "format": str(formatting_dict["c"])}
 
-def test_apply_formatting_skip_latex(loggingMixin, formatting_config):
+def test_apply_formatting_skip_latex(logging_mixin, formatting_config):
     """ Test skipping the application of the formatting to strings which look like latex. """
     config, formatting_dict = formatting_config
 
     assert config["latexLike"] == r"$latex_{like \mathrm{x}}$"
 
 @pytest.fixture
-def setup_analysis_iterator(loggingMixin):
+def setup_analysis_iterator(logging_mixin):
     """ Setup for testing iteration over analysis objects. """
     KeyIndex = dataclasses.make_dataclass("KeyIndex", ["a", "b", "c"], frozen = True)
     test_dict = {

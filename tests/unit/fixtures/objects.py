@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 @pytest.fixture
-def testRootHists():
+def test_root_hists():
     """ Create minimal TH*F hists in 1D, 2D, and 3D. Each has been filled once.
 
     Args:
@@ -41,7 +41,7 @@ def testRootHists():
     return RootHists(hist1D = hist, hist2D = hist2D, hist3D = hist3D)
 
 @pytest.fixture
-def testSparse():
+def test_sparse():
     """ Create a THnSparseF for testing.
 
     Fills in a set of values for testing.
@@ -63,12 +63,12 @@ def testSparse():
         min: float
         max: float
 
-    ignoredAxis   = SparseAxis(n_bins =  1, min =   0.0, max =  1.0)  # noqa: E221, E222
-    selectedAxis1 = SparseAxis(n_bins = 10, min =   0.0, max = 20.0)  # noqa: E222
-    selectedAxis2 = SparseAxis(n_bins = 20, min = -10.0, max = 10.0)
-    selectedAxis3 = SparseAxis(n_bins = 30, min =   0.0, max = 30.0)  # noqa: E222
+    ignored_axis   = SparseAxis(n_bins =  1, min =   0.0, max =  1.0)  # noqa: E221, E222
+    selected_axis1 = SparseAxis(n_bins = 10, min =   0.0, max = 20.0)  # noqa: E222
+    selected_axis2 = SparseAxis(n_bins = 20, min = -10.0, max = 10.0)
+    selected_axis3 = SparseAxis(n_bins = 30, min =   0.0, max = 30.0)  # noqa: E222
     # We want to select axes 2, 4, 5
-    axes = [ignoredAxis, ignoredAxis, selectedAxis1, ignoredAxis, selectedAxis2, selectedAxis3, ignoredAxis]
+    axes = [ignored_axis, ignored_axis, selected_axis1, ignored_axis, selected_axis2, selected_axis3, ignored_axis]
 
     # Create the actual sparse
     # NOTE: dtype is required here for the sparse to be created successfully.
