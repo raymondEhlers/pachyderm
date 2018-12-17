@@ -20,89 +20,92 @@ class TH1AxisType(enum.Enum):
     Other enumerations that refer to this enum should refer to the _values_ to ensure
     consistency in `.value` pointing to the axis value.
     """
-    xAxis = 0
-    yAxis = 1
-    zAxis = 2
+    x_axis = 0
+    y_axis = 1
+    z_axis = 2
 
 class HistAxisRange(generic_class.EqualityMixin):
     """ Represents the restriction of a range of an axis of a histogram.
 
     An axis can be restricted by multiple ``HistAxisRange`` elements (although separate projections are
     needed to apply more than one. This would be accomplished with separate entries to the
-    HistProjector.projectionDependentCutAxes).
+    HistProjector.projection_dependent_cut_axes).
 
     NOTE:
         A single axis which has multiple ranges could be represented by multiple ``HistAxisRange`` objects!
 
     Args:
-        axisRangeName (str): Name of the axis range. Usually some combination of the axis name and
+        axis_range_name (str): Name of the axis range. Usually some combination of the axis name and
             some sort of description of the range.
-        axisType (enum.Enum): Enumeration corresponding to the axis to be restricted. The numerical
+        axis_type (enum.Enum): Enumeration corresponding to the axis to be restricted. The numerical
             value of the enum should be axis number (for a THnBase).
-        minVal (function): Minimum range value for the axis. Usually set via ``ApplyFuncToFindBin()``.
-        minVal (function): Maximum range value for the axis. Usually set via ``ApplyFuncToFindBin()``.
+        min_val (function): Minimum range value for the axis. Usually set via ``apply_func_to_find_bin()``.
+        min_val (function): Maximum range value for the axis. Usually set via ``apply_func_to_find_bin()``.
     """
-    def __init__(self, axisRangeName, axisType, minVal, maxVal):
-        self.name = axisRangeName
-        self.axisType = axisType
-        self.minVal = minVal
-        self.maxVal = maxVal
+    def __init__(self, axis_range_name, axis_type, min_val, max_val):
+        self.name = axis_range_name
+        self.axis_type = axis_type
+        self.min_val = min_val
+        self.max_val = max_val
 
     def __repr__(self):
         """ Representation of the object. """
-        # The axis type is an enumeration of some type. In such a case, we want the repr to represent it using the str method instead
-        return "{}(name = {name!r}, axisType = {axisType}, minVal = {minVal!r}, maxVal = {maxVal!r})".format(self.__class__.__name__, **self.__dict__)
+        # The axis type is an enumeration of some type. In such a case, we want the repr to represent
+        # it using the str method instead
+        return "{}(name = {name!r}, axis_type = {axis_type}, min_val = {min_val!r}, max_val = {max_val!r})".format(self.__class__.__name__, **self.__dict__)
 
     def __str__(self):
         """ Print the elements of the object. """
-        return "{}: name: {name}, axisType: {axisType}, minVal: {minVal}, maxVal: {maxVal}".format(self.__class__.__name__, **self.__dict__)
+        return "{}: name: {name}, axis_type: {axis_type}, min_val: {min_val}, max_val: {max_val}".format(self.__class__.__name__, **self.__dict__)
 
     @property
     def axis(self):
         """ Wrapper to determine the axis to return based on the hist type. """
-        def axisFunc(hist):
+        def axis_func(hist):
             """ Retrieve the axis associated with the ``HistAxisRange`` object for a given hist.
 
             Args:
-                hist (ROOT.TH1, ROOT.THnBase, or similar): Histogram from which the selected axis should be retrieved.
+                hist (ROOT.TH1, ROOT.THnBase, or similar): Histogram from which the selected axis should
+                    be retrieved.
             Returns:
                 ROOT.TAxis: The axis associated with the ``HistAxisRange`` object.
             """
-            # Determine the axisType value
-            # Use try here instead of checking for a particular type to protect against type changes (say in the enum)
+            # Determine the axis_type value
+            # Use try here instead of checking for a particular type to protect against type changes
+            # (say in the enum)
             try:
                 # Try to extract the value from an enum
-                axisType = self.axisType.value
+                axis_type = self.axis_type.value
             except AttributeError:
                 # Seems that we received an int, so just use that value
-                axisType = self.axisType
+                axis_type = self.axis_type
 
             if hasattr(hist, "ProjectionND") and hasattr(hist, "Projection"):
                 # THnBase defines ProjectionND and Projection, so we will use those as proxies.
                 # Return the proper THn access
-                #logger.debug(f"From hist: {hist}, axisType: {self.axisType}, axis: {hist.GetAxis(self.axisType.value)}")
-                return hist.GetAxis(axisType)
+                #logger.debug(f"From hist: {hist}, axis_type: {self.axis_type}, axis: {hist.GetAxis(self.axis_type.value)}")
+                return hist.GetAxis(axis_type)
             else:
                 # If it's not a THn, then it must be a TH1 derived
-                axisFunctionMap = {
-                    TH1AxisType.xAxis.value: hist.GetXaxis,
-                    TH1AxisType.yAxis.value: hist.GetYaxis,
-                    TH1AxisType.zAxis.value: hist.GetZaxis
+                axis_function_map = {
+                    TH1AxisType.x_axis.value: hist.GetXaxis,
+                    TH1AxisType.y_axis.value: hist.GetYaxis,
+                    TH1AxisType.z_axis.value: hist.GetZaxis
                 }
 
                 # Retrieve the axis function and execute it. It is done separately to
                 # clarify any possible errors.
-                returnFunc = axisFunctionMap[axisType]
-                return returnFunc()
+                return_func = axis_function_map[axis_type]
+                return return_func()
 
-        return axisFunc
+        return axis_func
 
-    def ApplyRangeSet(self, hist):
+    def apply_range_set(self, hist):
         """ Apply the associated range set to the axis of a given hist.
 
         Note:
             The min and max values should be bins, not user ranges! For more, see the binning
-            explanation in ``ApplyFuncToFindBin(...)``.
+            explanation in ``apply_func_to_find_bin(...)``.
 
         Args:
             hist (ROOT.TH1 or similar): Histogram to which the axis range restriction should be applied.
@@ -110,15 +113,15 @@ class HistAxisRange(generic_class.EqualityMixin):
         # Do individual assignments to clarify which particular value is causing an error here.
         axis = self.axis(hist)
         #logger.debug(f"axis: {axis}, axis(): {axis.GetName()}")
-        minVal = self.minVal(axis)
-        maxVal = self.maxVal(axis)
+        min_val = self.min_val(axis)
+        max_val = self.max_val(axis)
         # NOTE: Using SetRangeUser() here was a bug, since I've been passing bin values! In general,
-        #       passing bin values is more flexible, but requires the values to be passed to ApplyFuncToFindBin()
-        #       to be shifted by some small epsilon to get the desired bin.
-        self.axis(hist).SetRange(minVal, maxVal)
+        #       passing bin values is more flexible, but requires the values to be passed to
+        #       ``apply_func_to_find_bin()`` to be shifted by some small epsilon to get the desired bin.
+        self.axis(hist).SetRange(min_val, max_val)
 
     @staticmethod
-    def ApplyFuncToFindBin(func, values = None):
+    def apply_func_to_find_bin(func, values = None):
         """ Closure to determine the bin associated with a value on an axis.
 
         It can apply a function to an axis if necessary to determine the proper bin.  Otherwise,
@@ -151,7 +154,7 @@ class HistAxisRange(generic_class.EqualityMixin):
         Returns:
             function: Function to be called with an axis to determine the desired bin on that axis.
         """
-        def returnFunc(axis):
+        def return_func(axis):
             """ Apply the stored function and value to a given axis.
 
             Args:
@@ -168,16 +171,16 @@ class HistAxisRange(generic_class.EqualityMixin):
             else:
                 return values
 
-        return returnFunc
+        return return_func
 
 class HistProjector(object):
     """ Handles generic ROOT ``THn`` and ``TH1`` projections.
 
     There are three types of cuts which can be specified:
 
-    - ``additionalAxisCuts``: Axis cuts which do not change based on the projection axis.
-    - ``projectionDependentCutAxes``: Axis cuts which change based on the projection axis.
-    - ``projectionAxes``: Axes onto which the projection will be performed.
+    - ``additional_axis_cuts``: Axis cuts which do not change based on the projection axis.
+    - ``projection_dependent_cut_axes``: Axis cuts which change based on the projection axis.
+    - ``projection_axes``: Axes onto which the projection will be performed.
 
     For a full description of each type of cut and the necessary details, see their descriptions
     in the attributes.
@@ -186,56 +189,56 @@ class HistProjector(object):
         The TH1 projections have not been tested as extensively as the ``THn`` projections.
 
     Note:
-        ``inputKey``, ``inputHist``, ``inputObservable``, ``projectionName``, and ``outputHist`` are all reserved
-        keys, such they will be overwritten by predefined information when passed to the various functions.
-        Thus, they should be avoided by the user when storing projection information
+        ``input_key``, ``input_hist``, ``input_observable``, ``projection_name``, and ``output_hist`` are
+        all reserved keys, such they will be overwritten by predefined information when passed to the
+        various functions. Thus, they should be avoided by the user when storing projection information
 
     Args:
         observable_dict (dict): Where the projected hists will be stored. They will be stored under the dict
-            key determined by ``OutputKeyName(...)``.
+            key determined by ``output_key_name(...)``.
         observables_to_project_from (dict): The observables which should be used to project from. The dict
-            key is passed to ``ProjectionName(...)`` as ``inputKey``.
-        projectionNameFormat (str): Format string to determine the projected hist name.
-        projectionInformation (dict): Keyword arguments to be passed to ``ProjectionName(...)`` to determine
+            key is passed to ``projection_name(...)`` as ``input_key``.
+        projection_name_format (str): Format string to determine the projected hist name.
+        projection_information (dict): Keyword arguments to be passed to ``projection_name(...)`` to determine
             the name of the projected histogram.
 
     Attributes:
         observable_dict (dict): Where the projected hists will be stored. They will be stored under the dict
-            key determined by ``OutputKeyName(...)``.
+            key determined by ``output_key_name(...)``.
         observables_to_project_from (dict): The observables which should be used to project from. The dict
-            key is passed to ``ProjectionName(...)`` as ``inputKey``.
-        projectionNameFormat (str): Format string to determine the projected hist name.
-        projectionInformation (dict): Keyword arguments to be passed to ``ProjectionName(...)`` to determine
+            key is passed to ``projection_name(...)`` as ``input_key``.
+        projection_name_format (str): Format string to determine the projected hist name.
+        projection_information (dict): Keyword arguments to be passed to ``projection_name(...)`` to determine
             the name of the projected histogram.
-        additionalAxisCuts (list): List of axis cuts which are neither projected nor depend on the axis
+        additional_axis_cuts (list): List of axis cuts which are neither projected nor depend on the axis
             being projected.
-        projectionDependentCutAxes (list): List of list of axis cuts which depend on the projected axis.
+        projection_dependent_cut_axes (list): List of list of axis cuts which depend on the projected axis.
             For example, if we want to project non-continuous ranges of a non-projection axis (say, dEta
             when projecting dPhi). It is a list of list to allow for groups of cuts to be specified together if necessary.
-        projectionAxes (list): List of axes which should be projected.
+        projection_axes (list): List of axes which should be projected.
     """
-    def __init__(self, observable_dict: dict, observables_to_project_from: dict, projectionNameFormat: str, projectionInformation: dict = None):
+    def __init__(self, observable_dict: dict, observables_to_project_from: dict, projection_name_format: str, projection_information: dict = None):
         # Input and output lists
         self.observable_dict = observable_dict
         self.observables_to_project_from = observables_to_project_from
         # Output hist name format
-        self.projectionNameFormat = projectionNameFormat
+        self.projection_name_format = projection_name_format
         # Additional projection information to help create names, input/output objects, etc
         # NOTE: See reserved keys enumerated above.
-        if projectionInformation is None:
-            projectionInformation = {}
+        if projection_information is None:
+            projection_information = {}
         # Ensure that the dict is copied successfully
-        self.projectionInformation = copy.deepcopy(projectionInformation)
+        self.projection_information = copy.deepcopy(projection_information)
 
         # Axes
         # Cuts for axes which are not projected
-        self.additionalAxisCuts: list = []
+        self.additional_axis_cuts: list = []
         # Axes cuts which depend on the projection axes
         # ie. If we want to change the range of the axis that we are projecting
         # For example, we may want to project an axis non-continuously (say, -1 - 0.5, 0.5 - 1)
-        self.projectionDependentCutAxes: list = []
+        self.projection_dependent_cut_axes: list = []
         # Axes to actually project
-        self.projectionAxes: list = []
+        self.projection_axes: list = []
 
     # Printing functions
     def __str__(self):
@@ -243,20 +246,20 @@ class HistProjector(object):
 
         This will only show up properly when printed - otherwise the tabs and newlines won't be printed.
         """
-        retVal = f"{self.__class__.__name__}: Projection Information:\n"
-        retVal += f"\tProjectionNameFormat: \"{self.projectionNameFormat}\""
-        retVal += "\n\tProjectionInformation:\n"
-        retVal += "\n".join(["\t\t- " + str("Arg: ") + str(val) for arg, val in self.projectionInformation.items()])
-        retVal += "\n\tadditionalAxisCuts:\n"
-        retVal += "\n".join(["\t\t- " + str(axis) for axis in self.additionalAxisCuts])
-        retVal += "\n\tprojectionDependentCutAxes:\n"
-        retVal += "\n".join(["\t\t- " + str([",".join(axis.name for axis in axisList)]) for axisList in self.projectionDependentCutAxes])
-        retVal += "\n\tprojectionAxes:\n"
-        retVal += "\n".join(["\t\t- " + str(axis) for axis in self.projectionAxes])
+        ret_val = f"{self.__class__.__name__}: Projection Information:\n"
+        ret_val += f"\tprojection_name_format: \"{self.projection_name_format}\""
+        ret_val += "\n\tprojection_information:\n"
+        ret_val += "\n".join(["\t\t- " + str("Arg: ") + str(val) for arg, val in self.projection_information.items()])
+        ret_val += "\n\tadditional_axis_cuts:\n"
+        ret_val += "\n".join(["\t\t- " + str(axis) for axis in self.additional_axis_cuts])
+        ret_val += "\n\tprojection_dependent_cut_axes:\n"
+        ret_val += "\n".join(["\t\t- " + str([",".join(axis.name for axis in axis_list)]) for axis_list in self.projection_dependent_cut_axes])
+        ret_val += "\n\tprojection_axes:\n"
+        ret_val += "\n".join(["\t\t- " + str(axis) for axis in self.projection_axes])
 
-        return retVal
+        return ret_val
 
-    def CallProjectionFunction(self, hist):
+    def call_projection_function(self, hist):
         """ Calls the actual projection function for the hist.
 
         Args:
@@ -265,27 +268,27 @@ class HistProjector(object):
             ROOT.TH1 or ROOT.THnBase derived: The projected histogram.
         """
         # Restrict projection axis ranges
-        for axis in self.projectionAxes:
-            logger.debug("Apply projection axes hist range: {0}".format(axis.name))
-            axis.ApplyRangeSet(hist)
+        for axis in self.projection_axes:
+            logger.debug(f"Apply projection axes hist range: {axis.name}")
+            axis.apply_range_set(hist)
 
-        projectedHist = None
+        projected_hist = None
         if hasattr(hist, "ProjectionND") and hasattr(hist, "Projection"):
             # THnBase defines ProjectionND and Projection, so we will use those as proxies.
-            projectedHist = self._project_THn(hist = hist)
+            projected_hist = self._project_THn(hist = hist)
         elif hasattr(hist, "ProjectionZ") and hasattr(hist, "Project3D"):
             # TH3 defines ProjectionZ and Project3D, so we will use those as proxies.
-            projectedHist = self._project_TH3(hist = hist)
+            projected_hist = self._project_TH3(hist = hist)
         elif hasattr(hist, "ProjectionX") and hasattr(hist, "ProjectionY"):
             # TH2 defines ProjectionX and ProjectionY, so we will use those as proxies.
-            projectedHist = self._project_TH2(hist = hist)
+            projected_hist = self._project_TH2(hist = hist)
         else:
             raise TypeError(type(hist), f"Could not recognize hist {hist} of type {hist.GetClass().GetName()}")
 
         # Cleanup restricted axes
-        self.CleanupCuts(hist, cutAxes = self.projectionAxes)
+        self.cleanup_cuts(hist, cut_axes = self.projection_axes)
 
-        return projectedHist
+        return projected_hist
 
     def _project_THn(self, hist):
         """ Perform the actual THn -> THn or TH1 projection.
@@ -298,28 +301,29 @@ class HistProjector(object):
             ROOT.THnBase or ROOT.TH1: The projected histogram.
         """
         # THnBase projections args are given as a list of axes, followed by any possible options.
-        projectionAxes = [axis.axisType.value for axis in self.projectionAxes]
+        projection_axes = [axis.axis_type.value for axis in self.projection_axes]
 
         # Handle ROOT THnBase quirk...
-        # 2D projection are called as (y, x, options), so we should reverse the order so it performs as expected
-        if len(projectionAxes) == 2:
+        # 2D projection are called as (y, x, options), so we should reverse the order so it performs
+        # as expected
+        if len(projection_axes) == 2:
             # Reverses in place
-            projectionAxes.reverse()
+            projection_axes.reverse()
 
         # Test calculating errors
         # Add "E" to ensure that errors will be calculated
-        args = projectionAxes + ["E"]
+        args = projection_axes + ["E"]
         # Do the actual projection
-        logger.debug("hist: {0} args: {1}".format(hist.GetName(), args))
+        logger.debug(f"hist: {hist.GetName()} args: {args}")
 
-        if len(projectionAxes) > 3:
+        if len(projection_axes) > 3:
             # Project into a THnBase object.
-            projectedHist = hist.ProjectionND(*args)
+            projected_hist = hist.ProjectionND(*args)
         else:
             # Project a TH1 derived object.
-            projectedHist = hist.Projection(*args)
+            projected_hist = hist.Projection(*args)
 
-        return projectedHist
+        return projected_hist
 
     def _project_TH3(self, hist):
         """ Perform the actual TH3 -> TH1 projection.
@@ -332,34 +336,34 @@ class HistProjector(object):
             ROOT.TH1: The projected histogram.
         """
         # Axis length validation
-        if len(self.projectionAxes) < 1 or len(self.projectionAxes) > 2:
-            raise ValueError(len(self.projectionAxes), "Invalid number of axes")
+        if len(self.projection_axes) < 1 or len(self.projection_axes) > 2:
+            raise ValueError(len(self.projection_axes), "Invalid number of axes")
 
         # Need to concatenate the names of the axes together
-        projectionAxisName = ""
-        for axis in self.projectionAxes:
+        projection_axis_name = ""
+        for axis in self.projection_axes:
             # [:1] returns just the first letter. For example, we could get "xy" if the first axis as
-            # xAxis and the second was yAxis.
+            # x_axis and the second was y_axis.
             # NOTE: Careful. This depends on the name of the enumerated values!!! Since this isn't terribly
             #       safe, we then perform additonal validation on the same to ensure that it is one of the
             #       expected axis names.
             proj_axis_name = axis.name[:1]
             if proj_axis_name not in ["x", "y", "z"]:
                 raise ValueError("Projection axis name {proj_axis_name} is not 'x', 'y', or 'z'. Please check your configuration.")
-            projectionAxisName += proj_axis_name
+            projection_axis_name += proj_axis_name
 
         # Handle ROOT Project3D quirk...
         # 2D projection are called as (y, x, options), so we should reverse the order so it performs as expected
         # NOTE: This isn't well documented in TH3. It is instead described in THnBase.Projection(...)
-        if len(self.projectionAxes) == 2:
+        if len(self.projection_axes) == 2:
             # Reverse the axes
-            projectionAxisName = projectionAxisName[::-1]
+            projection_axis_name = projection_axis_name[::-1]
 
         # Do the actual projection
-        logger.info(f"Projecting onto axes \"{projectionAxisName}\" from hist {hist.GetName()}")
-        projectedHist = hist.Project3D(projectionAxisName)
+        logger.info(f"Projecting onto axes \"{projection_axis_name}\" from hist {hist.GetName()}")
+        projected_hist = hist.Project3D(projection_axis_name)
 
-        return projectedHist
+        return projected_hist
 
     def _project_TH2(self, hist):
         """ Perform the actual TH2 -> TH1 projection.
@@ -371,119 +375,126 @@ class HistProjector(object):
         Returns:
             ROOT.TH1: The projected histogram.
         """
-        if len(self.projectionAxes) != 1:
-            raise ValueError(len(self.projectionAxes), "Invalid number of axes")
+        if len(self.projection_axes) != 1:
+            raise ValueError(len(self.projection_axes), "Invalid number of axes")
 
-        #logger.debug("self.projectionAxes[0].axis: {}, axis range name: {}, axisType: {}".format(self.projectionAxes[0].axis, self.projectionAxes[0].name , self.projectionAxes[0].axisType))
-        # NOTE: We cannot use TH3.ProjectionZ(...) because it has different semantics than ProjectionX and ProjectionY.
-        #       In particular, it doesn't respect the axis limits of axis onto which it is projected.
-        #       So we have to separate the projection by histogram type as opposed to axis length.
-        projectionFuncMap = {
-            TH1AxisType.xAxis.value: hist.ProjectionX,
-            TH1AxisType.yAxis.value: hist.ProjectionY
+        #logger.debug("self.projection_axes[0].axis: {}, axis range name: {}, axis_type: {}".format(self.projection_axes[0].axis, self.projection_axes[0].name , self.projection_axes[0].axis_type))
+        # NOTE: We cannot use TH3.ProjectionZ(...) because it has different semantics than ProjectionX
+        #       and ProjectionY. In particular, it doesn't respect the axis limits of axis onto which it
+        #       is projected.  So we have to separate the projection by histogram type as opposed to axis
+        #       length.
+        projection_func_map = {
+            TH1AxisType.x_axis.value: hist.ProjectionX,
+            TH1AxisType.y_axis.value: hist.ProjectionY
         }
 
-        # Determine the axisType value
-        # Use try here instead of checking for a particular type to protect against type changes (say in the enum)
+        # Determine the axis_type value
+        # Use try here instead of checking for a particular type to protect against type changes (say
+        # in the enum)
         try:
             # Try to extract the value from an enum
-            axisType = self.projectionAxes[0].axisType.value
+            axis_type = self.projection_axes[0].axis_type.value
         except ValueError:
             # Seems that we received an int, so just use that value
-            axisType = self.axisType
+            axis_type = self.axis_type
 
-        projectionFunc = projectionFuncMap[axisType]
+        projection_func = projection_func_map[axis_type]
 
         # Do the actual projection
-        logger.info(f"Projecting onto axis range {self.projectionAxes[0].name} from hist {hist.GetName()}")
-        projectedHist = projectionFunc()
+        logger.info(f"Projecting onto axis range {self.projection_axes[0].name} from hist {hist.GetName()}")
+        projected_hist = projection_func()
 
-        return projectedHist
+        return projected_hist
 
-    def Project(self, *args, **kwargs):
+    def project(self, *args, **kwargs):
         """ Perform the requested projections.
 
         Note:
             All cuts on the original histograms will be reset when this function is completed.
 
         Args:
-            args (list): Additional args to be passed to ProjectionName(...) and OutputKeyName(...)
-            kwargs (dict): Additional named args to be passed to ProjectionName(...) and OutputKeyName(...)
+            args (list): Additional args to be passed to projection_name(...) and output_key_name(...)
+            kwargs (dict): Additional named args to be passed to projection_name(...) and output_key_name(...)
         """
-        for key, inputObservable in self.observables_to_project_from.items():
+        for key, input_observable in self.observables_to_project_from.items():
             # Retrieve histogram
-            hist = self.GetHist(observable = inputObservable, *args, **kwargs)
+            hist = self.get_hist(observable = input_observable, *args, **kwargs)
 
             # Define projection name
-            projectionNameArgs = {}
-            projectionNameArgs.update(self.projectionInformation)
-            projectionNameArgs.update(kwargs)
+            projection_name_args = {}
+            projection_name_args.update(self.projection_information)
+            projection_name_args.update(kwargs)
             # Put the values included by default last to ensure nothing overwrites these values
-            projectionNameArgs.update({"inputKey": key, "inputObservable": inputObservable, "inputHist": hist})
-            projectionName = self.ProjectionName(*args, **projectionNameArgs)
+            projection_name_args.update({
+                "input_key": key,
+                "input_observable": input_observable,
+                "input_hist": hist
+            })
+            projection_name = self.projection_name(*args, **projection_name_args)
 
             # First apply the cuts
             # Restricting the range with SetRangeUser Works properly for both THn and TH1.
-            logger.info("hist: {0}".format(hist))
-            for axis in self.additionalAxisCuts:
-                logger.debug("Apply additional axis hist range: {0}".format(axis.name))
-                axis.ApplyRangeSet(hist)
+            logger.info(f"hist: {hist}")
+            for axis in self.additional_axis_cuts:
+                logger.debug(f"Apply additional axis hist range: {axis.name}")
+                axis.apply_range_set(hist)
 
             # We need to ensure that it isn't empty so at least one project occurs
-            if self.projectionDependentCutAxes == []:
-                self.projectionDependentCutAxes.append([])
+            if self.projection_dependent_cut_axes == []:
+                self.projection_dependent_cut_axes.append([])
 
             # Validate the projection dependent cut axes
             # It is invalid to have PDCA on the same axes as the projection axes.
-            duplicated_axes = [PDCA for PA in self.projectionAxes for PDCA_group in self.projectionDependentCutAxes for PDCA in PDCA_group if PDCA.axisType == PA.axisType]
+            duplicated_axes = [PDCA for PA in self.projection_axes for PDCA_group in self.projection_dependent_cut_axes for PDCA in PDCA_group if PDCA.axis_type == PA.axis_type]
             if duplicated_axes:
                 raise ValueError(f"Axis {duplicated_axes} is in the projection axes and the projection dependent cut axes. This configuration is not allowed, as the range in the PDCA will be overwritten by the projection axes! Please revise your configuration.")
 
             # Perform the projections
             hists = []
-            for (i, axes) in enumerate(self.projectionDependentCutAxes):
+            for (i, axes) in enumerate(self.projection_dependent_cut_axes):
                 # Projection dependent range set
                 for axis in axes:
-                    logger.debug("Apply projection dependent hist range: {0}".format(axis.name))
-                    axis.ApplyRangeSet(hist)
+                    logger.debug(f"Apply projection dependent hist range: {axis.name}")
+                    axis.apply_range_set(hist)
 
                 # Do the projection
-                projectedHist = self.CallProjectionFunction(hist)
-                projectedHist.SetName("{0}_{1}".format(projectionName, i))
+                projected_hist = self.call_projection_function(hist)
+                projected_hist.SetName(f"{projection_name}_{i}")
 
-                hists.append(projectedHist)
+                hists.append(projected_hist)
 
-                # Cleanup projection dependent cuts (although they should be set again on the next iteration of the loop)
-                self.CleanupCuts(hist, cutAxes = axes)
+                # Cleanup projection dependent cuts (although they should be set again on the next
+                # iteration of the loop)
+                self.cleanup_cuts(hist, cut_axes = axes)
 
             # Add all projections together
-            outputHist = hists[0]
-            for tempHist in hists[1:]:
-                outputHist.Add(tempHist)
+            output_hist = hists[0]
+            for temp_hist in hists[1:]:
+                output_hist.Add(temp_hist)
 
             # Ensure that the hist doesn't get deleted by ROOT
             # A reference to the histogram within python may not be enough
-            outputHist.SetDirectory(0)
+            output_hist.SetDirectory(0)
 
-            outputHist.SetName(projectionName)
-            outputHistArgs = projectionNameArgs
-            outputHistArgs.update({"outputHist": outputHist, "projectionName": projectionName})
-            outputKeyName = self.OutputKeyName(*args, **outputHistArgs)
-            self.observable_dict[outputKeyName] = self.OutputHist(*args, **outputHistArgs)
+            output_hist.SetName(projection_name)
+            output_hist_args = projection_name_args
+            output_hist_args.update({"output_hist": output_hist, "projection_name": projection_name})
+            output_key_name = self.output_key_name(*args, **output_hist_args)
+            self.observable_dict[output_key_name] = self.output_hist(*args, **output_hist_args)
 
             # Cleanup cuts
-            self.CleanupCuts(hist, cutAxes = self.additionalAxisCuts)
+            self.cleanup_cuts(hist, cut_axes = self.additional_axis_cuts)
 
-    def CleanupCuts(self, hist, cutAxes):
+    def cleanup_cuts(self, hist, cut_axes):
         """ Cleanup applied cuts by resetting the axis to the full range.
 
         Inspired by: https://github.com/matplo/rootutils/blob/master/python/2.7/THnSparseWrapper.py
 
         Args:
             hist (ROOT.TH1 or ROOT.THnBase): Histogram for which the axes should be reset.
-            cutAxes (list): List of axis cuts, which correspond to axes that should be reset.
+            cut_axes (list): List of axis cuts, which correspond to axes that should be reset.
         """
-        for axis in cutAxes:
+        for axis in cut_axes:
             # According to the function TAxis::SetRange(first, last), the widest possible range is
             # (1, Nbins). Anything beyond that will be reset to (1, Nbins)
             axis.axis(hist).SetRange(1, axis.axis(hist).GetNbins())
@@ -491,7 +502,7 @@ class HistProjector(object):
     #############################
     # Functions to be overridden!
     #############################
-    def ProjectionName(self, *args, **kwargs):
+    def projection_name(self, *args, **kwargs):
         """ Define the projection name for this projector.
 
         Note:
@@ -503,16 +514,17 @@ class HistProjector(object):
                 projection function.
         Returns:
             str: Projection name string formatted with the passed options. By default, it returns
-                ``projectionNameFormat`` formatted with the arguments to this function.
+                ``projection_name_format`` formatted with the arguments to this function.
         """
-        return self.projectionNameFormat.format(**kwargs)
+        return self.projection_name_format.format(**kwargs)
 
-    def GetHist(self, observable, *args, **kwargs):
-        """ Get the histogram that may be stored in some object. This histogram is used
-        to project from.
+    def get_hist(self, observable, *args, **kwargs):
+        """ Get the histogram that may be stored in some object.
+
+        This histogram is used to project from.
 
         Note:
-            The output object could just be the raw histogram.
+            The output object could just be the raw ROOT histogram.
 
         Note:
             This function is just a basic placeholder and likely should be overridden.
@@ -522,11 +534,12 @@ class HistProjector(object):
             args (list): Additional arguments passed to the projection function
             kwargs (dict): Additional arguments passed to the projection function
         Return:
-            A ROOT.TH1 or ROOT.THnBase histogram which should be projected. By default, it returns the observable (input object).
+            ROOT.TH1 or ROOT.THnBase histogram which should be projected. By default, it returns the
+                observable (input object).
         """
         return observable
 
-    def OutputKeyName(self, inputKey, outputHist, projectionName, *args, **kwargs):
+    def output_key_name(self, input_key, output_hist, projection_name, *args, **kwargs):
         """ Returns the key under which the output object should be stored.
 
         Note:
@@ -534,18 +547,20 @@ class HistProjector(object):
             and likely should be overridden.
 
         Args:
-            inputKey (str): Key of the input hist in the input dict
-            outputHist (ROOT.TH1 or ROOT.THnBase): The output histogram
-            projectionName (str): Projection name for the output histogram
+            input_key (str): Key of the input hist in the input dict
+            output_hist (ROOT.TH1 or ROOT.THnBase): The output histogram
+            projection_name (str): Projection name for the output histogram
             args (list): Additional arguments passed to the projection function
-            kwargs (dict): Projection information dict combined with additional arguments passed to the projection function
+            kwargs (dict): Projection information dict combined with additional arguments passed to
+                the projection function.
         Returns:
-            str: Key under which the output object should be stored. By default, it returns the projection name.
+            str: Key under which the output object should be stored. By default, it returns the
+                projection name.
         """
-        return projectionName
+        return projection_name
 
-    def OutputHist(self, outputHist, inputObservable, *args, **kwargs):
-        """ Return an output object. It should store the ``outputHist``.
+    def output_hist(self, output_hist, input_observable, *args, **kwargs):
+        """ Return an output object. It should store the ``output_hist``.
 
         Note:
             The output object could just be the raw histogram.
@@ -555,12 +570,15 @@ class HistProjector(object):
             and likely should be overridden.
 
         Args:
-            outputHist (ROOT.TH1 or ROOT.THnBase): The output histogram
-            inputObservable (object): The corresponding input object. It could be a histogram or something more complex.
+            output_hist (ROOT.TH1 or ROOT.THnBase): The output histogram
+            input_observable (object): The corresponding input object. It could be a histogram or something
+                more complex.
             args (list): Additional arguments passed to the projection function
-            kwargs (dict): Projection information dict combined with additional arguments passed to the projection function
+            kwargs (dict): Projection information dict combined with additional arguments passed to the
+                projection function
         Return:
-            str: The output object which should be stored in the output dict. By default, it returns the output hist.
+            str: The output object which should be stored in the output dict. By default, it returns the
+                output hist.
         """
-        return outputHist
+        return output_hist
 
