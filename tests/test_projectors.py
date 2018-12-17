@@ -401,8 +401,8 @@ class TestProjectorsWithRoot():
         (hist_axis_ranges_without_entries.x_axis, False),
     ], ids = ["PA with entries", "PA without entries"])
     def test_TH2Projection(self, logging_mixin, test_root_hists,
-                          use_PDCA, additional_cuts, expected_additional_cuts,
-                          projection_axes, expected_projection_axes):
+                           use_PDCA, additional_cuts, expected_additional_cuts,
+                           projection_axes, expected_projection_axes):
         """ Test projection of a TH2 to a TH1. """
         import ROOT   # noqa: F401
 
@@ -489,9 +489,9 @@ class TestProjectorsWithRoot():
         (hist_axis_ranges_without_entries.z_axis, False)
     ], ids = ["PA with entries", "PA without entries"])
     def test_TH3_to_TH1_projection(self, logging_mixin, test_root_hists,
-                               additional_axis_cuts, expected_additional_axis_cuts,
-                               projection_dependent_cut_axes, expected_projection_dependent_cut_axes,
-                               projection_axes, expected_projection_axes):
+                                   additional_axis_cuts, expected_additional_axis_cuts,
+                                   projection_dependent_cut_axes, expected_projection_dependent_cut_axes,
+                                   projection_axes, expected_projection_axes):
         """ Test projection from a TH3 to a TH1 derived class. """
         import ROOT  # noqa: F401
 
@@ -580,8 +580,8 @@ class TestProjectorsWithRoot():
         ([hist_axis_ranges_without_entries.z_axis, hist_axis_ranges_without_entries.x_axis], False),
     ], ids = ["PA with entries", "PA without entries due to x", "PA without entires due to z", "PA without entries"])
     def test_TH3_to_TH2_projection(self, logging_mixin, test_root_hists,
-                               use_PDCA, additional_cuts, expected_additional_cuts,
-                               projection_axes, expected_projection_axes):
+                                   use_PDCA, additional_cuts, expected_additional_cuts,
+                                   projection_axes, expected_projection_axes):
         """ Test projection of a TH3 into a TH2. """
         import ROOT  # noqa: F401
 
