@@ -150,7 +150,7 @@ def determine_override_options(selected_options: tuple, override_opts: DictLike,
     for option in override_opts:
         # We need to cast the option to a string to effectively compare to the selected option,
         # since only some of the options will already be strings
-        if str(option) in list(map(lambda opt: opt.str(), selected_options)):
+        if str(option) in list(map(lambda opt: str(opt), selected_options)):
             override_dict.update(determine_override_options(selected_options, override_opts[option], set_of_possible_options))
         else:
             logger.debug(f"override_opts: {override_opts}")
@@ -162,7 +162,7 @@ def determine_override_options(selected_options: tuple, override_opts: DictLike,
             for possible_options in set_of_possible_options:
                 # Same type of comparison as above, but for all possible options instead of the selected
                 # options.
-                if str(option) in list(map(lambda opt: opt.str(), possible_options)):
+                if str(option) in list(map(lambda opt: str(opt), possible_options)):
                     found_as_possible_option = True
                 # Below is more or less equivalent to the above (although .str() hides the details or
                 # whether we should compare to the name or the value in the enum and only compares against
