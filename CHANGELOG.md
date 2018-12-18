@@ -2,6 +2,14 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.1] - 18 December 2018
+
+### Changed
+
+- Convert each argument via `str()` in the generic_config instead of `obj.str()` which is less portable and
+  pythonic. Precipitated by changes in the definition of enumeration classes in the jet-hadron package. See:
+  `595ef2a8`.
+
 ## [1.2] - 17 December 2018
 
 ### Added
