@@ -14,17 +14,19 @@ import itertools
 import logging
 import string
 import ruamel.yaml
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Type
 
 logger = logging.getLogger(__name__)
+# Make it a bit easier to specify the CommentedMap type.
+DictLike = Type[ruamel.yaml.comments.CommentedMap]
 
-def load_configuration(filename):
+def load_configuration(filename: str) -> DictLike:
     """ Load an analysis configuration from a file.
 
     Args:
-        filename (str): Filename of the YAML configuration file.
+        filename: Filename of the YAML configuration file.
     Returns:
-        dict-like: dict-like object containing the loaded configuration
+        dict-like object containing the loaded configuration
     """
     # Initialize the YAML object in the round trip mode
     # NOTE: "typ" is a not a typo. It stands for "type"
@@ -35,7 +37,7 @@ def load_configuration(filename):
 
     return config
 
-def override_options(config, selected_options, set_of_possible_options, config_containing_override = None):
+def override_options(config: DictLike, selected_options: tuple, set_of_possible_options: tuple, config_containing_override: DictLike = None) -> DictLike:
     """ Determine override options for a particular configuration.
 
     The options are determined by searching following the order specified in selected_options.
@@ -60,11 +62,11 @@ def override_options(config, selected_options, set_of_possible_options, config_c
     single element lists can be converted into scalar values using ``simplify_data_representations()``.
 
     Args:
-        config (CommentedMap): The dict-like configuration from ruamel.yaml which should be overridden.
-        selected_options (tuple): The selected analysis options. They will be checked in the order with which
+        config: The dict-like configuration from ruamel.yaml which should be overridden.
+        selected_options: The selected analysis options. They will be checked in the order with which
             they are passed, so make certain that it matches the order in the configuration file!
         set_of_possible_options (tuple of enums): Possible options for the override value categories.
-        config_containing_override (CommentedMap): The dict-like config containing the override options in a map called
+        config_containing_override: The dict-like config containing the override options in a map called
             "override". If it is not specified, it will look for it in the main config.
     Returns:
         dict-like object: The updated configuration
@@ -110,7 +112,7 @@ def override_options(config, selected_options, set_of_possible_options, config_c
 
     return config
 
-def simplify_data_representations(config):
+def simplify_data_representations(config: DictLike) -> DictLike:
     """ Convert one entry lists to the scalar value
 
     This step is necessary because anchors are not kept for scalar values - just for lists and dictionaries.
@@ -120,9 +122,9 @@ def simplify_data_representations(config):
     Some notes on anchors in ruamel.yaml are here: https://stackoverflow.com/a/48559644
 
     Args:
-        config (CommentedMap): The dict-like configuration from ruamel.yaml which should be simplified.
+        config: The dict-like configuration from ruamel.yaml which should be simplified.
     Returns:
-        dict-like object: The updated configuration
+        The updated configuration.
     """
     for k, v in config.items():
         if v and isinstance(v, list) and len(v) == 1:
@@ -131,20 +133,20 @@ def simplify_data_representations(config):
 
     return config
 
-def determine_override_options(selected_options, override_opts, set_of_possible_options = ()):
+def determine_override_options(selected_options: tuple, override_opts: DictLike, set_of_possible_options: tuple = ()):
     """ Recursively extract the dict described in override_options().
 
-    In particular, this searches for selected options in the override_opts dict.
-    It stores only the override options that are selected.
+    In particular, this searches for selected options in the override_opts dict. It stores only
+    the override options that are selected.
 
     Args:
-        selected_options (tuple): The options selected for this analysis, in the order defined used
-            with override_options() and in the configuration file.
-        override_opts (CommentedMap): dict-like object returned by ruamel.yaml which contains the options that
+        selected_options: The options selected for this analysis, in the order defined used
+            with ``override_options()`` and in the configuration file.
+        override_opts: dict-like object returned by ruamel.yaml which contains the options that
             should be used to override the configuration options.
         set_of_possible_options (tuple of enums): Possible options for the override value categories.
     """
-    override_dict = {}
+    override_dict: Dict[str, Any] = {}
     for option in override_opts:
         # We need to cast the option to a string to effectively compare to the selected option,
         # since only some of the options will already be strings
@@ -158,18 +160,20 @@ def determine_override_options(selected_options, override_opts, set_of_possible_
             #       such as in the case of the energy (because a number is not allowed to be a field name.)
             found_as_possible_option = False
             for possible_options in set_of_possible_options:
-                # Same type of comparison as above, but for all possible options instead of the selected options.
+                # Same type of comparison as above, but for all possible options instead of the selected
+                # options.
                 if str(option) in list(map(lambda opt: opt.str(), possible_options)):
                     found_as_possible_option = True
-                # Below is more or less equivalent to the above (although .str() hides the details or whether
-                # we should compare to the name or the value in the enum and only compares against the designated value).
+                # Below is more or less equivalent to the above (although .str() hides the details or
+                # whether we should compare to the name or the value in the enum and only compares against
+                # the designated value).
                 #for possible_opt in possible_options:
                     #if possible_opt.name == option or possible_opt.value == option:
                     #    found_as_possible_option = True
 
             if not found_as_possible_option:
-                # Store the override value, since it doesn't correspond with a selected option or a possible option
-                # and therefore must be an option that we want to override.
+                # Store the override value, since it doesn't correspond with a selected option or a possible
+                # option and therefore must be an option that we want to override.
                 logger.debug(f"Storing override option \"{option}\", with value \"{override_opts[option]}\"")
                 override_dict[option] = override_opts[option]
             else:
@@ -177,15 +181,15 @@ def determine_override_options(selected_options, override_opts, set_of_possible_
 
     return override_dict
 
-def determine_selection_of_iterable_values_from_config(config, possible_iterables):
+def determine_selection_of_iterable_values_from_config(config: DictLike, possible_iterables: Dict[str, Type[enum.Enum]]) -> Dict[str, List[Any]]:
     """ Determine iterable values to use to create objects for a given configuration.
 
     All values of an iterable can be included be setting the value to ``True`` (Not as a single value list,
     but as the only value.). Alternatively, an iterator can be disabled by setting the value to ``False``.
 
     Args:
-        config (CommentedMap): The dict-like configuration from ruamel.yaml which should be overridden.
-        possible_iterables (dict): Key value pairs of names of enumerations and their values.
+        config: The dict-like configuration from ruamel.yaml which should be overridden.
+        possible_iterables: Key value pairs of names of enumerations and their values.
     Returns:
         dict: Iterables values that were requested in the config.
     """
@@ -195,7 +199,7 @@ def determine_selection_of_iterable_values_from_config(config, possible_iterable
         if k not in possible_iterables:
             raise KeyError(k, f"Cannot find requested iterable in possible_iterables: {possible_iterables}")
         logger.debug(f"k: {k}, v: {v}")
-        additional_iterable = []
+        additional_iterable: List[Any] = []
         enum_values = possible_iterables[k]
         # Check for a string. This is wrong, and the user should be notified.
         if isinstance(v, str):
@@ -215,7 +219,7 @@ def determine_selection_of_iterable_values_from_config(config, possible_iterable
 
     return iterables
 
-def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_options: dict, key_index_name: str = "KeyIndex") -> Tuple[object, List[str], dict]:
+def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_options: dict, key_index_name: str = "KeyIndex") -> Tuple[Any, List[str], dict]:
     """ Create objects for each set of values based on the given arguments.
 
     The iterable values are available under a key index ``dataclass`` which is used to index the returned
@@ -313,19 +317,21 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
     return (KeyIndex, names, objects)
 
 class formatting_dict(dict):
-    """ Dict to handle missing keys when formatting a string. It returns the missing key
-    for later use in formatting. See: https://stackoverflow.com/a/17215533 """
-    def __missing__(self, key):
+    """ Dict to handle missing keys when formatting a string.
+
+    It returns the missing key for later use in formatting. See: https://stackoverflow.com/a/17215533
+    """
+    def __missing__(self, key: str) -> str:
         return "{" + key + "}"
 
-def apply_formatting_dict(obj, formatting):
+def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
     """ Recursively apply a formatting dict to all strings in a configuration.
 
     Note that it skips applying the formatting if the string appears to contain latex (specifically,
     if it contains an "$"), since the formatting fails on nested brackets.
 
     Args:
-        obj (dict): Some configuration object to recursively applying the formatting to.
+        obj: Some configuration object to recursively applying the formatting to.
         formatting (dict): String formatting options to apply to each configuration field.
     Returns:
         dict: Configuration with formatting applied to every field.

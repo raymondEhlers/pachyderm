@@ -8,12 +8,12 @@
 from dataclasses import dataclass
 import logging
 import numpy as np
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
-def get_histograms_in_list(filename: str, list_name: str = "AliAnalysisTaskJetH_tracks_caloClusters_clusbias5R2GA") -> dict:
+def get_histograms_in_list(filename: str, list_name: str = "AliAnalysisTaskJetH_tracks_caloClusters_clusbias5R2GA") -> Dict[str, Any]:
     """ Get histograms from the file and make them available in a dict.
 
     Lists are recursively explored, with all lists converted to dictionaries, such that the return
@@ -21,10 +21,10 @@ def get_histograms_in_list(filename: str, list_name: str = "AliAnalysisTaskJetH_
     derived objects).
 
     Args:
-        filename (str): Filename of the ROOT file containing the list.
-        list_name (str): Name of the list to retrieve.
+        filename: Filename of the ROOT file containing the list.
+        list_name: Name of the list to retrieve.
     Returns:
-        dict: Contains hists with keys as their names. Lists are recursively added, mirroring
+        Contains hists with keys as their names. Lists are recursively added, mirroring
             the structure under which the hists were stored.
     Raises:
         ValueError: If the list could not be found in the given file.
@@ -47,7 +47,7 @@ def get_histograms_in_list(filename: str, list_name: str = "AliAnalysisTaskJetH_
 
     return hists
 
-def _retrieve_object(output_dict: dict, obj) -> None:
+def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
     """ Function to recursively retrieve histograms from a list in a ROOT file.
 
     ``SetDirectory(True)`` is applied to TH1 derived hists and python is explicitly given
@@ -163,7 +163,7 @@ class Histogram1D:
         return (x, y, errors)
 
     @classmethod
-    def from_existing_hist(cls, hist):
+    def from_existing_hist(cls, hist: Any):
         """ Convert an existing histogram.
 
         Note:
@@ -193,7 +193,7 @@ class Histogram1D:
 
         return cls(x = x, y = y, errors_squared = errors_squared)
 
-def get_array_from_hist2D(hist, set_zero_to_NaN: bool = True):
+def get_array_from_hist2D(hist: Any, set_zero_to_NaN: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """ Extract the necessary data from the hist.
 
     Converts the histogram into a numpy array, and suitably processes it for a surface plot

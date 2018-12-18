@@ -22,7 +22,7 @@ epsilon = 1e-5
 ###################
 # Utility functions
 ###################
-def read_YAML(filename: str, file_access_mode: str = "r") -> dict:
+def read_YAML(filename: str, file_access_mode: str = "r") -> ruamel.yaml.comments.CommentedMap:
     """ Read the YAML file at filename.
 
     Uses the round trip mode.
