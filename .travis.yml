@@ -12,7 +12,7 @@ _testScript: &testScript
         # Check code quality
         - flake8 .
         # Static type checking
-        - mypy --ignore-missing-imports pachyderm
+        - mypy pachyderm
         # Run the tests
         - pytest -l -vv --cov=pachyderm --cov-branch -m "not ROOT" --durations=5 tests/
         # Check that the docs build successfully
