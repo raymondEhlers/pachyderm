@@ -5,7 +5,7 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-import collections
+import dataclasses
 import logging
 import pytest
 
@@ -14,10 +14,10 @@ from pachyderm import generic_class
 logger = logging.getLogger(__name__)
 
 @pytest.fixture
-def setupEqualityMixin():
+def setup_equality_mixin():
     """ Create a basic class for tests of the equality mixin. """
 
-    class equalityMixinTestClass(generic_class.EqualityMixin):
+    class EqualityMixinTestClass(generic_class.EqualityMixin):
         def __init__(self, aNumber, aString, aList, aDict):
             self.aNumber = aNumber
             self.aString = aString
@@ -31,58 +31,58 @@ def setupEqualityMixin():
     aList = [1, 2, 3, {"hello": "world"}],
     aDict = {"string": "string", "list": [1, 2, 3], "dict": {"hello": "world"}}
 
-    testClass = equalityMixinTestClass(aNumber, aString, aList, aDict)
-    expectedClass = equalityMixinTestClass(aNumber, aString, aList, aDict)
+    test_class = EqualityMixinTestClass(aNumber, aString, aList, aDict)
+    expected_class = EqualityMixinTestClass(aNumber, aString, aList, aDict)
 
-    return (testClass, expectedClass)
+    return (test_class, expected_class)
 
-def testEqualityMixin(logging_mixin, setupEqualityMixin):
+def test_equality_mixin(logging_mixin, setup_equality_mixin):
     """ Test the equality mixin with the same classes. """
-    testClass, expectedClass = setupEqualityMixin
+    test_class, expected_class = setup_equality_mixin
 
     # Check basic assertions
-    assert testClass is testClass
-    assert testClass == testClass
+    assert test_class is test_class
+    assert test_class == test_class
     # Check against an identical instance of the same class.
-    assert testClass == expectedClass
-    assert not testClass != expectedClass
+    assert test_class == expected_class
+    assert not test_class != expected_class
 
     # Modify the test class to make the classes unequal.
     # (We will work through a simple shift of the elements one member forward).
     # (I would do this with a paramterization, but I don't see any straightforward
     # way to do it, so this will be fine)
-    testClass.aNumber = expectedClass.aDict
-    assert testClass != expectedClass
-    assert not testClass == expectedClass
+    test_class.aNumber = expected_class.aDict
+    assert test_class != expected_class
+    assert not test_class == expected_class
 
-    testClass.aString = expectedClass.aNumber
-    assert testClass != expectedClass
-    assert not testClass == expectedClass
+    test_class.aString = expected_class.aNumber
+    assert test_class != expected_class
+    assert not test_class == expected_class
 
-    testClass.aList = expectedClass.aString
-    assert testClass != expectedClass
-    assert not testClass == expectedClass
+    test_class.aList = expected_class.aString
+    assert test_class != expected_class
+    assert not test_class == expected_class
 
-    testClass.aDict = expectedClass.aList
-    assert testClass != expectedClass
-    assert not testClass == expectedClass
+    test_class.aDict = expected_class.aList
+    assert test_class != expected_class
+    assert not test_class == expected_class
 
-    # Restore the changes (just to be certain)
-    testClass.aNumber = expectedClass.aNumber
-    testClass.aString = expectedClass.aString
-    testClass.aList = expectedClass.aList
-    testClass.aDict = expectedClass.aDict
+    # Restore the changes so they can be used later (just to be certain)
+    test_class.aNumber = expected_class.aNumber
+    test_class.aString = expected_class.aString
+    test_class.aList = expected_class.aList
+    test_class.aDict = expected_class.aDict
 
-def testEqualityMixinAgainstOtherClasses(logging_mixin, setupEqualityMixin):
+def test_equality_mixin_against_other_classes(logging_mixin, setup_equality_mixin):
     """ Test the quality mixin against other classes, for which comparions are not implemented. """
-    testClass, expectedClass = setupEqualityMixin
+    test_class, expected_class = setup_equality_mixin
 
     # Create a named tuple object to compare against.
-    testNamedTuple = collections.namedtuple("testTuple", ["hello", "world"])
-    anotherObject = testNamedTuple(hello = "hello", world = "world")
+    TestClass = dataclasses.make_dataclass("TestClass", ["hello", "world"])
+    another_object = TestClass(hello = "hello", world = "world")
 
     # Can't catch NotImplemented, as it's a special type of raised value
     # that isn't handled the same way as other raised exceptions.
     # Instead, we just perform the assertions to cover tests against different objects.
-    assert not testClass == anotherObject
-    assert testClass != anotherObject
+    assert not test_class == another_object
+    assert test_class != another_object
