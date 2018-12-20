@@ -14,23 +14,34 @@ import itertools
 import logging
 import string
 import ruamel.yaml
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, Iterable, List, Tuple, Type
 
 logger = logging.getLogger(__name__)
 # Make it a bit easier to specify the CommentedMap type.
 DictLike = Type[ruamel.yaml.comments.CommentedMap]
 
-def load_configuration(filename: str) -> DictLike:
+def load_configuration(filename: str, classes_to_register: Iterable[Any] = None) -> DictLike:
     """ Load an analysis configuration from a file.
 
     Args:
         filename: Filename of the YAML configuration file.
+        classes_to_register: Classes to register with YAML so they can be constructed automatically.
+            Default: None.
     Returns:
         dict-like object containing the loaded configuration
     """
+    # Validate passed classes
+    if classes_to_register is None:
+        classes_to_register = []
+
     # Initialize the YAML object in the round trip mode
     # NOTE: "typ" is a not a typo. It stands for "type"
     yaml = ruamel.yaml.YAML(typ = "rt")
+
+    # Register externally defined classes
+    for cls in classes_to_register:
+        logger.debug(f"Registering class {cls} with YAML")
+        yaml.register_class(cls)
 
     with open(filename, "r") as f:
         config = yaml.load(f)

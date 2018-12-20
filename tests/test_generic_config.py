@@ -182,6 +182,13 @@ def test_load_configuration(logging_mixin, basic_config):
           trivial formatting issues.
     """
     (basic_config, yaml_string) = basic_config
+    classes_to_register = [dataclasses.make_dataclass("TestClass", ["hello", "world"])]
+    yaml_string += """
+hello:
+    - !TestClass
+      hello: "str"
+      world: "str2" """
+    basic_config["hello"] = [classes_to_register[0](hello = "str", world = "str2")]
 
     import tempfile
     with tempfile.NamedTemporaryFile() as f:
@@ -189,7 +196,7 @@ def test_load_configuration(logging_mixin, basic_config):
         f.write(yaml_string.encode())
         f.seek(0)
         # Then get the config from the file
-        retrieved_config = generic_config.load_configuration(f.name)
+        retrieved_config = generic_config.load_configuration(f.name, classes_to_register = classes_to_register)
 
     assert retrieved_config == basic_config
 
