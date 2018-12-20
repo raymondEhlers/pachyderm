@@ -6,6 +6,7 @@
 """
 
 import dataclasses
+import copy
 import enum
 import logging
 import pytest
@@ -324,6 +325,35 @@ def test_determine_selection_of_iterable_values_from_config(logging_mixin, objec
     # Check in two ways.
     assert "collisionEnergy" not in iterables
     assert len(iterables) == 2
+
+def test_determine_selection_of_iterable_values_from_config_list_of_values(logging_mixin, object_creation_config):
+    """ Test creating objects from lists of values in a configuration file. """
+    # Create fake object needed for using lists of objects.
+    @dataclasses.dataclass
+    class TestIterable:
+        a: int
+        b: int
+
+    # Setup
+    (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
+    list_of_values = [
+        TestIterable(a = 1, b = 2),
+        TestIterable(a = 2, b = 3),
+    ]
+    # Create set of values and allow it as a possible iterable
+    config["iterables"]["test_iterable_values"] = copy.deepcopy(list_of_values)
+    possible_iterables["test_iterable_values"] = None
+    # Actually create the objects
+    iterables = generic_config.determine_selection_of_iterable_values_from_config(
+        config = config,
+        possible_iterables = possible_iterables
+    )
+
+    # Check the iterables
+    assert iterables["reaction_plane_orientation"] == reaction_plane_orientations
+    assert iterables["qVector"] == qvectors
+    assert iterables["test_iterable_values"] == list_of_values
+    assert len(iterables) == 3
 
 def test_determine_selection_of_iterable_values_with_undefined_iterable(logging_mixin, object_creation_config):
     """ Test determining which values of an iterable to use when an iterable is not defined. """

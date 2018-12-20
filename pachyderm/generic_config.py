@@ -214,7 +214,7 @@ def determine_selection_of_iterable_values_from_config(config: DictLike, possibl
         enum_values = possible_iterables[k]
         # Check for a string. This is wrong, and the user should be notified.
         if isinstance(v, str):
-            raise TypeError(type(v), "Passed string {v} when must be either bool or list".format(v = v))
+            raise TypeError(type(v), f"Passed string {v} when must be either bool or list")
         # Allow the possibility to skip
         if v is False:
             continue
@@ -222,9 +222,14 @@ def determine_selection_of_iterable_values_from_config(config: DictLike, possibl
         elif v is True:
             additional_iterable = list(enum_values)
         else:
-            # Otherwise, only take the requested values.
-            for el in v:
-                additional_iterable.append(enum_values[el])
+            if enum_values is None:
+                # The enumeration values are none, which means that we want to take
+                # all of the values defined in the config.
+                additional_iterable = list(v)
+            else:
+                # Otherwise, only take the requested values.
+                for el in v:
+                    additional_iterable.append(enum_values[el])
         # Store for later
         iterables[k] = additional_iterable
 
