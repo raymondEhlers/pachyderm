@@ -6,8 +6,11 @@
 """
 
 import dataclasses
+import enum
 import logging
 import pytest
+import ruamel.yaml
+import tempfile
 
 from pachyderm import generic_class
 
@@ -86,3 +89,42 @@ def test_equality_mixin_against_other_classes(logging_mixin, setup_equality_mixi
     # Instead, we just perform the assertions to cover tests against different objects.
     assert not test_class == another_object
     assert test_class != another_object
+
+@pytest.fixture
+def setup_enum_with_yaml(request):
+    """ Setup for testing reading and writing enum values to YAML. """
+    # Test enumeration
+    # Note: The request parameter must be called ``param`` because we are using parametrize with
+    #       indirect variables.
+    class TestEnum(*request.param, enum.Enum):
+        a = 1
+        b = 2
+
+        def __str__(self):
+            return str(self.name)
+
+    yaml = ruamel.yaml.YAML(typ = "rt")
+    yaml.register_class(TestEnum)
+
+    return TestEnum, yaml
+
+@pytest.mark.parametrize("setup_enum_with_yaml", [
+    [generic_class.EnumToYAML, generic_class.EnumFromYAML],
+    [generic_class.EnumWithYAML],
+], ids = ["Seperate mixins", "Combined mixin"], indirect = True)
+def test_enum_with_yaml(setup_enum_with_yaml, logging_mixin):
+    """ Test closure of reading and writing enum values to YAML. """
+    # Setup
+    TestEnum, yaml = setup_enum_with_yaml
+    input_value = TestEnum.a
+
+    # Read and write to a temp file for convenience.
+    with tempfile.TemporaryFile() as f:
+        # Dump the value to the file
+        yaml.dump([input_value], f)
+        # Then load it back.
+        f.seek(0)
+        result = yaml.load(f)
+
+    assert result == [input_value]
+
