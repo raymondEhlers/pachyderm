@@ -2,6 +2,19 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.2] - 22 December 2018
+
+### Added
+
+- Enumeration YAML read and write mixins. They utilize the `__name__` of the enumeration (not the value!).
+  See: `3f987afb`.
+
+### Changed
+
+- Allow for classes to be registered and constructed via YAML. See: `b877a09e`
+- Allows for set of iterable values to be specified in a configuration file. Often used in conjunction
+  with creating objects in YAML. See: `7cab0476`.
+
 ## [1.2.1] - 18 December 2018
 
 ### Changed
