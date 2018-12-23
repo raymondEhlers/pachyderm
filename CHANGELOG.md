@@ -2,6 +2,14 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.3] - 23 December 2018
+
+### Fixed
+
+- Mixin approach for enum values to/from YAML causes problems with pickling (which is implicitly called while
+  copying). Revised the approach to be unbound functions, which doesn't have this same problem. See:
+  `89159dc9`.
+
 ## [1.2.2] - 22 December 2018
 
 ### Added
