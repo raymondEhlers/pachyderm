@@ -91,27 +91,24 @@ def test_equality_mixin_against_other_classes(logging_mixin, setup_equality_mixi
     assert test_class != another_object
 
 @pytest.fixture
-def setup_enum_with_yaml(request):
+def setup_enum_with_yaml(logging_mixin):
     """ Setup for testing reading and writing enum values to YAML. """
     # Test enumeration
-    # Note: The request parameter must be called ``param`` because we are using parametrize with
-    #       indirect variables.
-    class TestEnum(*request.param, enum.Enum):
+    class TestEnum(enum.Enum):
         a = 1
         b = 2
 
         def __str__(self):
             return str(self.name)
 
+        to_yaml = classmethod(generic_class.enum_to_yaml)
+        from_yaml = classmethod(generic_class.enum_from_yaml)
+
     yaml = ruamel.yaml.YAML(typ = "rt")
     yaml.register_class(TestEnum)
 
     return TestEnum, yaml
 
-@pytest.mark.parametrize("setup_enum_with_yaml", [
-    [generic_class.EnumToYAML, generic_class.EnumFromYAML],
-    [generic_class.EnumWithYAML],
-], ids = ["Seperate mixins", "Combined mixin"], indirect = True)
 def test_enum_with_yaml(setup_enum_with_yaml, logging_mixin):
     """ Test closure of reading and writing enum values to YAML. """
     # Setup
