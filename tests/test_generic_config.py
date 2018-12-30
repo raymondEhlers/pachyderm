@@ -22,7 +22,7 @@ def log_yaml_dump(yaml, config):
     s = StringIO()
     yaml.dump(config, s)
     s.seek(0)
-    logger.debug(s)
+    logger.debug(s.read())
 
 @pytest.fixture
 def basic_config():
@@ -272,7 +272,7 @@ multiEntryDict:
     hello: "world"
     foo: "bar"
 """
-    yaml = ruamel.yaml.YAML()
+    yaml = ruamel.yaml.YAML(typ = "rt")
     data = yaml.load(test_yaml)
 
     return data
@@ -338,7 +338,7 @@ iterables:
     qVector: True
     collisionEnergy: False
 """
-    yaml = ruamel.yaml.YAML()
+    yaml = ruamel.yaml.YAML(typ = "rt")
     config = yaml.load(config)
 
     possible_iterables = {}
@@ -508,7 +508,7 @@ dict2:
 latexLike: $latex_{like \mathrm{x}}$
 noneExample: null
 """
-    yaml = ruamel.yaml.YAML()
+    yaml = ruamel.yaml.YAML(typ = "rt")
     config = yaml.load(config)
 
     formatting = {"a": "b", "c": 1}
