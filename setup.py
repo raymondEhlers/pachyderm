@@ -99,6 +99,7 @@ setup(
             "sphinx_markdown_tables",
         ],
         "dev": [
+            "pre-commit",
             "flake8",
             # Makes flake8 easier to parse
             "flake8-colors",
