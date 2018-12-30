@@ -27,7 +27,7 @@ $ pip install pachyderm
 
 All dependencies are specified in the `setup.py` (and will be handled automatically when installed via pip)
 except for ROOT. The package can be installed without ROOT with limited functionality, but for full
-functionality, it must be available.
+functionality, ROOT must be available.
 
 ### Dockerfile
 
@@ -36,6 +36,33 @@ There is a Dockerfile which is used for testing pachyderm with ROOT. It is based
 image](https://hub.docker.com/r/rehlers/overwatch-base/) to allow us to avoid redeveloping another container
 just to have ROOT available. It may also be used to run pachyderm if so desired, although such a use case
 doesn't seem tremendously useful (which is why the image isn't pushed to docker hub).
+
+## Development
+
+I recommend setting up the development environment as follows:
+
+```bash
+# Setup
+$ pip install -e .[dev,tests,docs]
+# Setup git pre-commit hooks to reduce errors
+$ pre-commit install
+# develop develop develop...
+```
+
+## Documentation
+
+All classes, functions, etc, should be documented, including with typing information. [The
+docs](https://pachyderm-heavy-ion.readthedocs.io/en/latest/) are built on each new successful commit. They can
+also be built locally using:
+
+```bash
+# Setup
+$ pip install -e .[dev,tests,docs]
+# Create the docs
+$ pushd doc && make html && popd
+# Open the created docs
+$ open docs/_build/html/index.html
+```
 
 ## Name Meaning
 
