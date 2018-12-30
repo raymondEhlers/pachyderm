@@ -94,18 +94,22 @@ def override_options(config: DictLike, selected_options: tuple, set_of_possible_
         # Check if key is there and if it is not None! (The second part is important)
         if k in config:
             try:
-                # We can't check for the anchor - we just have to try to access it.
-                # However, we don't actually care about the value. We just want to
-                # preserve it if it is exists.
+                # If it has an anchor, we know that we want to preserve the type. So we check for the anchor
+                # by trying to access it (Note that we don't actually care what the value is - just that it
+                # exists). If it fails with an AttributeError, then we know we can just assign the value. If it
+                # has an anchor, then we want to preserve the anchor information.
                 config[k].anchor
-                logger.debug("type: {}, k: {}".format(type(config[k]), k))
+                logger.debug(f"type: {type(config[k])}, k: {k}")
                 if isinstance(config[k], list):
                     # Clear out the existing list entries
                     del config[k][:]
-                    if isinstance(override_dict[k], str):
+                    if isinstance(override_dict[k], (str, int, float, bool)):
                         # We have to treat str carefully because it is an iterable, but it will be expanded as
                         # individual characters if it's treated the same as a list, which is not the desired
                         # behavior! If we wrap it in [], then it will be treated as the only entry in the list
+                        # NOTE: We also treat the basic types this way because they will be passed this way if
+                        #       overriding indirectly with anchors (since the basic scalar types don't yet support
+                        #       reassignment while maintaining their anchors).
                         config[k].append(override_dict[k])
                     else:
                         # Here we just assign all entries of the list to all entries of override_dict[k]
@@ -115,6 +119,14 @@ def override_options(config: DictLike, selected_options: tuple, set_of_possible_
                     # Then we can simply update the dict with our new values
                     config[k].clear()
                     config[k].update(override_dict[k])
+                elif isinstance(config[k], (int, float, bool)):
+                    # This isn't really very good (since we lose information), but there's nothing that can be done
+                    # about it at the moment (Dec 2018)
+                    logger.debug("Overwriting YAML anchor object. It is currently unclear how to reassign this value.")
+                    config[k] = v
+                else:
+                    # Raise a value error on all of the cases that we aren't already aware of.
+                    raise ValueError(f"Object {k} (type {type(config[k])}) somehow has an anchor, but is something other than a list or dict. Attempting to assign directly to it.")
             except AttributeError:
                 # If no anchor, just overwrite the value at this key
                 config[k] = v

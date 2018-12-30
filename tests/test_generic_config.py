@@ -47,15 +47,39 @@ test1: &test1
 - val1
 - val2
 test2: *test1
-# Test overrid values
+# Test override values
 test3: &test3 ["test3"]
 test4: *test3
+# Basic int override
+testInt: 1
+# Basic test for when int has anchors
+testIntAnchor: &testInt 10
+testIntAnchorValue: *testInt
+# Test for int override indirection
+testIntRef: &testIntIndirection [3]
+testIntAnchorIndirection: *testIntIndirection
+# Basic float override (will apparently use ScalarFloat)
+testFloat: 1.234
+# Basic test for when float has anchors
+testFloatAnchor: &testFloat 2.3456
+testFloatAnchorValue: *testFloat
+# Test for float override indirection
+testFloatRef: &testFloatAnchor [3.1]
+testFloatAnchorIndirection: *testFloatAnchor
+# Bools
+testBool: false
 testList: [1, 2]
 testDict:
     1: 2
 override:
     responseTaskName: *responseMakerTaskName
     test3: "test6"
+    testInt: 2
+    #testIntAnchor: 12
+    testIntRef: 4
+    testFloat: 2.71
+    testFloatRef: 3.14
+    testBool: true
     testList: [3, 4]
     testDict:
         3: 4
@@ -132,10 +156,23 @@ def test_basic_anchor_override(logging_mixin, basic_config):
     (basic_config, yaml_string) = basic_config
     basic_config = override_data(basic_config)
 
+    # Test all of the basic types. It is important to tests str, float, int, bool, etc
+    # because they are handled specially by ruamel.yaml to preserve anchors, etc.
     # The two conditions below are redundant, but each are useful for visualizing
     # different configuration circumstances, so both are kept.
     assert basic_config["responseTaskName"] == "AliJetResponseMaker_{cent}histos"
     assert basic_config["test4"] == "test6"
+    # Test basic types
+    assert basic_config["testInt"] == 2
+    assert basic_config["testFloat"] == 2.71
+    assert basic_config["testBool"] is True
+    # Test anchor indirection for basic types
+    assert basic_config["testIntAnchorValue"] == 10
+    assert basic_config["testIntRef"] == 4
+    assert basic_config["testIntAnchorIndirection"] == 4
+    assert basic_config["testFloatAnchorValue"] == 2.3456
+    assert basic_config["testFloatRef"] == 3.14
+    assert basic_config["testFloatAnchorIndirection"] == 3.14
 
 def test_advanced_anchor_override(logging_mixin, basic_config):
     """ Test overriding a anchored value with another anchor.
