@@ -2,6 +2,25 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3] - 30 December 2018
+
+### Added
+
+- New YAML module to create YAML objects, register classes + modules for reading and writing, and additional
+  helper functions. It generally encapsulate much of the basic YAML functionality. See: `e8009517`.
+- Pre-commit hooks configuration to the repository based on `pre-commit`. This should generally improve the
+  quality of commits. Currently includes `flake8`, `mypy`, `yamllint`, and some additional minor python
+  checks. See: `586c1549` and `0510a0ba`.
+- YAML linting via `yamllint`. Little is done with this yet, but more files should filter in, so it's useful
+  to have . See: `a6bc250f`.
+
+### Fixed
+
+- Fixed breaking change made by `ruamel.yaml` upstream related to base python types receiving anchor support.
+  It is a good start, but still needs some time to mature for our purposes. Also expanded the tests to check
+  for such issues. See: `9aa7f4b7` (the commit message has far more information).
+- Minor test improvements for `generic_config`. See: `d723bbcb`.
+
 ## [1.2.3] - 23 December 2018
 
 ### Fixed
