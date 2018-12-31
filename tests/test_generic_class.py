@@ -6,11 +6,8 @@
 """
 
 import dataclasses
-import enum
 import logging
 import pytest
-import ruamel.yaml
-import tempfile
 
 from pachyderm import generic_class
 
@@ -80,7 +77,7 @@ def test_equality_mixin_against_other_classes(logging_mixin, setup_equality_mixi
     """ Test the quality mixin against other classes, for which comparions are not implemented. """
     test_class, expected_class = setup_equality_mixin
 
-    # Create a named tuple object to compare against.
+    # Create a dataclass object to compare against.
     TestClass = dataclasses.make_dataclass("TestClass", ["hello", "world"])
     another_object = TestClass(hello = "hello", world = "world")
 
@@ -89,39 +86,4 @@ def test_equality_mixin_against_other_classes(logging_mixin, setup_equality_mixi
     # Instead, we just perform the assertions to cover tests against different objects.
     assert not test_class == another_object
     assert test_class != another_object
-
-@pytest.fixture
-def setup_enum_with_yaml(logging_mixin):
-    """ Setup for testing reading and writing enum values to YAML. """
-    # Test enumeration
-    class TestEnum(enum.Enum):
-        a = 1
-        b = 2
-
-        def __str__(self):
-            return str(self.name)
-
-        to_yaml = classmethod(generic_class.enum_to_yaml)
-        from_yaml = classmethod(generic_class.enum_from_yaml)
-
-    yaml = ruamel.yaml.YAML(typ = "rt")
-    yaml.register_class(TestEnum)
-
-    return TestEnum, yaml
-
-def test_enum_with_yaml(setup_enum_with_yaml, logging_mixin):
-    """ Test closure of reading and writing enum values to YAML. """
-    # Setup
-    TestEnum, yaml = setup_enum_with_yaml
-    input_value = TestEnum.a
-
-    # Read and write to a temp file for convenience.
-    with tempfile.TemporaryFile() as f:
-        # Dump the value to the file
-        yaml.dump([input_value], f)
-        # Then load it back.
-        f.seek(0)
-        result = yaml.load(f)
-
-    assert result == [input_value]
 

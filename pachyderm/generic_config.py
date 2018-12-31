@@ -14,35 +14,23 @@ import itertools
 import logging
 import string
 import ruamel.yaml
-from typing import Any, Dict, Iterable, List, Tuple, Type
+from typing import Any, Dict, List, Tuple, Type
+
+from pachyderm import yaml
 
 logger = logging.getLogger(__name__)
 # Make it a bit easier to specify the CommentedMap type.
 DictLike = Type[ruamel.yaml.comments.CommentedMap]
 
-def load_configuration(filename: str, classes_to_register: Iterable[Any] = None) -> DictLike:
+def load_configuration(yaml: "ruamel.yaml.YAML", filename: str) -> DictLike:
     """ Load an analysis configuration from a file.
 
     Args:
+        yaml: YAML object to use in loading the configuration.
         filename: Filename of the YAML configuration file.
-        classes_to_register: Classes to register with YAML so they can be constructed automatically.
-            Default: None.
     Returns:
         dict-like object containing the loaded configuration
     """
-    # Validate passed classes
-    if classes_to_register is None:
-        classes_to_register = []
-
-    # Initialize the YAML object in the round trip mode
-    # NOTE: "typ" is a not a typo. It stands for "type"
-    yaml = ruamel.yaml.YAML(typ = "rt")
-
-    # Register externally defined classes
-    for cls in classes_to_register:
-        logger.debug(f"Registering class {cls} with YAML")
-        yaml.register_class(cls)
-
     with open(filename, "r") as f:
         config = yaml.load(f)
 
@@ -302,6 +290,9 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         [(name, type(iterable)) for name, iterable in iterables.items()],
         frozen = True
     )
+    # Allow the KeyIndex to be read and written to YAML
+    KeyIndex.to_yaml = classmethod(yaml.enum_to_yaml)
+    KeyIndex.from_yaml = classmethod(yaml.enum_from_yaml)
     # ``itertools.product`` produces all possible permutations of the iterables values.
     # NOTE: Product preserves the order of the iterables values, which is important for properly
     #       assigning the values to the ``KeyIndex``.
@@ -396,7 +387,7 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
         pass
     else:
         # This may or may not be expected, depending on the particular value.
-        logger.info("NOTE: Unrecognized type {} of obj {}".format(type(obj), obj))
+        logger.info(f"NOTE: Unrecognized type {type(obj)} of obj {obj}")
 
     return obj
 

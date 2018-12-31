@@ -14,13 +14,14 @@ from io import StringIO
 import ruamel.yaml
 
 from pachyderm import generic_config
+from pachyderm import yaml
 
 logger = logging.getLogger(__name__)
 
-def log_yaml_dump(yaml, config):
+def log_yaml_dump(yml, config):
     """ Helper function to log the YAML config. """
     s = StringIO()
-    yaml.dump(config, s)
+    yml.dump(config, s)
     s.seek(0)
     logger.debug(s.read())
 
@@ -114,11 +115,11 @@ def override_data(config):
     Returns:
         CommentedMap: dict-like object containing the overridden configuration
     """
-    yaml = ruamel.yaml.YAML()
+    yml = ruamel.yaml.YAML()
 
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("Before override:")
-        log_yaml_dump(yaml, config)
+        log_yaml_dump(yml, config)
 
     # Override and simplify the values
     config = generic_config.override_options(config, (), ())
@@ -126,7 +127,7 @@ def override_data(config):
 
     if logger.isEnabledFor(logging.DEBUG):
         logger.debug("After override:")
-        log_yaml_dump(yaml, config)
+        log_yaml_dump(yml, config)
 
     return config
 
@@ -227,6 +228,7 @@ hello:
       hello: "str"
       world: "str2" """
     basic_config["hello"] = [classes_to_register[0](hello = "str", world = "str2")]
+    yml = yaml.yaml(classes_to_register = classes_to_register)
 
     import tempfile
     with tempfile.NamedTemporaryFile() as f:
@@ -234,7 +236,7 @@ hello:
         f.write(yaml_string.encode())
         f.seek(0)
         # Then get the config from the file
-        retrieved_config = generic_config.load_configuration(f.name, classes_to_register = classes_to_register)
+        retrieved_config = generic_config.load_configuration(yaml = yml, filename = f.name)
 
     assert retrieved_config == basic_config
 
