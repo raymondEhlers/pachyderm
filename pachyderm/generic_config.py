@@ -307,11 +307,12 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
             formatting_options[name] = str(val)
 
         # Apply formatting options
-        # Need a deep copy to ensure that the iterable dependent values in the formatting are
-        # properly set for each object individually.
+        # If we formatted in place, we would need to deepcopy the args to ensure that the iterable dependent
+        # values in the formatted values are properly set for each iterable object individually.
+        # However, by formatting into new variables, we can avoid a deepcopy, which greatly improves performance!
         # NOTE: We don't need a deep copy do this for iterable value names themselves because they will be overwritten
-        #       for each object. See above.
-        object_args = copy.deepcopy(args)
+        #       for each object. They are set in the block above.
+        object_args = copy.copy(args)
         logger.debug(f"object_args pre format: {object_args}")
         object_args = apply_formatting_dict(object_args, formatting_options)
         # Print our results for debugging purposes. However, we skip printing the full
@@ -351,6 +352,7 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
         dict: Configuration with formatting applied to every field.
     """
     #logger.debug("Processing object of type {}".format(type(obj)))
+    new_obj = obj
 
     if isinstance(obj, str):
         # Apply the formatting options to the string.
@@ -361,17 +363,19 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
         # Note that we can't use format_map because it is python 3.2+ only.
         # The solution below works in py 2/3
         if "$" not in obj:
-            obj = string.Formatter().vformat(obj, (), formatting_dict(**formatting))
+            new_obj = string.Formatter().vformat(obj, (), formatting_dict(**formatting))
         #else:
         #    logger.debug("Skipping str {} since it appears to be a latex string, which may break the formatting.".format(obj))
     elif isinstance(obj, dict):
+        new_obj = {}
         for k, v in obj.items():
             # Using indirect access to ensure that the original object is updated.
-            obj[k] = apply_formatting_dict(v, formatting)
+            new_obj[k] = apply_formatting_dict(v, formatting)
     elif isinstance(obj, list):
+        new_obj = []
         for i, el in enumerate(obj):
             # Using indirect access to ensure that the original object is updated.
-            obj[i] = apply_formatting_dict(el, formatting)
+            new_obj.append(apply_formatting_dict(el, formatting))
     elif isinstance(obj, int) or isinstance(obj, float) or obj is None:
         # Skip over this, as there is nothing to be done - we just keep the value.
         pass
@@ -384,7 +388,7 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
         # This may or may not be expected, depending on the particular value.
         logger.info(f"NOTE: Unrecognized type {type(obj)} of obj {obj}")
 
-    return obj
+    return new_obj
 
 def iterate_with_selected_objects(analysis_objects: Dict[Any, Any], **selections: Dict[str, Any]) -> Any:
     """ Iterate over an analysis dictionary with selected attributes.
