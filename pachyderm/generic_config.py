@@ -309,7 +309,7 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         # Apply formatting options
         # Need a deep copy to ensure that the iterable dependent values in the formatting are
         # properly set for each object individually.
-        # NOTE: We don't need a deep copy do this for iterable value names because they will be overwritten
+        # NOTE: We don't need a deep copy do this for iterable value names themselves because they will be overwritten
         #       for each object. See above.
         object_args = copy.deepcopy(args)
         logger.debug(f"object_args pre format: {object_args}")

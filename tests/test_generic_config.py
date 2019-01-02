@@ -380,7 +380,7 @@ def test_determine_selection_of_iterable_values_from_config_list_of_values(loggi
         TestIterable(a = 2, b = 3),
     ]
     # Create set of values and allow it as a possible iterable
-    config["iterables"]["test_iterable_values"] = copy.deepcopy(list_of_values)
+    config["iterables"]["test_iterable_values"] = copy.copy(list_of_values)
     possible_iterables["test_iterable_values"] = None
     # Actually create the objects
     iterables = generic_config.determine_selection_of_iterable_values_from_config(
@@ -427,9 +427,13 @@ def object_and_creation_args():
     # Define fake object. We don't use a mock because we need to instantiate the object
     # in the function that is being tested. This is not super straightforward with mock,
     # so instead we create a test object by hand.
-    obj = dataclasses.make_dataclass("TestObj", ["reaction_plane_orientation", "qVector", "a", "b", "options_fmt"])
+    obj = dataclasses.make_dataclass(
+        "TestObj",
+        ["reaction_plane_orientation", "qVector", "a", "b", "options_fmt", "nested_fmt"]
+    )
     # Include args that depend on the iterable values to ensure that they are varied properly!
-    args = {"a": 1, "b": "{fmt}", "options_fmt": "{reaction_plane_orientation}_{qVector}"}
+    # "nested_fmt" is needed to show when deepcopy is necessary.
+    args = {"a": 1, "b": "{fmt}", "options_fmt": "{reaction_plane_orientation}_{qVector}", "nested_fmt": [[{"val": "{qVector}_{reaction_plane_orientation}"}]]}
     formatting_options = {"fmt": "formatted", "options_fmt": "{reaction_plane_orientation}_{qVector}"}
 
     return (obj, args, formatting_options)
@@ -465,7 +469,9 @@ def test_create_objects_from_iterables(logging_mixin, object_creation_config, ob
             assert created_object.qVector == qVector
             assert created_object.a == args["a"]
             assert created_object.b == formatting_options["fmt"]
+            logger.debug(f"options_fmt: {created_object.options_fmt}")
             assert created_object.options_fmt == formatting_options["options_fmt"].format(reaction_plane_orientation = rp_angle, qVector = qVector)
+            assert created_object.nested_fmt == [[{"val": f"{qVector}_{rp_angle}"}]]
 
 def test_missing_iterable_for_object_creation(logging_mixin, object_and_creation_args):
     """ Test object creation when the iterables are missing. """
