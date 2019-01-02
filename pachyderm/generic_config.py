@@ -16,8 +16,6 @@ import string
 import ruamel.yaml
 from typing import Any, Dict, List, Tuple, Type
 
-from pachyderm import yaml
-
 logger = logging.getLogger(__name__)
 # Make it a bit easier to specify the CommentedMap type.
 DictLike = Type[ruamel.yaml.comments.CommentedMap]
@@ -290,9 +288,6 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         [(name, type(iterable)) for name, iterable in iterables.items()],
         frozen = True
     )
-    # Allow the KeyIndex to be read and written to YAML
-    KeyIndex.to_yaml = classmethod(yaml.enum_to_yaml)
-    KeyIndex.from_yaml = classmethod(yaml.enum_from_yaml)
     # ``itertools.product`` produces all possible permutations of the iterables values.
     # NOTE: Product preserves the order of the iterables values, which is important for properly
     #       assigning the values to the ``KeyIndex``.
