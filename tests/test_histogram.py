@@ -48,9 +48,12 @@ def retrieve_root_list(test_root_hists):
     l1.SetName("mainList")
     l2 = ROOT.TList()
     l2.SetName("innerList")
+    l3 = ROOT.TList()
+    l3.SetName("secondList")
     for h in hists:
         l1.Add(h)
         l2.Add(h)
+        l3.Add(h)
     l1.Add(l2)
 
     # File for comparison.
@@ -58,12 +61,14 @@ def retrieve_root_list(test_root_hists):
     # Create the file if needed.
     if not os.path.exists(filename):
         current_directory = ROOT.TDirectory.CurrentDirectory()
-        lCopy = l1.Clone("tempMainList")
+        lCopy = l1.Clone("mainList")
+        lSecondCopy = l3.Clone("secondList")
         # The objects will be destroyed when l is written.
         # However, we write it under the l name to ensure it is read corectly later
         f = ROOT.TFile(filename, "RECREATE")
         f.cd()
         lCopy.Write(l1.GetName(), ROOT.TObject.kSingleKey)
+        lSecondCopy.Write(l3.GetName(), ROOT.TObject.kSingleKey)
         f.Close()
         current_directory.cd()
 
@@ -72,11 +77,14 @@ def retrieve_root_list(test_root_hists):
     expected = {}
     inner_dict = {}
     main_list = {}
+    second_list = {}
     for h in hists:
         inner_dict[h.GetName()] = h
         main_list[h.GetName()] = h
+        second_list[h.GetName()] = h
     main_list["innerList"] = inner_dict
     expected["mainList"] = main_list
+    expected["secondList"] = second_list
 
     yield (filename, l1, expected)
 
@@ -88,6 +96,27 @@ def retrieve_root_list(test_root_hists):
 
 @pytest.mark.ROOT
 class TestRetrievingHistgramsFromAList():
+    def test_get_histograms_in_file(self, logging_mixin, retrieve_root_list):
+        """ Test for retrieving all of the histograms in a ROOT file. """
+        (filename, root_list, expected) = retrieve_root_list
+
+        output = histogram.get_histograms_in_file(filename = filename)
+        logger.info(f"{output}")
+
+        # This isn't the most sophisticated way of comparsion, but bin-by-bin is sufficient for here.
+        # We take advantage that we know the structure of the file so we don't need to handle recursion
+        # or higher dimensional hists.
+        output_inner_list = output["mainList"].pop("innerList")
+        expected_inner_list = expected["mainList"].pop("innerList")
+        output_second_list = output.pop("secondList")
+        expected_second_list = expected.pop("secondList")
+        for (o, e) in [(output["mainList"], expected["mainList"]), (output_inner_list, expected_inner_list), (output_second_list, expected_second_list)]:
+            for oHist, eHist in zip(o.values(), e.values()):
+                logger.info(f"oHist: {oHist}, eHist: {eHist}")
+                oValues = [oHist.GetBinContent(i) for i in range(0, oHist.GetXaxis().GetNbins() + 2)]
+                eValues = [eHist.GetBinContent(i) for i in range(0, eHist.GetXaxis().GetNbins() + 2)]
+                assert np.allclose(oValues, eValues)
+
     def test_get_histograms_in_list(self, logging_mixin, retrieve_root_list):
         """ Test for retrieving a list of histograms from a ROOT file. """
         (filename, root_list, expected) = retrieve_root_list
@@ -127,6 +156,9 @@ class TestRetrievingHistgramsFromAList():
 
         output = {}
         histogram._retrieve_object(output, root_list)
+
+        # Ignore second list
+        expected.pop("secondList")
 
         assert output == expected
 

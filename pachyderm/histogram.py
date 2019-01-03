@@ -13,7 +13,18 @@ from typing import Any, Dict, Tuple
 # Setup logger
 logger = logging.getLogger(__name__)
 
-def get_histograms_in_list(filename: str, list_name: str = "AliAnalysisTaskJetH_tracks_caloClusters_clusbias5R2GA") -> Dict[str, Any]:
+def get_histograms_in_file(filename: str) -> Dict[str, Any]:
+    """ Helper function which gets all histograms in a file.
+
+    Args:
+        filename: Filename of the ROOT file containing the list.
+    Returns:
+        Contains hists with keys as their names. Lists are recursively added, mirroring
+            the structure under which the hists were stored.
+    """
+    return get_histograms_in_list(filename = filename)
+
+def get_histograms_in_list(filename: str, list_name: str = None) -> Dict[str, Any]:
     """ Get histograms from the file and make them available in a dict.
 
     Lists are recursively explored, with all lists converted to dictionaries, such that the return
@@ -33,7 +44,11 @@ def get_histograms_in_list(filename: str, list_name: str = "AliAnalysisTaskJetH_
 
     hists: dict = {}
     fIn = ROOT.TFile(filename, "READ")
-    hist_list = fIn.Get(list_name)
+    if list_name is not None:
+        hist_list = fIn.Get(list_name)
+    else:
+        hist_list = [obj.ReadObj() for obj in fIn.GetListOfKeys()]
+
     if not hist_list:
         fIn.ls()
         raise ValueError(f"Could not find list with name \"{list_name}\". Possible names are listed above.")
