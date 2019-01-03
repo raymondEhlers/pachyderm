@@ -149,7 +149,7 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
     # Construct the contained values so that we properly construct int, float, etc.
     # We just leave this to YAML because it already stores this information.
     values = [constructor.construct_object(n) for n in data.value]
-    print(f"{data}, {values}")
+    logger.debug(f"{data}, {values}")
     return np.array(values)
 
 def enum_to_yaml(cls: Type[T_EnumToYAML], representer: Type[ruamel.yaml.representer.BaseRepresenter], data: Type[T_EnumToYAML]) -> ruamel.yaml.nodes.ScalarNode:
