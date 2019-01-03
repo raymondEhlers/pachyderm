@@ -2,6 +2,27 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.1] - 2 January 2019
+
+### Added
+
+- Improved test coverage to demonstrate why `deepcopy` is necessary when constructing objects. See:
+  `369da022`.
+- `histogram.get_histograms_in_file(filename)` to return all histograms stored in a ROOT file. See:
+  `5b333884`.
+
+### Changed
+
+- Avoided a very expensive `deepcopy` by formatting strings into new objects instead of writing into existing
+  objects (which had to be copied first). See: `085f8f18`.
+- Return the iterables that were actually utilized in `generic_config.create_objects_from_iterables`. It
+  replaces the iterables names return values with a dict, where the keys are the iterables names and the
+  values are lists of the utilized iterables. See: `973b85ae`.
+
+### Fixed
+
+- `KeyIndex` already could be written to YAML - it didn't need `to_yaml` and `from_yaml` methods.
+
 ## [1.3] - 30 December 2018
 
 ### Added
