@@ -451,7 +451,7 @@ def test_create_objects_from_iterables(logging_mixin, object_creation_config, ob
     )
 
     # Create the objects.
-    (key_index, names, objects) = generic_config.create_objects_from_iterables(
+    (key_index, returned_iterables, objects) = generic_config.create_objects_from_iterables(
         obj = obj,
         args = args,
         iterables = iterables,
@@ -460,7 +460,7 @@ def test_create_objects_from_iterables(logging_mixin, object_creation_config, ob
     )
 
     # Check the names of the iterables.
-    assert names == list(iterables)
+    assert list(returned_iterables) == list(iterables)
     # Check the precise values passed to the object.
     for rp_angle in reaction_plane_orientations:
         for qVector in qvectors:
@@ -481,7 +481,7 @@ def test_missing_iterable_for_object_creation(logging_mixin, object_and_creation
 
     # Create the objects.
     with pytest.raises(ValueError) as exception_info:
-        (names, objects) = generic_config.create_objects_from_iterables(
+        generic_config.create_objects_from_iterables(
             obj = obj,
             args = args,
             iterables = iterables,

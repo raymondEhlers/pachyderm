@@ -233,7 +233,7 @@ def determine_selection_of_iterable_values_from_config(config: DictLike, possibl
 
     return iterables
 
-def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_options: dict, key_index_name: str = "KeyIndex") -> Tuple[Any, List[str], dict]:
+def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_options: dict, key_index_name: str = "KeyIndex") -> Tuple[Any, Dict[str, Any], dict]:
     """ Create objects for each set of values based on the given arguments.
 
     The iterable values are available under a key index ``dataclass`` which is used to index the returned
@@ -255,7 +255,7 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         ... )
         (
             KeyIndex,
-            ["a", "b"],
+            {"a": ["a1", "a2"], "b": ["b1", "b2"]}
             {
                 KeyIndex(a = "a1", b = "b1"): obj(a = "a1", b = "b1"),
                 KeyIndex(a = "a1", b = "b2"): obj(a = "a1", b = "b2"),
@@ -272,11 +272,11 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         formatting_options (dict): Values to be used in formatting strings in the arguments.
         key_obj_name (str): Name of the iterable key object.
     Returns:
-        (object, list, dict): Roughly, (KeyIndex, names, objects). Specifically, the key_index is a
-            new dataclass which defines the parameters used to create the object, names is the names
-            of the iterables used. The dictionary keys are KeyIndex objects which describe the iterable
-            arguments passed to the object, while the values are the newly constructed arguments. See the
-            example above.
+        (object, list, dict, dict): Roughly, (KeyIndex, iterables, objects). Specifically, the
+            key_index is a new dataclass which defines the parameters used to create the object, iterables
+            are the iterables used to create the objects, which names as keys and the iterables as values.
+            The objects dictionary keys are KeyIndex objects which describe the iterable arguments passed to the
+            object, while the values are the newly constructed arguments. See the example above.
     """
     # Setup
     objects = {}
@@ -329,7 +329,7 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
     if not objects:
         raise ValueError(iterables, "There appear to be no iterables to use in creating objects.")
 
-    return (KeyIndex, names, objects)
+    return (KeyIndex, iterables, objects)
 
 class formatting_dict(dict):
     """ Dict to handle missing keys when formatting a string.
