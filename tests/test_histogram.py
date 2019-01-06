@@ -307,29 +307,50 @@ class TestWithRootHists():
         logger.info(f"uniform_bins: {uniform_bins}")
         assert not np.allclose(expected_hist.bin_edges, uniform_bins)
 
-    #@pytest.mark.parametrize("use_bin_edges", [
-    #    False, True
-    #], ids = ["Use bin centers", "Use bin edges"])
+    @pytest.mark.parametrize("use_bin_edges", [
+        False, True
+    ], ids = ["Use bin centers", "Use bin edges"])
     @pytest.mark.parametrize("set_zero_to_NaN", [
         False, True
     ], ids = ["Keep zeroes as zeroes", "Set zeroes to NaN"])
-    def test_get_array_from_hist2D(self, logging_mixin, set_zero_to_NaN, test_root_hists):
+    def test_get_array_from_hist2D(self, logging_mixin, use_bin_edges, set_zero_to_NaN, test_root_hists):
         """ Test getting numpy arrays from a 2D hist. """
         hist = test_root_hists.hist2D
-        hist_array = histogram.get_array_from_hist2D(hist = hist, set_zero_to_NaN = set_zero_to_NaN)
+        x, y, hist_array = histogram.get_array_from_hist2D(hist = hist, set_zero_to_NaN = set_zero_to_NaN, return_bin_edges = use_bin_edges)
 
         # Determine expected values
-        x_range = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
-        y_range = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
+        if use_bin_edges:
+            epsilon = 1e-9
+            x_bin_edges = np.empty(hist.GetXaxis().GetNbins() + 1)
+            x_bin_edges[:-1] = [hist.GetXaxis().GetBinLowEdge(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)]
+            x_bin_edges[-1] = hist.GetXaxis().GetBinUpEdge(hist.GetXaxis().GetNbins())
+            y_bin_edges = np.empty(hist.GetYaxis().GetNbins() + 1)
+            y_bin_edges[:-1] = [hist.GetYaxis().GetBinLowEdge(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)]
+            y_bin_edges[-1] = hist.GetYaxis().GetBinUpEdge(hist.GetYaxis().GetNbins())
+            x_mesh = np.arange(np.amin(x_bin_edges), np.amax(x_bin_edges) + epsilon, hist.GetXaxis().GetBinWidth(1))
+            y_mesh = np.arange(np.amin(y_bin_edges), np.amax(y_bin_edges) + epsilon, hist.GetYaxis().GetBinWidth(1))
+        else:
+            x_mesh = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
+            y_mesh = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
+        x_range = x_mesh
+        y_range = y_mesh
         expected_x, expected_y = np.meshgrid(x_range, y_range)
-        expected_hist_array = np.array([hist.GetBinContent(x, y) for x in range(1, hist.GetXaxis().GetNbins() + 1) for y in range(1, hist.GetYaxis().GetNbins() + 1)], dtype=np.float32).reshape(hist.GetXaxis().GetNbins(), hist.GetYaxis().GetNbins())
+        expected_hist_array = np.array([
+            hist.GetBinContent(x, y)
+            for x in range(1, hist.GetXaxis().GetNbins() + 1)
+            for y in range(1, hist.GetYaxis().GetNbins() + 1)], dtype=np.float32
+        ).reshape(hist.GetYaxis().GetNbins(), hist.GetXaxis().GetNbins())
         if set_zero_to_NaN:
             expected_hist_array[expected_hist_array == 0] = np.nan
 
-        assert np.array_equal(hist_array[0], expected_x)
-        assert np.array_equal(hist_array[1], expected_y)
-        # Need to use the special `np.testing.assert_array_equal()` to properly
-        # handle comparing NaN in the array. It returns _None_ if it is successful,
-        # so we compare against that. It will raise an exception if they disagree
-        assert np.testing.assert_array_equal(hist_array[2], expected_hist_array) is None
+        assert np.allclose(x, expected_x)
+        assert np.allclose(y, expected_y)
+        assert np.allclose(hist_array, expected_hist_array, equal_nan = True)
+
+        # Check particular values for good measure.
+        assert np.isclose(hist_array[1][0], 1.0)
+        if set_zero_to_NaN:
+            assert np.isnan(hist_array[0][1])
+        else:
+            assert np.isclose(hist_array[0][1], 0.0)
 

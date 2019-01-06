@@ -222,30 +222,39 @@ class Histogram1D:
 
         return cls(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
 
-def get_array_from_hist2D(hist: Any, set_zero_to_NaN: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """ Extract the necessary data from the hist.
+def get_array_from_hist2D(hist: Any, set_zero_to_NaN: bool = True, return_bin_edges: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """ Extract x, y, and bin values from a 2D ROOT histogram.
 
     Converts the histogram into a numpy array, and suitably processes it for a surface plot
-    by removing 0s (which can cause problems when taking logs), and returning the bin centers
-    for (X,Y).
+    by removing 0s (which can cause problems when taking logs), and returning a set of (x, y) mesh
+    values utilziing either the bin edges or bin centers.
 
     Note:
         This is a different format than the 1D version!
 
     Args:
         hist (ROOT.TH2): Histogram to be converted.
-        set_zero_to_NaN (bool): If true, set 0 in the array to NaN. Useful with matplotlib so that
-            it will ignore the values when plotting. See comments in this function for more
-            details. Default: True.
+        set_zero_to_NaN: If true, set 0 in the array to NaN. Useful with matplotlib so that it will
+            ignore the values when plotting. See comments in this function for more details. Default: True.
+        return_bin_edges: Return x and y using bin edges instead of bin centers.
     Returns:
-        tuple: Contains (x bin centers, y bin centers, numpy array of hist data) where X,Y
-            are values on a grid (from np.meshgrid)
+        Contains (x values, y values, numpy array of hist data) where (x, y) are values on a
+            grid (from np.meshgrid) using the selected bin values.
     """
     # Process the hist into a suitable state
-    shape = (hist.GetXaxis().GetNbins(), hist.GetYaxis().GetNbins())
+    # NOTE: The shape specific can be somewhat confusing (ie. I would naviely expected to specify the x first.)
+    # This says that the ``GetYaxis().GetNbins()`` number of rows and ``GetXaxis().GetNbins()`` number of columns.
+    shape = (hist.GetYaxis().GetNbins(), hist.GetXaxis().GetNbins())
     # To keep consistency with the root_numpy 2D hist format, we transpose the final result
     # This format has x values as columns.
-    hist_array = np.array([hist.GetBinContent(x) for x in range(1, hist.GetNcells()) if not hist.IsBinUnderflow(x) and not hist.IsBinOverflow(x)]).reshape(shape).T
+    hist_array = np.array([hist.GetBinContent(x) for x in range(1, hist.GetNcells()) if not hist.IsBinUnderflow(x) and not hist.IsBinOverflow(x)])
+    # The hist_array was linear, so we need to shape it into our expected 2D values.
+    hist_array = hist_array.reshape(shape)
+    # Transpose the array to better match expectations
+    # In particular, by transposing the array, it means that ``thist_array[1][0]`` gives the 2nd x
+    # value (x_index = 1) and the 1st y value (y_index = 1). This is as we would expect. This is also
+    # the same convention as used by root_numpy
+    hist_array = hist_array.T
     # Set all 0s to nan to get similar behavior to ROOT. In ROOT, it will basically ignore 0s. This is
     # especially important for log plots. Matplotlib doesn't handle 0s as well, since it attempts to
     # plot them and then will throw exceptions when the log is taken.
@@ -254,9 +263,36 @@ def get_array_from_hist2D(hist: Any, set_zero_to_NaN: bool = True) -> Tuple[np.n
     if set_zero_to_NaN:
         hist_array[hist_array == 0] = np.nan
 
-    # We want an array of bin centers
-    x_range = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
-    y_range = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
+    if return_bin_edges:
+        # Bin edges
+        x_bin_edges = get_bin_edges_from_axis(hist.GetXaxis())
+        y_bin_edges = get_bin_edges_from_axis(hist.GetYaxis())
+
+        # NOTE: The addition of epsilon to the max is extremely important! Otherwise, the x and y
+        #       ranges will be one bin short since ``arange`` is not inclusive. This could also be resolved
+        #       by using ``linspace``, but I think this approach is perfectly fine.
+        # NOTE: This epsilon is smaller than the one in ``utils`` because we are sometimes dealing
+        #       with small times (~ns). The other value is larger because (I seem to recall) that
+        #       smaller values didn't always place nice with ROOT, but it is fine here, since we're
+        #       working with numpy.
+        # NOTE: This should be identical to taking the min and max of the axis using
+        #       ``TAxis.GetXmin()`` and ``TAxis.GetXmax()``, but I prefer this approach.
+        epsilon = 1e-9
+        x_range = np.arange(
+            np.amin(x_bin_edges),
+            np.amax(x_bin_edges) + epsilon,
+            hist.GetXaxis().GetBinWidth(1)
+        )
+        y_range = np.arange(
+            np.amin(y_bin_edges),
+            np.amax(y_bin_edges) + epsilon,
+            hist.GetYaxis().GetBinWidth(1)
+        )
+    else:
+        # We want an array of bin centers
+        x_range = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
+        y_range = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
+
     X, Y = np.meshgrid(x_range, y_range)
 
     return (X, Y, hist_array)
