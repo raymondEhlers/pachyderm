@@ -41,6 +41,23 @@ def test_root_hists():
     return RootHists(hist1D = hist, hist2D = hist2D, hist3D = hist3D)
 
 @pytest.fixture
+def setup_non_uniform_binning():
+    """ Test a ROOT histogram with non-uniform binning.
+
+    Args:
+        None
+    Returns:
+        1D histogram with non-uniform binning.
+    """
+    import ROOT
+
+    binning = np.array([0, 1, 2, 4, 5, 6], dtype = np.float64)
+    hist = ROOT.TH1F("test", "test", 5, binning)
+    hist.Fill(1.5)
+
+    return hist
+
+@pytest.fixture
 def test_sparse():
     """ Create a THnSparseF for testing.
 

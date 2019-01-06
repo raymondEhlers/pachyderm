@@ -281,6 +281,35 @@ class TestWithRootHists():
         logger.debug(f"sumw2: {hist.GetSumw2N()}")
         assert check_hist(hist_array, expected_hist_array) is True
 
+    def test_non_uniform_binning(self, logging_mixin, setup_non_uniform_binning):
+        """ Test non-uniform binning in Histogram1D. """
+        hist = setup_non_uniform_binning
+
+        # Determine expected values.
+        x_bins = range(1, hist.GetXaxis().GetNbins() + 1)
+        expected_bin_edges = np.empty(len(x_bins) + 1)
+        expected_bin_edges[:-1] = [hist.GetXaxis().GetBinLowEdge(i) for i in x_bins]
+        expected_bin_edges[-1] = hist.GetXaxis().GetBinUpEdge(hist.GetXaxis().GetNbins())
+
+        expected_hist = histogram.Histogram1D.from_existing_hist(hist)
+
+        # The naming is a bit confusing here, but basically we want to compare the
+        # non-uniform binnning in a ROOT hist vs a Histogram1D. We also then extract the bin
+        # edges here as an extra cross-check.
+        assert np.allclose(expected_hist.bin_edges, expected_bin_edges)
+        # Then we check all of the fields to be safe.
+        # (This is a bit redundant because both objects will use Histogram1D, but it doesn't hurt).
+        assert check_hist(hist, expected_hist)
+
+        # This uses uniform binning and it _shouldn't_ agree.
+        uniform_bins = np.linspace(expected_bin_edges[0], expected_bin_edges[-1], hist.GetXaxis().GetNbins() + 1)
+        logger.info(f"expected_bin_edges: {expected_bin_edges}")
+        logger.info(f"uniform_bins: {uniform_bins}")
+        assert not np.allclose(expected_hist.bin_edges, uniform_bins)
+
+    #@pytest.mark.parametrize("use_bin_edges", [
+    #    False, True
+    #], ids = ["Use bin centers", "Use bin edges"])
     @pytest.mark.parametrize("set_zero_to_NaN", [
         False, True
     ], ids = ["Keep zeroes as zeroes", "Set zeroes to NaN"])
