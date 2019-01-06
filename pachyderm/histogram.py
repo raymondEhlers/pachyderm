@@ -103,13 +103,22 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
 class Histogram1D:
     """ Contains histogram data.
 
+    Note:
+        Underflow and overflow bins are excluded!
+
+    Args:
+        bin_edges (np.ndarray): The histogram bin edges.
+        y (np.ndarray): The histogram bin values.
+        errors_squared (np.ndarray): The bin sum weight squared errors.
+
     Attributes:
         x (np.ndarray): The bin centers.
-        y (np.ndarray): The bin value.
+        y (np.ndarray): The bin values.
+        bin_edges (np.ndarray): The bin edges.
         errors (np.ndarray): The bin errors.
         errors_squared (np.ndarray): The bin sum weight squared errors.
     """
-    x: np.ndarray
+    bin_edges: np.ndarray
     y: np.ndarray
     errors_squared: np.ndarray
 
@@ -117,13 +126,27 @@ class Histogram1D:
     def errors(self) -> np.ndarray:
         return np.sqrt(self.errors_squared)
 
+    @property
+    def x(self) -> np.ndarray:
+        """ The histogram bin centers (``x``).
+
+        This property caches the x value so we don't have to calculate it every time.
+        """
+        try:
+            return self._x
+        except AttributeError:
+            bin_widths = (self.bin_edges[1:] - self.bin_edges[:-1]) / 2
+            x = self.bin_edges[:-1] + bin_widths
+            self._x: np.ndarray = x
+
+        return self._x
+
     @staticmethod
     def _from_uproot(hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ Convert a uproot histogram to a set of array for creating a Histogram.
 
         Note:
-            Underflow and overflow bins are excluded! Bins are assumed to be fixed
-            size.
+            Underflow and overflow bins are excluded!
 
         Args:
             hist (uproot.hist.TH1*): Input histogram.
@@ -132,28 +155,21 @@ class Histogram1D:
                 errors are the sumw2 bin errors.
         """
         # This excluces underflow and overflow
-        (y, edges) = hist.numpy()
-
-        # Assume uniform bin size
-        bin_size = (hist.high - hist.low) / hist.numbins
-        # Shift all of the edges to the center of the bins
-        # (and drop the last value, which is now invalid)
-        x = edges[:-1] + bin_size / 2.0
+        (y, bin_edges) = hist.numpy()
 
         # Also retrieve errors from sumw2.
         # If more sophistication is needed, we can modify this to follow the approach to
         # calculating bin errors from TH1::GetBinError()
         errors = hist.variances
 
-        return (x, y, errors)
+        return (bin_edges, y, errors)
 
     @staticmethod
     def _from_th1(hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ Convert a TH1 histogram to a Histogram.
 
         Note:
-            Underflow and overflow bins are excluded! Bins are assumed to be fixed
-            size.
+            Underflow and overflow bins are excluded!
 
         Args:
             hist (ROOT.TH1): Input histogram.
@@ -165,17 +181,15 @@ class Histogram1D:
         if hist.GetSumw2N() == 0:
             hist.Sumw2(True)
 
-        x_axis = hist.GetXaxis()
         # Don't include overflow
-        x_bins = range(1, x_axis.GetNbins() + 1)
-        x = np.array([x_axis.GetBinCenter(i) for i in x_bins])
+        bin_edges = get_bin_edges_from_axis(hist.GetXaxis())
         # NOTE: The y value and bin error are stored with the hist, not the axis.
-        y = np.array([hist.GetBinContent(i) for i in x_bins])
+        y = np.array([hist.GetBinContent(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
         errors = np.array(hist.GetSumw2())
         # Exclude the under/overflow binsov
         errors = errors[1:-1]
 
-        return (x, y, errors)
+        return (bin_edges, y, errors)
 
     @classmethod
     def from_existing_hist(cls, hist: Any):
@@ -201,12 +215,12 @@ class Histogram1D:
         # "values" is a proxy for if we have an uproot hist.
         logger.debug(f"{hist}, {type(hist)}")
         if hasattr(hist, "values"):
-            (x, y, errors_squared) = cls._from_uproot(hist)
+            (bin_edges, y, errors_squared) = cls._from_uproot(hist)
         else:
             # Handle traditional ROOT hists
-            (x, y, errors_squared) = cls._from_th1(hist)
+            (bin_edges, y, errors_squared) = cls._from_th1(hist)
 
-        return cls(x = x, y = y, errors_squared = errors_squared)
+        return cls(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
 
 def get_array_from_hist2D(hist: Any, set_zero_to_NaN: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """ Extract the necessary data from the hist.
@@ -246,4 +260,24 @@ def get_array_from_hist2D(hist: Any, set_zero_to_NaN: bool = True) -> Tuple[np.n
     X, Y = np.meshgrid(x_range, y_range)
 
     return (X, Y, hist_array)
+
+def get_bin_edges_from_axis(axis) -> np.ndarray:
+    """ Get bin edges from a ROOT hist axis.
+
+    Note:
+        Doesn't include over- or underflow bins!
+
+    Args:
+        axis (ROOT.TAxis): Axis from which the bin edges should be extracted.
+    Returns:
+        Array containing the bin edges.
+    """
+    # Don't include over- or underflow bins
+    bins = range(1, axis.GetNbins() + 1)
+    # Bin edges
+    bin_edges = np.empty(len(bins) + 1)
+    bin_edges[:-1] = [axis.GetBinLowEdge(i) for i in bins]
+    bin_edges[-1] = axis.GetBinUpEdge(axis.GetNbins())
+
+    return bin_edges
 

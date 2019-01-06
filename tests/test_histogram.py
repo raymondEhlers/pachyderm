@@ -178,7 +178,7 @@ def setup_histogram_conversion():
         The error on bin 9 (one-indexed) is just sqrt(counts), while the error on bin 4
         is sqrt(4) because we filled it with weight 2 (sumw2 squares this values).
     """
-    expected = histogram.Histogram1D(x = np.arange(1, 11) - 0.5,
+    expected = histogram.Histogram1D(bin_edges = np.linspace(0, 10, 11),
                                      y = np.array([0, 0, 0, 2, 0, 0, 0, 0, 3, 0]),
                                      errors_squared = np.array([0, 0, 0, 4, 0, 0, 0, 0, 3, 0]))
 
@@ -214,8 +214,10 @@ def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1
     else:
         h = input_hist
     # Ensure that there are entries
-    assert len(h.x) > 0
+    assert len(h.bin_edges) > 0
     # Then check the actual values
+    np.testing.assert_allclose(h.bin_edges, expected.bin_edges)
+    assert len(h.x) > 0
     np.testing.assert_allclose(h.x, expected.x)
     assert len(h.y) > 0
     np.testing.assert_allclose(h.y, expected.y)
@@ -266,19 +268,18 @@ class TestWithRootHists():
 
         # Determine expected values
         x_bins = range(1, hist.GetXaxis().GetNbins() + 1)
+        expected_bin_edges = np.empty(len(x_bins) + 1)
+        expected_bin_edges[:-1] = [hist.GetXaxis().GetBinLowEdge(i) for i in x_bins]
+        expected_bin_edges[-1] = hist.GetXaxis().GetBinUpEdge(hist.GetXaxis().GetNbins())
         expected_hist_array = histogram.Histogram1D(
-            x = np.array([hist.GetXaxis().GetBinCenter(i) for i in x_bins]),
+            bin_edges = expected_bin_edges,
             y = np.array([hist.GetBinContent(i) for i in x_bins]),
             errors_squared = np.array([hist.GetBinError(i) for i in x_bins])**2,
-            #errors_squared = np.array(hist.GetSumw2()),
         )
 
         logger.debug(f"sumw2: {len(hist.GetSumw2())}")
         logger.debug(f"sumw2: {hist.GetSumw2N()}")
-        #assert np.array_equal(hist_array.x, expected_hist_array.x)
-        #assert np.array_equal(hist_array.y, expected_hist_array.y)
         assert check_hist(hist_array, expected_hist_array) is True
-        #assert np.array_equal(hist_array.errors, expected_hist_array.errors)
 
     @pytest.mark.parametrize("set_zero_to_NaN", [
         False, True
