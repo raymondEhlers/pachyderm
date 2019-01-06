@@ -2,6 +2,18 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.2] - 5 January 2019
+
+### Changed
+
+- `Histogram1D` now utilizes bin edges to define the axes instead of the bin centers. This allows for variable
+  sized bins. Further, the bin centers (ie `x`) are easy to calculate from the bin edges, but the edges are
+  a bit more painful. See: `b053fe8214591da6754e55d5f9dabf79a3cd5f56`.
+- `Histogram1D` supports non-uniform binning. See: `32d2ed53f5743e0b8cab353130e045c733677255`.
+- `get_array_from_hist2D(...)` can now return an (x, y) mesh using bin edges by enabling the
+  `return_bin_edges` option. By default, it will use bin centers. See:
+  `44a760a655eca0ec416042ec0a629cf88eb2ed7b`.
+
 ## [1.3.1] - 2 January 2019
 
 ### Added
