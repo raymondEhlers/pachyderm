@@ -8,9 +8,19 @@
 import copy
 import enum
 import logging
-from typing import Any, Callable, Dict, Iterable, Optional, Union
+from typing import Any, Callable, Dict, Iterable, Optional, Type, Union
 
 from pachyderm import generic_class
+
+# Typing helper
+try:
+    import ROOT
+    T_hist = Union[Type[ROOT.TH1], Type[ROOT.THnBase]]
+    T_axis = Type[ROOT.TAxis]
+except ImportError:
+    # It doesn't like the possibility of redefining this, so we need to tell ``mypy`` to ignore it.
+    T_hist = Any  # type: ignore
+    T_axis = Any  # type: ignore
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -64,12 +74,11 @@ class HistAxisRange(generic_class.EqualityMixin):
     @property
     def axis(self) -> Callable[[Any], Any]:
         """ Wrapper to determine the axis to return based on the hist type. """
-        def axis_func(hist):
+        def axis_func(hist: T_hist) -> T_axis:
             """ Retrieve the axis associated with the ``HistAxisRange`` object for a given hist.
 
             Args:
-                hist (ROOT.TH1, ROOT.THnBase, or similar): Histogram from which the selected axis should
-                    be retrieved.
+                hist: Histogram from which the selected axis should be retrieved.
             Returns:
                 ROOT.TAxis: The axis associated with the ``HistAxisRange`` object.
             """
@@ -103,7 +112,7 @@ class HistAxisRange(generic_class.EqualityMixin):
 
         return axis_func
 
-    def apply_range_set(self, hist: Any) -> None:
+    def apply_range_set(self, hist: T_hist) -> None:
         """ Apply the associated range set to the axis of a given hist.
 
         Note:
@@ -111,7 +120,7 @@ class HistAxisRange(generic_class.EqualityMixin):
             explanation in ``apply_func_to_find_bin(...)``.
 
         Args:
-            hist (ROOT.TH1 or similar): Histogram to which the axis range restriction should be applied.
+            hist: Histogram to which the axis range restriction should be applied.
         Returns:
             None. The range is set on the axis.
         """
@@ -127,7 +136,7 @@ class HistAxisRange(generic_class.EqualityMixin):
 
     @staticmethod
     def apply_func_to_find_bin(
-        func: Union[Callable[[Any], Any], Callable[[Any, float], Any]],
+        func: Callable[..., Union[float, int, Any]],
         values: Optional[float] = None
     ) -> Callable[[Any], Union[float, int]]:
         """ Closure to determine the bin associated with a value on an axis.
@@ -162,7 +171,7 @@ class HistAxisRange(generic_class.EqualityMixin):
         Returns:
             Function to be called with an axis to determine the desired bin on that axis.
         """
-        def return_func(axis):
+        def return_func(axis) -> Any:
             """ Apply the stored function and value to a given axis.
 
             Args:
@@ -181,7 +190,7 @@ class HistAxisRange(generic_class.EqualityMixin):
 
         return return_func
 
-class HistProjector(object):
+class HistProjector:
     """ Handles generic ROOT ``THn`` and ``TH1`` projections.
 
     There are three types of cuts which can be specified:
@@ -268,13 +277,13 @@ class HistProjector(object):
 
         return ret_val
 
-    def call_projection_function(self, hist: Any) -> Any:
+    def call_projection_function(self, hist: T_hist) -> T_hist:
         """ Calls the actual projection function for the hist.
 
         Args:
-            hist (ROOT.TH1 or ROOT.THnBase): Histogram from which the projections should be performed.
+            hist: Histogram from which the projections should be performed.
         Returns:
-            ROOT.TH1 or ROOT.THnBase derived: The projected histogram.
+            The projected histogram.
         """
         # Restrict projection axis ranges
         for axis in self.projection_axes:
@@ -299,7 +308,7 @@ class HistProjector(object):
 
         return projected_hist
 
-    def _project_THn(self, hist: Any) -> Any:
+    def _project_THn(self, hist: T_hist) -> Any:
         """ Perform the actual THn -> THn or TH1 projection.
 
         This projection could be to 1D, 2D, 3D, or ND.
@@ -334,7 +343,7 @@ class HistProjector(object):
 
         return projected_hist
 
-    def _project_TH3(self, hist: Any) -> Any:
+    def _project_TH3(self, hist: T_hist) -> Any:
         """ Perform the actual TH3 -> TH1 projection.
 
         This projection could be to 1D or 2D.
@@ -375,7 +384,7 @@ class HistProjector(object):
 
         return projected_hist
 
-    def _project_TH2(self, hist: Any) -> Any:
+    def _project_TH2(self, hist: T_hist) -> Any:
         """ Perform the actual TH2 -> TH1 projection.
 
         This projection can only be to 1D.
@@ -507,18 +516,18 @@ class HistProjector(object):
                 "projection_name": projection_name
             })
             output_key_name = self.output_key_name(**output_hist_args)  # type: ignore
-            self.observable_dict[output_key_name] = self.output_hist(**output_hist_args)
+            self.observable_dict[output_key_name] = self.output_hist(**output_hist_args)  # type: ignore
 
             # Cleanup cuts
             self.cleanup_cuts(hist, cut_axes = self.additional_axis_cuts)
 
-    def cleanup_cuts(self, hist: Any, cut_axes: Iterable[HistAxisRange]) -> None:
+    def cleanup_cuts(self, hist: T_hist, cut_axes: Iterable[HistAxisRange]) -> None:
         """ Cleanup applied cuts by resetting the axis to the full range.
 
         Inspired by: https://github.com/matplo/rootutils/blob/master/python/2.7/THnSparseWrapper.py
 
         Args:
-            hist (ROOT.TH1 or ROOT.THnBase): Histogram for which the axes should be reset.
+            hist: Histogram for which the axes should be reset.
             cut_axes: List of axis cuts, which correspond to axes that should be reset.
         """
         for axis in cut_axes:
@@ -564,7 +573,7 @@ class HistProjector(object):
         """
         return observable
 
-    def output_key_name(self, input_key: str, output_hist: Any, projection_name: str, **kwargs) -> str:
+    def output_key_name(self, input_key: str, output_hist: T_hist, projection_name: str, **kwargs) -> str:
         """ Returns the key under which the output object should be stored.
 
         Note:
@@ -573,7 +582,7 @@ class HistProjector(object):
 
         Args:
             input_key: Key of the input hist in the input dict
-            output_hist (ROOT.TH1 or ROOT.THnBase): The output histogram
+            output_hist: The output histogram
             projection_name: Projection name for the output histogram
             kwargs: Projection information dict combined with additional arguments passed to
                 the projection function.
@@ -583,7 +592,7 @@ class HistProjector(object):
         """
         return projection_name
 
-    def output_hist(self, output_hist: Any, input_observable: Any, **kwargs: Dict[str, Any]) -> str:
+    def output_hist(self, output_hist: T_hist, input_observable: Any, **kwargs: Dict[str, Any]) -> Union[T_hist, Any]:
         """ Return an output object. It should store the ``output_hist``.
 
         Note:
@@ -594,7 +603,7 @@ class HistProjector(object):
             and likely should be overridden.
 
         Args:
-            output_hist (ROOT.TH1 or ROOT.THnBase): The output histogram
+            output_hist: The output histogram
             input_observable (object): The corresponding input object. It could be a histogram or something
                 more complex.
             kwargs: Projection information dict combined with additional arguments passed to the
