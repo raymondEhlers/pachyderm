@@ -96,7 +96,8 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
     if isinstance(obj, ROOT.TCollection):
         # Keeping it in order simply makes it easier to follow
         output_dict[obj.GetName()] = {}
-        for obj_temp in obj:
+        objects = list(obj)
+        for obj_temp in objects:
             _retrieve_object(output_dict[obj.GetName()], obj_temp)
 
 @dataclass
