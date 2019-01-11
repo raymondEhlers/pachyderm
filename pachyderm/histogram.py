@@ -87,7 +87,7 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
         # Explicitly note that python owns the object
         # From more on memory management with ROOT and python, see:
         # https://root.cern.ch/root/html/guides/users-guide/PythonRuby.html#memory-handling
-        ROOT.SetOwnership(obj, True)
+        ROOT.SetOwnership(obj, False)
 
         # Store the objects
         output_dict[obj.GetName()] = obj
