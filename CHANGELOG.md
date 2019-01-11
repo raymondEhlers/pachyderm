@@ -2,6 +2,19 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.3] - 11 January 2019
+
+### Added
+
+- A few more git pre-commit hooks. See: `dcdde76d223b93ec12d1f43cb5f9a94894efa6c8`.
+
+### Fixed
+
+- ROOT memory issue that sometimes occurred during testing. Fixed by ensuring that the open ROOT file is
+  always closed when an exception is raised. Also included ensuring that only python has ownership of the
+  objects. See: `c21612967376fb15aa1cffa2e2c8c7b663dae90b` (many of the preceding commits are related to
+  trying to solve this issue).
+
 ## [1.3.2] - 5 January 2019
 
 ### Changed
