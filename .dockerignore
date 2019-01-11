@@ -1,10 +1,23 @@
 # Prevents docker from copying useless information to the daemon
 # Ingore basically all directories except for docs/, pachyderm/, and tests/
+# build information
 pachyderm.egg-info/
-.pytest_cache/
+# python cache
+**/__pycache__
+**/*.pyc
+# pytest cache
+**/.pytest_cache
+# Coverage
+htmlcov/
+# Docs build directory
+docs/_build
+# mypy cache
+.mypy_cache
 # Virtualenvs
 .pachyderm/
 .env/
 .env3/
 # Other files
 *.swp
+
+
