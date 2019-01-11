@@ -51,6 +51,9 @@ def get_histograms_in_list(filename: str, list_name: str = None) -> Dict[str, An
 
     if not hist_list:
         fIn.ls()
+        # Closing this file appears (but is not entirely confirmed) to be extremely important! Otherwise,
+        # the memory will leak, leading to ROOT memory issues!
+        fIn.Close()
         raise ValueError(f"Could not find list with name \"{list_name}\". Possible names are listed above.")
 
     # Retrieve objects in the hist list
@@ -89,15 +92,15 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
         # https://root.cern.ch/root/html/guides/users-guide/PythonRuby.html#memory-handling
         ROOT.SetOwnership(obj, False)
 
-        # Store the objects
+        # Store the object
         output_dict[obj.GetName()] = obj
 
     # Recurse over lists
     if isinstance(obj, ROOT.TCollection):
         # Keeping it in order simply makes it easier to follow
         output_dict[obj.GetName()] = {}
-        objects = list(obj)
-        for obj_temp in objects:
+        # Iterate over the objects in the collection and recursively store them
+        for obj_temp in list(obj):
             _retrieve_object(output_dict[obj.GetName()], obj_temp)
 
 @dataclass

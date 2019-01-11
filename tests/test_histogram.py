@@ -154,6 +154,10 @@ class TestRetrievingHistgramsFromAList():
         """
         (filename, root_list, expected) = retrieve_root_list
 
+        # Did we actually get histograms? Used when debugging ROOT memory issues that seem to occur after
+        # an exception is raised...
+        logger.debug(f"{root_list}, {expected}")
+
         output = {}
         histogram._retrieve_object(output, root_list)
 
