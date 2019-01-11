@@ -23,7 +23,7 @@ _testScript: &testScript
 _dockerTestScript: &dockerTestScript
     before_script:
         # Build the docker image
-        - docker build --build-arg PYTHON_VERSION=${PYTHON_VERSION} -t rehlers/pachyderm .
+        - docker build --build-arg PYTHON_VERSION=${PYTHON_VERSION} -t "${DOCKER_USERNAME}/pachyderm:${TRAVIS_TAG:-latest}-py${PYTHON_VERSION}" .
         # So we can see that the have the expected images
         - docker images
     script:
