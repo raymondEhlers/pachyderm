@@ -1,3 +1,4 @@
+---
 # xenial is needed for python 3.7
 dist: xenial
 language: python
@@ -35,6 +36,7 @@ _dockerTestScript: &dockerTestScript
         - docker run $ci_env rehlers/pachyderm /bin/bash -c "pytest -l -vv --cov=pachyderm --cov-branch --durations=5 tests/ && bash <(curl -s https://codecov.io/bash)"
         # We could now push the image to docker hub. However, we don't really need it for anything, so
         # we skip this step for now.
+        - bash docker/pushToDockerHub.sh
 jobs:
     include:
         # Tests which require ROOT, coverage
