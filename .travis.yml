@@ -33,7 +33,7 @@ _dockerTestScript: &dockerTestScript
         - ci_env=`bash <(curl -s https://codecov.io/env)`
         # Run tests and upload coverage
         # Pachyderm was installed when the image was created above, so we don't need to install it again.
-        - docker run $ci_env rehlers/pachyderm /bin/bash -c "pytest -l -vv --cov=pachyderm --cov-branch --durations=5 tests/ && bash <(curl -s https://codecov.io/bash)"
+        - docker run $ci_env "${DOCKER_USERNAME}/pachyderm:${TRAVIS_TAG:-latest}-py${PYTHON_VERSION}" /bin/bash -c "pytest -l -vv --cov=pachyderm --cov-branch --durations=5 tests/ && bash <(curl -s https://codecov.io/bash)"
         # We could now push the image to docker hub. However, we don't really need it for anything, so
         # we skip this step for now.
         - bash docker/pushToDockerHub.sh
