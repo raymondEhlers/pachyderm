@@ -152,7 +152,7 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
     logger.debug(f"{data}, {values}")
     return np.array(values)
 
-def enum_to_yaml(cls: Type[T_EnumToYAML], representer: Type[ruamel.yaml.representer.BaseRepresenter], data: Type[T_EnumToYAML]) -> ruamel.yaml.nodes.ScalarNode:
+def enum_to_yaml(cls: Type[T_EnumToYAML], representer: Representer, data: T_EnumToYAML) -> ruamel.yaml.nodes.ScalarNode:
     """ Encodes YAML representation.
 
     This is a mixin method for writing enum values to YAML. It needs to be added to the enum
@@ -179,7 +179,7 @@ def enum_to_yaml(cls: Type[T_EnumToYAML], representer: Type[ruamel.yaml.represen
         f"{str(data)}"
     )
 
-def enum_from_yaml(cls: Type[T_EnumFromYAML], constructor: ruamel.yaml.constructor.BaseConstructor, node: ruamel.yaml.nodes.ScalarNode) -> Type[T_EnumFromYAML]:
+def enum_from_yaml(cls: Type[T_EnumFromYAML], constructor: Constructor, node: ruamel.yaml.nodes.ScalarNode) -> T_EnumFromYAML:
     """ Decode YAML representation.
 
     This is a mixin method for reading enum values from YAML. It needs to be added to the enum
