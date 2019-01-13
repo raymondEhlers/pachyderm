@@ -15,7 +15,7 @@ from pachyderm import generic_class
 # Typing helper
 try:
     import ROOT
-    T_hist = Union[Type[ROOT.TH1], Type[ROOT.THnBase]]
+    T_hist = Union[ROOT.TH1, ROOT.THnBase]
     T_axis = Type[ROOT.TAxis]
 except ImportError:
     # It doesn't like the possibility of redefining this, so we need to tell ``mypy`` to ignore it.
