@@ -386,7 +386,7 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
         pass
     else:
         # This may or may not be expected, depending on the particular value.
-        logger.info(f"NOTE: Unrecognized type {type(obj)} of obj {obj}")
+        logger.debug(f"Unrecognized obj '{obj}' of type '{type(obj)}'")
 
     return new_obj
 
