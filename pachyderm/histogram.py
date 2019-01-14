@@ -13,6 +13,29 @@ from typing import Any, Dict, Tuple
 # Setup logger
 logger = logging.getLogger(__name__)
 
+class RootOpen:
+    """ Very simple helper to open root files. """
+    def __init__(self, filename: str, mode: str = "read"):
+        import ROOT
+        self.filename = filename
+        self.mode = mode
+        self.f = ROOT.TFile.Open(self.filename, self.mode)
+
+    def __enter__(self):
+        if not self.f or self.f.IsZombie():
+            raise IOError(f"Failed to open ROOT file '{self.filename}'.")
+        return self.f
+
+    def __exit__(self, type, value, traceback):
+        # Pass on all of the exceptions, but make sure that the file is closed.
+        # NOTE: The file isn't always valid because one has to deal with ROOT,
+        #       so we have to explicitly check that is is valid before continuing.
+        if self.f:
+            self.f.Close()
+
+        # We don't return anything because we always want the exceptions to continue
+        # to be raised.
+
 def get_histograms_in_file(filename: str) -> Dict[str, Any]:
     """ Helper function which gets all histograms in a file.
 
@@ -40,28 +63,23 @@ def get_histograms_in_list(filename: str, list_name: str = None) -> Dict[str, An
     Raises:
         ValueError: If the list could not be found in the given file.
     """
-    import ROOT
-
     hists: dict = {}
-    fIn = ROOT.TFile(filename, "READ")
-    if list_name is not None:
-        hist_list = fIn.Get(list_name)
-    else:
-        hist_list = [obj.ReadObj() for obj in fIn.GetListOfKeys()]
+    with RootOpen(filename = filename, mode = "READ") as fIn:
+        if list_name is not None:
+            hist_list = fIn.Get(list_name)
+        else:
+            hist_list = [obj.ReadObj() for obj in fIn.GetListOfKeys()]
 
-    if not hist_list:
-        fIn.ls()
-        # Closing this file appears (but is not entirely confirmed) to be extremely important! Otherwise,
-        # the memory will leak, leading to ROOT memory issues!
-        fIn.Close()
-        raise ValueError(f"Could not find list with name \"{list_name}\". Possible names are listed above.")
+        if not hist_list:
+            fIn.ls()
+            # Closing this file appears (but is not entirely confirmed) to be extremely important! Otherwise,
+            # the memory will leak, leading to ROOT memory issues!
+            fIn.Close()
+            raise ValueError(f"Could not find list with name \"{list_name}\". Possible names are listed above.")
 
-    # Retrieve objects in the hist list
-    for obj in hist_list:
-        _retrieve_object(hists, obj)
-
-    # Cleanup
-    fIn.Close()
+        # Retrieve objects in the hist list
+        for obj in hist_list:
+            _retrieve_object(hists, obj)
 
     return hists
 

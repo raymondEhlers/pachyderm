@@ -95,7 +95,43 @@ def retrieve_root_list(test_root_hists):
     l1.Clear()
 
 @pytest.mark.ROOT
-class TestRetrievingHistgramsFromAList():
+class TestOpenRootFile:
+    def test_open_file(self, logging_mixin, retrieve_root_list):
+        """ Test for context manager for opening ROOT files. """
+        filename, root_list, expected = retrieve_root_list
+
+        output = {}
+        with histogram.RootOpen(filename = filename) as f:
+            for name in ["mainList", "secondList"]:
+                histogram._retrieve_object(output, f.Get(name))
+
+        logger.debug(f"{output}")
+
+        # This isn't the most sophisticated way of comparsion, but bin-by-bin is sufficient for here.
+        # We take advantage that we know the structure of the file so we don't need to handle recursion
+        # or higher dimensional hists.
+        output_inner_list = output["mainList"].pop("innerList")
+        expected_inner_list = expected["mainList"].pop("innerList")
+        output_second_list = output.pop("secondList")
+        expected_second_list = expected.pop("secondList")
+        for (o, e) in [(output["mainList"], expected["mainList"]), (output_inner_list, expected_inner_list), (output_second_list, expected_second_list)]:
+            for oHist, eHist in zip(o.values(), e.values()):
+                logger.info(f"oHist: {oHist}, eHist: {eHist}")
+                oValues = [oHist.GetBinContent(i) for i in range(0, oHist.GetXaxis().GetNbins() + 2)]
+                eValues = [eHist.GetBinContent(i) for i in range(0, eHist.GetXaxis().GetNbins() + 2)]
+                assert np.allclose(oValues, eValues)
+
+    def test_failing_to_open_file(self, logging_mixin):
+        """ Test for raising the proper exception for a file that doens't exist. """
+        fake_filename = "fake_filename.root"
+        with pytest.raises(IOError) as exception_info:
+            with histogram.RootOpen(filename = fake_filename):
+                pass
+        # Check that the right exception was thrown by proxy via the filename.
+        assert "Failed" in exception_info.value.args[0] and f"{fake_filename}" in exception_info.value.args[0]
+
+@pytest.mark.ROOT
+class TestRetrievingHistgramsFromAList:
     def test_get_histograms_in_file(self, logging_mixin, retrieve_root_list):
         """ Test for retrieving all of the histograms in a ROOT file. """
         (filename, root_list, expected) = retrieve_root_list
@@ -259,7 +295,7 @@ def test_uproot_hist_to_histogram(setup_histogram_conversion):
     del uproot_file
 
 @pytest.mark.ROOT
-class TestWithRootHists():
+class TestWithRootHists:
     def test_get_array_from_hist(self, logging_mixin, test_root_hists):
         """ Test getting numpy arrays from a 1D hist.
 
