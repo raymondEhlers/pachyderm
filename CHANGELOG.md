@@ -2,6 +2,24 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.4] -
+
+### Added
+
+- Added very simple context manager for opening ROOT files. Basically a simpler version of
+  `rootpy.io.root_open`. See: `0d7a923f19d714125ec5f1eaed55ad9203ae718e`.
+- Outliers removal module. It removes outliers from a given histogram. It was developed based on previous
+  code. See:
+
+### Changed
+
+- Clarify typing information. See: `eac9586a7d7c0bf1e2be1f0ef2235fb75bf0e676` and
+  `4de3493092b413dbaaeccebc3b3a10d70b3ad0df`.
+
+### Fixed
+
+- Improved typing information in the `yaml` module. See: `eac9586a7d7c0bf1e2be1f0ef2235fb75bf0e676`.
+
 ## [1.3.3] - 11 January 2019
 
 ### Added
