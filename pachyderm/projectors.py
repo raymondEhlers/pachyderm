@@ -15,12 +15,12 @@ from pachyderm import generic_class
 # Typing helper
 try:
     import ROOT
-    T_hist = Union[ROOT.TH1, ROOT.THnBase]
-    T_axis = Type[ROOT.TAxis]
+    T_Hist = Union[ROOT.TH1, ROOT.THnBase]
+    T_Axis = Type[ROOT.TAxis]
 except ImportError:
     # It doesn't like the possibility of redefining this, so we need to tell ``mypy`` to ignore it.
-    T_hist = Any  # type: ignore
-    T_axis = Any  # type: ignore
+    T_Hist = Any  # type: ignore
+    T_Axis = Any  # type: ignore
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class TH1AxisType(enum.Enum):
     y_axis = 1
     z_axis = 2
 
-RangeMinMaxType = Callable[[Any], float]
+RangeMinMaxType = Union[float, Callable[[Any], float]]
 
 class HistAxisRange(generic_class.EqualityMixin):
     """ Represents the restriction of a range of an axis of a histogram.
@@ -74,7 +74,7 @@ class HistAxisRange(generic_class.EqualityMixin):
     @property
     def axis(self) -> Callable[[Any], Any]:
         """ Wrapper to determine the axis to return based on the hist type. """
-        def axis_func(hist: T_hist) -> T_axis:
+        def axis_func(hist: T_Hist) -> T_Axis:
             """ Retrieve the axis associated with the ``HistAxisRange`` object for a given hist.
 
             Args:
@@ -112,7 +112,7 @@ class HistAxisRange(generic_class.EqualityMixin):
 
         return axis_func
 
-    def apply_range_set(self, hist: T_hist) -> None:
+    def apply_range_set(self, hist: T_Hist) -> None:
         """ Apply the associated range set to the axis of a given hist.
 
         Note:
@@ -127,6 +127,10 @@ class HistAxisRange(generic_class.EqualityMixin):
         # Do individual assignments to clarify which particular value is causing an error here.
         axis = self.axis(hist)
         #logger.debug(f"axis: {axis}, axis(): {axis.GetName()}")
+        # Help out mypy
+        assert not isinstance(self.min_val, float)
+        assert not isinstance(self.max_val, float)
+        # Evaluate the functions to determine the values.
         min_val = self.min_val(axis)
         max_val = self.max_val(axis)
         # NOTE: Using SetRangeUser() here was a bug, since I've been passing bin values! In general,
@@ -211,11 +215,15 @@ class HistProjector:
         various functions. Thus, they should be avoided by the user when storing projection information
 
     Args:
-        observable_dict: Where the projected hists will be stored. They will be stored under the dict
-            key determined by ``output_key_name(...)``.
-        observables_to_project_from: The observables which should be used to project from. The dict
-            key is passed to ``projection_name(...)`` as ``input_key``.
         projection_name_format: Format string to determine the projected hist name.
+        observable: Object where the proejcted hist will be stored. Convenience argument for case where only
+            projecting one hist. Default: None.
+        observable_dict: Where the projected hists will be stored. They will be stored under the dict
+            key determined by ``output_key_name(...)``. Default: None.
+        observables_to_project_from: Single object from which the histogram should be projected. Convenience
+            argument for case where only projecting one hist. Default: None.
+        observables_to_project_from: The observables which should be used to project from. The dict
+            key is passed to ``projection_name(...)`` as ``input_key``. Default: None.
         projection_information: Keyword arguments to be passed to ``projection_name(...)`` to determine
             the name of the projected histogram.
 
@@ -235,12 +243,29 @@ class HistProjector:
             together if necessary.
         projection_axes (list): List of axes which should be projected.
     """
-    def __init__(self, observable_dict: Dict[str, Any], observables_to_project_from: Dict[str, Any], projection_name_format: str, projection_information: Optional[Dict[str, Any]] = None):
-        # Input and output lists
-        self.observable_dict = observable_dict
+    def __init__(self,
+                 observables_to_project_from: Union[Dict[str, Any], T_Hist, Any],
+                 observable_dict: Union[Dict[str, Any], T_Hist, Any],
+                 projection_name_format: str,
+                 output_attribute_name: str = None,
+                 projection_information: Optional[Dict[str, Any]] = None):
+        # Determine whether we projecting multiple objects.
+        # If not, store the attribute under which we are going to store the output.
+        single_observable_projection = False
+        if output_attribute_name is not None:
+            single_observable_projection = True
+        self.single_observable_projection = single_observable_projection
+        self.output_attribute_name = output_attribute_name
+
+        # Validate and assign input and output objects.
+        if self.single_observable_projection and (isinstance(observables_to_project_from, dict) or isinstance(observable_dict, dict)):
+            raise ValueError("A dict of observables is not compatible with a single observable projection. Check your arguments.")
         self.observables_to_project_from = observables_to_project_from
+        self.observable_dict = observable_dict
+
         # Output hist name format
         self.projection_name_format = projection_name_format
+
         # Additional projection information to help create names, input/output objects, etc
         # NOTE: See reserved keys enumerated above.
         if projection_information is None:
@@ -277,7 +302,7 @@ class HistProjector:
 
         return ret_val
 
-    def call_projection_function(self, hist: T_hist) -> T_hist:
+    def call_projection_function(self, hist: T_Hist) -> T_Hist:
         """ Calls the actual projection function for the hist.
 
         Args:
@@ -301,14 +326,14 @@ class HistProjector:
             # TH2 defines ProjectionX and ProjectionY, so we will use those as proxies.
             projected_hist = self._project_TH2(hist = hist)
         else:
-            raise TypeError(type(hist), f"Could not recognize hist {hist} of type {hist.GetClass().GetName()}")
+            raise TypeError(type(hist), f"Could not recognize hist {hist} of type {type(hist)}")
 
         # Cleanup restricted axes
         self.cleanup_cuts(hist, cut_axes = self.projection_axes)
 
         return projected_hist
 
-    def _project_THn(self, hist: T_hist) -> Any:
+    def _project_THn(self, hist: T_Hist) -> Any:
         """ Perform the actual THn -> THn or TH1 projection.
 
         This projection could be to 1D, 2D, 3D, or ND.
@@ -343,7 +368,7 @@ class HistProjector:
 
         return projected_hist
 
-    def _project_TH3(self, hist: T_hist) -> Any:
+    def _project_TH3(self, hist: T_Hist) -> Any:
         """ Perform the actual TH3 -> TH1 projection.
 
         This projection could be to 1D or 2D.
@@ -384,7 +409,7 @@ class HistProjector:
 
         return projected_hist
 
-    def _project_TH2(self, hist: T_hist) -> Any:
+    def _project_TH2(self, hist: T_Hist) -> Any:
         """ Perform the actual TH2 -> TH1 projection.
 
         This projection can only be to 1D.
@@ -397,7 +422,7 @@ class HistProjector:
         if len(self.projection_axes) != 1:
             raise ValueError(len(self.projection_axes), "Invalid number of axes")
 
-        #logger.debug("self.projection_axes[0].axis: {}, axis range name: {}, axis_type: {}".format(self.projection_axes[0].axis, self.projection_axes[0].name , self.projection_axes[0].axis_type))
+        #logger.debug(f"self.projection_axes[0].axis: {self.projection_axes[0].axis}, axis range name: {self.projection_axes[0].name}, axis_type: {self.projection_axes[0].axis_type}")
         # NOTE: We cannot use TH3.ProjectionZ(...) because it has different semantics than ProjectionX
         #       and ProjectionY. In particular, it doesn't respect the axis limits of axis onto which it
         #       is projected.  So we have to separate the projection by histogram type as opposed to axis
@@ -425,91 +450,172 @@ class HistProjector:
 
         return projected_hist
 
-    def project(self, **kwargs: Dict[str, Any]) -> None:
-        """ Perform the requested projections.
+    def _project_observable(self, input_key: str,
+                            input_observable: Any,
+                            get_hist_args: Dict[str, Any] = None,
+                            projection_name_args: Dict[str, Any] = None,
+                            **kwargs) -> T_Hist:
+        """ Perform a projection for a single observable.
 
         Note:
             All cuts on the original histograms will be reset when this function is completed.
 
         Args:
+            input_key: Key to describe the input observable.
+            input_observable: Observable to project from.
+            get_hist_args: Arguments to pass to ``get_hist(...)``. Made available so the args can be cached
+                to avoid a ``deepcopy`` when looping. Default: None. In this case, they will be retrieved
+                automatically.
+            projection_name_args: Arguments to pass to ``projection_name(...)``. Made available so the args
+                can be cached to avoid a ``deepcopy`` when looping. Default: None. In this case, they will be
+                retrieved automatically.
+            kwargs: Additional named args to be passed to projection_name(...) and output_key_name(...).
+        Returns:
+            The projected histogram.
+        """
+        # Validation of other optional arguments.
+        if get_hist_args is None:
+            get_hist_args = copy.deepcopy(kwargs)
+        if projection_name_args is None:
+            projection_name_args = copy.deepcopy(kwargs)
+
+        # Retrieve histogram
+        # We update ``input_observable`` in ``get_hist_args`` every loop, so we don't have to worry
+        # about passing the wrong observable.
+        get_hist_args.update({"observable": input_observable})
+        hist = self.get_hist(**get_hist_args)
+
+        # Define projection name
+        projection_name_args.update(self.projection_information)
+        # In principle, we could have overwritten one of the kwargs, so we ensure with one of the other
+        # updates, so we update it again to be certain.
+        projection_name_args.update(kwargs)
+        # Put the values included by default last to ensure nothing overwrites these values
+        projection_name_args.update({  # type: ignore
+            "input_key": input_key,
+            "input_observable": input_observable,
+            "input_hist": hist
+        })
+        projection_name = self.projection_name(**projection_name_args)
+
+        # First apply the cuts
+        # Restricting the range with SetRange(User) works properly for both THn and TH1.
+        logger.info(f"hist: {hist}")
+        for axis in self.additional_axis_cuts:
+            logger.debug(f"Apply additional axis hist range: {axis.name}")
+            axis.apply_range_set(hist)
+
+        # We need to ensure that it isn't empty so at least one project occurs
+        if self.projection_dependent_cut_axes == []:
+            self.projection_dependent_cut_axes.append([])
+
+        # Validate the projection dependent cut axes
+        # It is invalid to have PDCA on the same axes as the projection axes.
+        duplicated_axes = [
+            PDCA
+            for PA in self.projection_axes
+            for PDCA_group in self.projection_dependent_cut_axes
+            for PDCA in PDCA_group
+            if PDCA.axis_type == PA.axis_type
+        ]
+        if duplicated_axes:
+            raise ValueError(
+                f"Axis {duplicated_axes} is in the projection axes and the projection dependent cut axes."
+                " This configuration is not allowed, as the range in the PDCA will be overwritten by the projection axes!"
+                " Please revise your configuration."
+            )
+
+        # Perform the projections
+        hists = []
+        for i, axes in enumerate(self.projection_dependent_cut_axes):
+            # Projection dependent range set
+            for axis in axes:
+                logger.debug(f"Apply projection dependent hist range: {axis.name}")
+                axis.apply_range_set(hist)
+
+            # Do the projection
+            projected_hist = self.call_projection_function(hist)
+            projected_hist.SetName(f"{projection_name}_{i}")
+
+            hists.append(projected_hist)
+
+            # Cleanup projection dependent cuts (although they should be set again on the next
+            # iteration of the loop)
+            self.cleanup_cuts(hist, cut_axes = axes)
+
+        # Cleanup the rest of the cuts
+        self.cleanup_cuts(hist, cut_axes = self.additional_axis_cuts)
+
+        # Combine all of the projections together
+        output_hist = hists[0]
+        for temp_hist in hists[1:]:
+            output_hist.Add(temp_hist)
+
+        # Final settings
+        output_hist.SetName(projection_name)
+        # Ensure that the hist doesn't get deleted by ROOT
+        # A reference to the histogram within python may not be enough
+        output_hist.SetDirectory(0)
+
+        return output_hist, projection_name, projection_name_args
+
+    def _project_single_observable(self, **kwargs: Dict[str, Any]) -> T_Hist:
+        """ Driver function for projecting and storing a single observable.
+
+        Args:
             kwargs (dict): Additional named args to be passed to projection_name(...) and output_key_name(...)
         Returns:
-            None. The projected hiostgrams are stored in ``observable_dict``.
+            The projected histogram. The histogram is also stored in the output specified by ``observable_dict``.
+        """
+        # Help out mypy
+        assert isinstance(self.output_attribute_name, str)
+
+        # Run the actual projection.
+        output_hist, projection_name, projection_name_args, = self._project_observable(
+            input_key = "single_observable",
+            input_observable = self.observables_to_project_from,
+            **kwargs,
+        )
+        # Store the output.
+        output_hist_args = projection_name_args
+        output_hist_args.update({  # type: ignore
+            "output_hist": output_hist,
+            "projection_name": projection_name
+        })
+
+        # Store the final histogram.
+        output_hist = self.output_hist(**output_hist_args)  # type: ignore
+
+        # Store the final output hist
+        if not hasattr(self.observable_dict, self.output_attribute_name):
+            raise ValueError("Attempted to assign hist to non-existent attribute {attribute_name} of object {self.observable_dict}. Check the attribute name!")
+        # Actually store the histogram.
+        setattr(self.observable_dict, self.output_attribute_name, output_hist)
+
+        # Return the observable
+        return output_hist
+
+    def _project_dict(self, **kwargs: Dict[str, Any]) -> Dict[str, T_Hist]:
+        """ Driver function for projecting and storing a dictionary of observables.
+
+        Args:
+            kwargs (dict): Additional named args to be passed to projection_name(...) and output_key_name(...)
+        Returns:
+            The projected histograms. The projected histograms are also stored in ``observable_dict``.
         """
         # Setup function arguments with values which don't change per loop.
         get_hist_args = copy.deepcopy(kwargs)
         projection_name_args = copy.deepcopy(kwargs)
         for key, input_observable in self.observables_to_project_from.items():
-            # Retrieve histogram
-            # We update ``input_observable`` in ``get_hist_args`` every loop, so we don't have to worry
-            # about passing the wrong observable.
-            get_hist_args.update({"observable": input_observable})
-            hist = self.get_hist(**get_hist_args)
+            output_hist, projection_name, projection_name_args, = self._project_observable(
+                input_key = key,
+                input_observable = input_observable,
+                get_hist_args = get_hist_args,
+                projection_name_args = projection_name_args,
+                **kwargs,
+            )
 
-            # Define projection name
-            projection_name_args.update(self.projection_information)
-            # In principle, we could have overwitten one of the kwargs, so we ensure with one of the other
-            # updates, so we update it again to be certain.
-            projection_name_args.update(kwargs)
-            # Put the values included by default last to ensure nothing overwrites these values
-            projection_name_args.update({  # type: ignore
-                "input_key": key,
-                "input_observable": input_observable,
-                "input_hist": hist
-            })
-            projection_name = self.projection_name(**projection_name_args)
-
-            # First apply the cuts
-            # Restricting the range with SetRangeUser Works properly for both THn and TH1.
-            logger.info(f"hist: {hist}")
-            for axis in self.additional_axis_cuts:
-                logger.debug(f"Apply additional axis hist range: {axis.name}")
-                axis.apply_range_set(hist)
-
-            # We need to ensure that it isn't empty so at least one project occurs
-            if self.projection_dependent_cut_axes == []:
-                self.projection_dependent_cut_axes.append([])
-
-            # Validate the projection dependent cut axes
-            # It is invalid to have PDCA on the same axes as the projection axes.
-            duplicated_axes = [
-                PDCA
-                for PA in self.projection_axes
-                for PDCA_group in self.projection_dependent_cut_axes
-                for PDCA in PDCA_group
-                if PDCA.axis_type == PA.axis_type
-            ]
-            if duplicated_axes:
-                raise ValueError(f"Axis {duplicated_axes} is in the projection axes and the projection dependent cut axes. This configuration is not allowed, as the range in the PDCA will be overwritten by the projection axes! Please revise your configuration.")
-
-            # Perform the projections
-            hists = []
-            for (i, axes) in enumerate(self.projection_dependent_cut_axes):
-                # Projection dependent range set
-                for axis in axes:
-                    logger.debug(f"Apply projection dependent hist range: {axis.name}")
-                    axis.apply_range_set(hist)
-
-                # Do the projection
-                projected_hist = self.call_projection_function(hist)
-                projected_hist.SetName(f"{projection_name}_{i}")
-
-                hists.append(projected_hist)
-
-                # Cleanup projection dependent cuts (although they should be set again on the next
-                # iteration of the loop)
-                self.cleanup_cuts(hist, cut_axes = axes)
-
-            # Add all projections together
-            output_hist = hists[0]
-            for temp_hist in hists[1:]:
-                output_hist.Add(temp_hist)
-
-            # Ensure that the hist doesn't get deleted by ROOT
-            # A reference to the histogram within python may not be enough
-            output_hist.SetDirectory(0)
-
-            output_hist.SetName(projection_name)
+            # Store the output observable
             output_hist_args = projection_name_args
             output_hist_args.update({  # type: ignore
                 "output_hist": output_hist,
@@ -518,10 +624,25 @@ class HistProjector:
             output_key_name = self.output_key_name(**output_hist_args)  # type: ignore
             self.observable_dict[output_key_name] = self.output_hist(**output_hist_args)  # type: ignore
 
-            # Cleanup cuts
-            self.cleanup_cuts(hist, cut_axes = self.additional_axis_cuts)
+        return self.observable_dict
 
-    def cleanup_cuts(self, hist: T_hist, cut_axes: Iterable[HistAxisRange]) -> None:
+    def project(self, **kwargs: Dict[str, Any]) -> Union[T_Hist, Dict[str, T_Hist]]:
+        """ Perform the requested projection(s).
+
+        Note:
+            All cuts on the original histograms will be reset when this function is completed.
+
+        Args:
+            kwargs (dict): Additional named args to be passed to projection_name(...) and output_key_name(...)
+        Returns:
+            The projected histogram(s). The projected histograms are also stored in ``observable_dict``.
+        """
+        if isinstance(self.observables_to_project_from, dict):
+            return self._project_dict(**kwargs)
+        else:
+            return self._project_single_observable(**kwargs)
+
+    def cleanup_cuts(self, hist: T_Hist, cut_axes: Iterable[HistAxisRange]) -> None:
         """ Cleanup applied cuts by resetting the axis to the full range.
 
         Inspired by: https://github.com/matplo/rootutils/blob/master/python/2.7/THnSparseWrapper.py
@@ -573,7 +694,7 @@ class HistProjector:
         """
         return observable
 
-    def output_key_name(self, input_key: str, output_hist: T_hist, projection_name: str, **kwargs) -> str:
+    def output_key_name(self, input_key: str, output_hist: T_Hist, projection_name: str, **kwargs) -> str:
         """ Returns the key under which the output object should be stored.
 
         Note:
@@ -592,7 +713,7 @@ class HistProjector:
         """
         return projection_name
 
-    def output_hist(self, output_hist: T_hist, input_observable: Any, **kwargs: Dict[str, Any]) -> Union[T_hist, Any]:
+    def output_hist(self, output_hist: T_Hist, input_observable: Any, **kwargs: Dict[str, Any]) -> Union[T_Hist, Any]:
         """ Return an output object. It should store the ``output_hist``.
 
         Note:

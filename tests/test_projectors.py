@@ -10,7 +10,7 @@ import enum
 import dataclasses
 import logging
 import pytest
-from typing import List
+from typing import Any, Dict, List, Tuple
 
 from pachyderm import projectors
 from pachyderm import utils
@@ -266,8 +266,12 @@ def setup_hist_axis_range(hist_range: projectors.HistAxisRange) -> projectors.Hi
 
     # We don't want to modify the original objects, since we need them to be preserved for other tests.
     hist_range = copy.copy(hist_range)
-    hist_range.min_val = projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.FindBin, hist_range.min_val + utils.epsilon)
-    hist_range.max_val = projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.FindBin, hist_range.max_val - utils.epsilon)
+    hist_range.min_val = projectors.HistAxisRange.apply_func_to_find_bin(
+        ROOT.TAxis.FindBin, hist_range.min_val + utils.epsilon  # type: ignore
+    )
+    hist_range.max_val = projectors.HistAxisRange.apply_func_to_find_bin(
+        ROOT.TAxis.FindBin, hist_range.max_val - utils.epsilon  # type: ignore
+    )
     return hist_range
 
 # Convenient access to hist axis ranges.
@@ -332,28 +336,100 @@ hist_axis_ranges_restricted = (
         max_val = 12)
 )
 
+@dataclasses.dataclass
+class SingleObservable:
+    """ Test class for single observable projections. """
+    hist: Any
+
+def determine_projector_input_args(single_observable: bool,
+                                   hist: projectors.T_Hist,
+                                   hist_label: str
+                                   ) -> Tuple[Dict[str, Any], SingleObservable, Dict[str, projectors.T_Hist]]:
+    """ Determine some projector input arguments.
+
+    Note:
+        This doesn't cover all arguments. Some additional ones must be specified during the test.
+
+    Args:
+        single_observable: True if we are testing with a signal observable.
+        hist: Histogram to be projected.
+        hist_label: Label for the histogram to be projected.
+    Returns:
+        Keyword arguments, single_observable, observable_dict
+    """
+    kwdargs: Dict[str, Any] = {}
+    # These observables have to be defined here so we don't lose reference to them.
+    observable = SingleObservable(hist = None)
+    observable_dict: Dict[str, projectors.T_Hist] = {}
+
+    # The arguments depend on the observable type.
+    if single_observable:
+        kwdargs["observable_dict"] = observable
+        kwdargs["output_attribute_name"] = "hist"
+        kwdargs["observables_to_project_from"] = hist
+    else:
+        kwdargs["observable_dict"] = observable_dict
+        kwdargs["observables_to_project_from"] = {hist_label: hist}
+
+    return kwdargs, observable, observable_dict
+
+def check_and_get_projection(single_observable: bool,
+                             observable: SingleObservable,
+                             observable_dict: Dict[str, projectors.T_Hist]) -> projectors.T_Hist:
+    """ Run basic checks and get the projection.
+
+    Args:
+        single_observable: True if we are testing with a signal observable.
+        observable: Single observable object which may contain the projection.
+        observable_dict: Dict which many contain the projection.
+    Returns:
+        The projected histogram.
+    """
+    if single_observable:
+        assert len(observable_dict) == 0
+        assert observable.hist is not None
+        proj = observable.hist
+    else:
+        assert len(observable_dict) == 1
+        assert observable.hist is None
+        proj = next(iter(observable_dict.values()))
+
+    return proj
+
 @pytest.mark.ROOT
 class TestProjectorsWithRoot():
     """ Tests for projectors for TH1 derived histograms. """
-    def test_projectors(self, logging_mixin, test_root_hists):
+    @pytest.mark.parametrize("single_observable", [
+        False,
+        True,
+    ], ids = ["Dict observable input", "Single observable input"])
+    def test_projectors(self, logging_mixin, single_observable, test_root_hists):
         """ Test creation and basic methods of the projection class. """
         import ROOT  # noqa: F401
 
         # Args
         projection_name_format = "{test} world"
+        kwdargs, observable, observable_dict = determine_projector_input_args(
+            single_observable = single_observable,
+            hist = None,
+            hist_label = "histogram",
+        )
+        kwdargs["projection_name_format"] = projection_name_format
+        kwdargs["projection_information"] = {"test": "Hello"}
         # Create object
-        obj = projectors.HistProjector(observable_dict = {},
-                                       observables_to_project_from = {},
-                                       projection_name_format = projection_name_format,
-                                       projection_information = {"test": "Hello"})
+        obj = projectors.HistProjector(**kwdargs)
+
+        assert obj.output_attribute_name is ("hist" if single_observable else None)
 
         # These objects should be overridden so they aren't super meaningful, but we can still
         # test to ensure that they provide the basic functionality that is expected.
         assert obj.projection_name(test = "Hello") == projection_name_format.format(test = "Hello")
         assert obj.get_hist(observable = test_root_hists.hist2D) == test_root_hists.hist2D
-        assert obj.output_key_name(input_key = "input_key",
-                                   output_hist = test_root_hists.hist2D,
-                                   projection_name = projection_name_format.format(test = "Hello")) == projection_name_format.format(test = "Hello")
+        assert obj.output_key_name(
+            input_key = "input_key",
+            output_hist = test_root_hists.hist2D,
+            projection_name = projection_name_format.format(test = "Hello")
+        ) == projection_name_format.format(test = "Hello")
         assert obj.output_hist(output_hist = test_root_hists.hist1D,
                                input_observable = test_root_hists.hist2D) == test_root_hists.hist1D
 
@@ -376,6 +452,10 @@ class TestProjectorsWithRoot():
 
         assert str(obj) == expected_str
 
+    @pytest.mark.parametrize("single_observable", [
+        False,
+        True,
+    ], ids = ["Dict observable input", "Single observable input"])
     # Other axes:
     # AAC = Additional Axis Cuts
     # PDCA = Projection Dependent Cut Axes
@@ -400,11 +480,11 @@ class TestProjectorsWithRoot():
         (hist_axis_ranges.x_axis, True),
         (hist_axis_ranges_without_entries.x_axis, False),
     ], ids = ["PA with entries", "PA without entries"])
-    def test_TH2Projection(self, logging_mixin, test_root_hists,
-                           use_PDCA, additional_cuts, expected_additional_cuts,
-                           projection_axes, expected_projection_axes):
+    def test_TH2_projection(self, logging_mixin, test_root_hists, single_observable,
+                            use_PDCA, additional_cuts, expected_additional_cuts,
+                            projection_axes, expected_projection_axes):
         """ Test projection of a TH2 to a TH1. """
-        import ROOT   # noqa: F401
+        import ROOT  # noqa: F401
 
         # Setup hist ranges
         if additional_cuts:
@@ -414,13 +494,16 @@ class TestProjectorsWithRoot():
                 additional_cuts = setup_hist_axis_range(additional_cuts)
         projection_axes = setup_hist_axis_range(projection_axes)
         # Setup projector
-        observable_dict = {}
-        observables_to_project_from = {"hist2D": test_root_hists.hist2D}
-        projection_name_format = "hist"
-        obj = projectors.HistProjector(observable_dict = observable_dict,
-                                       observables_to_project_from = observables_to_project_from,
-                                       projection_name_format = projection_name_format,
-                                       projection_information = {})
+        kwdargs = {}
+        # These observables have to be defined here so we don't lose reference to them.
+        kwdargs, observable, observable_dict = determine_projector_input_args(
+            single_observable = single_observable,
+            hist = test_root_hists.hist2D,
+            hist_label = "hist2D",
+        )
+        kwdargs["projection_name_format"] = "hist"
+        kwdargs["projection_information"] = {}
+        obj = projectors.HistProjector(**kwdargs)
 
         # Set the projection axes.
         # Using additional cut axes or PDCA is mutually exclusive because we only have one
@@ -439,12 +522,15 @@ class TestProjectorsWithRoot():
         # Perform the projection.
         obj.project()
 
-        # Check the output.
-        assert len(observable_dict) == 1
-        proj = next(iter(observable_dict.values()))
+        # Check the output and get the projection.
+        proj = check_and_get_projection(
+            single_observable = single_observable,
+            observable = observable,
+            observable_dict = observable_dict,
+        )
         assert proj.GetName() == "hist"
 
-        logger.debug("observable_dict: {}, proj.GetEntries(): {}".format(observable_dict, proj.GetEntries()))
+        logger.debug(f"observable_dict: {observable_dict}, proj.GetEntries(): {proj.GetEntries()}")
 
         # Check the axes (they should be in the same order that they are defined above).
         # Use the axis max as a proxy (this function name sux).
@@ -467,6 +553,10 @@ class TestProjectorsWithRoot():
             assert non_zero_bin_location == 1
             assert proj.GetBinContent(non_zero_bin_location) == 1
 
+    @pytest.mark.parametrize("single_observable", [
+        False,
+        True,
+    ], ids = ["Dict observable input", "Single observable input"])
     # AAC = Additional Axis Cuts
     @pytest.mark.parametrize("additional_axis_cuts, expected_additional_axis_cuts", [
         (None, True),
@@ -488,7 +578,7 @@ class TestProjectorsWithRoot():
         (hist_axis_ranges.z_axis, True),
         (hist_axis_ranges_without_entries.z_axis, False)
     ], ids = ["PA with entries", "PA without entries"])
-    def test_TH3_to_TH1_projection(self, logging_mixin, test_root_hists,
+    def test_TH3_to_TH1_projection(self, logging_mixin, test_root_hists, single_observable,
                                    additional_axis_cuts, expected_additional_axis_cuts,
                                    projection_dependent_cut_axes, expected_projection_dependent_cut_axes,
                                    projection_axes, expected_projection_axes):
@@ -502,13 +592,14 @@ class TestProjectorsWithRoot():
             projection_dependent_cut_axes = [setup_hist_axis_range(cut) for cut in projection_dependent_cut_axes]
         projection_axes = setup_hist_axis_range(projection_axes)
         # Setup projector
-        observable_dict = {}
-        observables_to_project_from = {"hist3D": test_root_hists.hist3D}
-        projection_name_format = "hist"
-        obj = projectors.HistProjector(observable_dict = observable_dict,
-                                       observables_to_project_from = observables_to_project_from,
-                                       projection_name_format = projection_name_format,
-                                       projection_information = {})
+        kwdargs, observable, observable_dict = determine_projector_input_args(
+            single_observable = single_observable,
+            hist = test_root_hists.hist3D,
+            hist_label = "hist3D",
+        )
+        kwdargs["projection_name_format"] = "hist"
+        kwdargs["projection_information"] = {}
+        obj = projectors.HistProjector(**kwdargs)
 
         # Set the projection axes.
         if additional_axis_cuts is not None:
@@ -523,12 +614,15 @@ class TestProjectorsWithRoot():
         # Perform the projection.
         obj.project()
 
-        # Check the basic output.
-        assert len(observable_dict) == 1
-        proj = next(iter(observable_dict.values()))
+        # Check the output and get the projection.
+        proj = check_and_get_projection(
+            single_observable = single_observable,
+            observable = observable,
+            observable_dict = observable_dict,
+        )
         assert proj.GetName() == "hist"
 
-        logger.debug("observable_dict: {}, proj.GetEntries(): {}".format(observable_dict, proj.GetEntries()))
+        logger.debug(f"observable_dict: {observable_dict}, proj.GetEntries(): {proj.GetEntries()}")
 
         expected_bins = 5
         # If we don't expect a count, we've restricted the range further, so we need to reflect this in our check.
@@ -553,6 +647,10 @@ class TestProjectorsWithRoot():
             assert non_zero_bin_location == 1
             assert proj.GetBinContent(non_zero_bin_location) == 1
 
+    @pytest.mark.parametrize("single_observable", [
+        False,
+        True,
+    ], ids = ["Dict observable input", "Single observable input"])
     # Other axes:
     # AAC = Additional Axis Cuts
     # PDCA = Projection Dependent Cut Axes
@@ -579,7 +677,7 @@ class TestProjectorsWithRoot():
         ([hist_axis_ranges_without_entries.z_axis, hist_axis_ranges.x_axis], False),
         ([hist_axis_ranges_without_entries.z_axis, hist_axis_ranges_without_entries.x_axis], False),
     ], ids = ["PA with entries", "PA without entries due to x", "PA without entires due to z", "PA without entries"])
-    def test_TH3_to_TH2_projection(self, logging_mixin, test_root_hists,
+    def test_TH3_to_TH2_projection(self, logging_mixin, test_root_hists, single_observable,
                                    use_PDCA, additional_cuts, expected_additional_cuts,
                                    projection_axes, expected_projection_axes):
         """ Test projection of a TH3 into a TH2. """
@@ -593,13 +691,14 @@ class TestProjectorsWithRoot():
                 additional_cuts = setup_hist_axis_range(additional_cuts)
         projection_axes = [setup_hist_axis_range(cut) for cut in projection_axes]
         # Setup projector
-        observable_dict = {}
-        observables_to_project_from = {"hist3D": test_root_hists.hist3D}
-        projection_name_format = "hist"
-        obj = projectors.HistProjector(observable_dict = observable_dict,
-                                       observables_to_project_from = observables_to_project_from,
-                                       projection_name_format = projection_name_format,
-                                       projection_information = {})
+        kwdargs, observable, observable_dict = determine_projector_input_args(
+            single_observable = single_observable,
+            hist = test_root_hists.hist3D,
+            hist_label = "hist3D",
+        )
+        kwdargs["projection_name_format"] = "hist"
+        kwdargs["projection_information"] = {}
+        obj = projectors.HistProjector(**kwdargs)
 
         # Set the projection axes.
         # Using additional cut axes or PDCA is mutually exclusive because we only have one
@@ -619,12 +718,15 @@ class TestProjectorsWithRoot():
         # Perform the projection.
         obj.project()
 
-        # Check the basic output.
-        assert len(observable_dict) == 1
-        proj = next(iter(observable_dict.values()))
+        # Check the output and get the projection.
+        proj = check_and_get_projection(
+            single_observable = single_observable,
+            observable = observable,
+            observable_dict = observable_dict,
+        )
         assert proj.GetName() == "hist"
 
-        logger.debug("observable_dict: {}, proj.GetEntries(): {}".format(observable_dict, proj.GetEntries()))
+        logger.debug(f"observable_dict: {observable_dict}, proj.GetEntries(): {proj.GetEntries()}")
 
         # Check the axes (they should be in the same order that they are defined above).
         # Use the axis max as a proxy (this function name sux).
@@ -677,7 +779,7 @@ class TestProjectorsWithRoot():
 
         assert "This configuration is not allowed" in exception_info.value.args[0]
 
-# Define similar axis and axis seletion structures for the THnSparse.
+# Define similar axis and axis selection structures for the THnSparse.
 # We use some subset of nearly all of these options in the various THn tests.
 sparse_hist_axis_ranges = HistAxisRanges(
     projectors.HistAxisRange(
@@ -740,6 +842,10 @@ sparse_hist_axis_ranges_restricted = [
 @pytest.mark.ROOT
 class TestsForTHnSparseProjection():
     """ Tests for projectors for THnSparse derived histograms. """
+    @pytest.mark.parametrize("single_observable", [
+        False,
+        True,
+    ], ids = ["Dict observable input", "Single observable input"])
     # AAC = Additional Axis Cuts
     @pytest.mark.parametrize("additional_axis_cuts, expected_additional_axis_cuts_counts", [
         (None, 1),
@@ -761,7 +867,7 @@ class TestsForTHnSparseProjection():
         (sparse_hist_axis_ranges.z_axis, 1),
         (sparse_hist_axis_ranges_with_no_entries.z_axis, 0)
     ], ids = ["PA with entries", "PA without entries"])
-    def test_THn_projection(logging_mixin, test_sparse,
+    def test_THn_projection(logging_mixin, test_sparse, single_observable,
                             additional_axis_cuts, expected_additional_axis_cuts_counts,
                             projection_dependent_cut_axes, expected_projection_dependent_cut_axes_counts,
                             projection_axes, expected_projection_axes_counts):
@@ -777,13 +883,14 @@ class TestsForTHnSparseProjection():
         # Setup objects
         sparse, _ = test_sparse
         # Setup projector
-        observable_dict = {}
-        observables_to_project_from = {"hist_sparse": sparse}
-        projection_name_format = "hist"
-        obj = projectors.HistProjector(observable_dict = observable_dict,
-                                       observables_to_project_from = observables_to_project_from,
-                                       projection_name_format = projection_name_format,
-                                       projection_information = {})
+        kwdargs, observable, observable_dict = determine_projector_input_args(
+            single_observable = single_observable,
+            hist = sparse,
+            hist_label = "hist_sparse",
+        )
+        kwdargs["projection_name_format"] = "hist"
+        kwdargs["projection_information"] = {}
+        obj = projectors.HistProjector(**kwdargs)
 
         # Set the projection axes.
         if additional_axis_cuts is not None:
@@ -798,11 +905,15 @@ class TestsForTHnSparseProjection():
         # Perform the projection.
         obj.project()
 
-        # Basic output checks.
-        assert len(observable_dict) == 1
-        proj = next(iter(observable_dict.values()))
+        # Check the output and get the projection.
+        proj = check_and_get_projection(
+            single_observable = single_observable,
+            observable = observable,
+            observable_dict = observable_dict,
+        )
         assert proj.GetName() == "hist"
-        logger.debug("observable_dict: {}, proj.GetEntries(): {}".format(observable_dict, proj.GetEntries()))
+
+        logger.debug(f"observable_dict: {observable_dict}, proj.GetEntries(): {proj.GetEntries()}")
 
         # Find the non-zero bin content so that it can be checked below.
         non_zero_bins = []
