@@ -8,7 +8,7 @@
 import copy
 import enum
 import logging
-from typing import Any, Callable, Dict, Iterable, Optional, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Type, Union
 
 from pachyderm import generic_class
 
@@ -215,25 +215,26 @@ class HistProjector:
         various functions. Thus, they should be avoided by the user when storing projection information
 
     Args:
+        observable_to_project_from: The observables which should be used to project from. The dict
+            key is passed to ``projection_name(...)`` as ``input_key``.
+        output_observable: Object or dict where the projected hist will be stored.
         projection_name_format: Format string to determine the projected hist name.
-        observable: Object where the proejcted hist will be stored. Convenience argument for case where only
-            projecting one hist. Default: None.
-        observable_dict: Where the projected hists will be stored. They will be stored under the dict
-            key determined by ``output_key_name(...)``. Default: None.
-        observables_to_project_from: Single object from which the histogram should be projected. Convenience
-            argument for case where only projecting one hist. Default: None.
-        observables_to_project_from: The observables which should be used to project from. The dict
-            key is passed to ``projection_name(...)`` as ``input_key``. Default: None.
+        output_attribute_name: Name of the attribute where which the single observable projection will
+            be stored in the output_observable object. Must not be specified if projecting with multiple
+            objects. Default: None.
         projection_information: Keyword arguments to be passed to ``projection_name(...)`` to determine
-            the name of the projected histogram.
+            the name of the projected histogram. Default: None.
 
     Attributes:
-        observable_dict (dict): Where the projected hists will be stored. They will be stored under the dict
-            key determined by ``output_key_name(...)``.
-        observables_to_project_from (dict): The observables which should be used to project from. The dict
+        single_observable_projection: True if the projector is only performing a single observable projection.
+        output_attribute_name: Name of the attribute under which the single observable projection will be stored
+            in the output_observable object.
+        observable_to_project_from: The observable(s) which should be used to project from. The dict
             key is passed to ``projection_name(...)`` as ``input_key``.
-        projection_name_format (str): Format string to determine the projected hist name.
-        projection_information (dict): Keyword arguments to be passed to ``projection_name(...)`` to determine
+        output_observable: Where the projected hist(s) will be stored. They will be stored under the dict
+            key determined by ``output_key_name(...)``.
+        projection_name_format: Format string to determine the projected hist name.
+        projection_information: Keyword arguments to be passed to ``projection_name(...)`` to determine
             the name of the projected histogram.
         additional_axis_cuts (list): List of axis cuts which are neither projected nor depend on the axis
             being projected.
@@ -244,8 +245,8 @@ class HistProjector:
         projection_axes (list): List of axes which should be projected.
     """
     def __init__(self,
-                 observables_to_project_from: Union[Dict[str, Any], T_Hist, Any],
-                 observable_dict: Union[Dict[str, Any], T_Hist, Any],
+                 observable_to_project_from: Union[Dict[str, Any], T_Hist, Any],
+                 output_observable: Union[Dict[str, Any], T_Hist, Any],
                  projection_name_format: str,
                  output_attribute_name: str = None,
                  projection_information: Optional[Dict[str, Any]] = None):
@@ -258,10 +259,10 @@ class HistProjector:
         self.output_attribute_name = output_attribute_name
 
         # Validate and assign input and output objects.
-        if self.single_observable_projection and (isinstance(observables_to_project_from, dict) or isinstance(observable_dict, dict)):
+        if self.single_observable_projection and (isinstance(observable_to_project_from, dict) or isinstance(output_observable, dict)):
             raise ValueError("A dict of observables is not compatible with a single observable projection. Check your arguments.")
-        self.observables_to_project_from = observables_to_project_from
-        self.observable_dict = observable_dict
+        self.observable_to_project_from = observable_to_project_from
+        self.output_observable = output_observable
 
         # Output hist name format
         self.projection_name_format = projection_name_format
@@ -275,13 +276,13 @@ class HistProjector:
 
         # Axes
         # Cuts for axes which are not projected
-        self.additional_axis_cuts: list = []
+        self.additional_axis_cuts: List[HistAxisRange] = []
         # Axes cuts which depend on the projection axes
         # ie. If we want to change the range of the axis that we are projecting
         # For example, we may want to project an axis non-continuously (say, -1 - 0.5, 0.5 - 1)
-        self.projection_dependent_cut_axes: list = []
+        self.projection_dependent_cut_axes: List[List[HistAxisRange]] = []
         # Axes to actually project
-        self.projection_axes: list = []
+        self.projection_axes: List[HistAxisRange] = []
 
     # Printing functions
     def __str__(self) -> str:
@@ -565,7 +566,7 @@ class HistProjector:
         Args:
             kwargs (dict): Additional named args to be passed to projection_name(...) and output_key_name(...)
         Returns:
-            The projected histogram. The histogram is also stored in the output specified by ``observable_dict``.
+            The projected histogram. The histogram is also stored in the output specified by ``output_observable``.
         """
         # Help out mypy
         assert isinstance(self.output_attribute_name, str)
@@ -573,7 +574,7 @@ class HistProjector:
         # Run the actual projection.
         output_hist, projection_name, projection_name_args, = self._project_observable(
             input_key = "single_observable",
-            input_observable = self.observables_to_project_from,
+            input_observable = self.observable_to_project_from,
             **kwargs,
         )
         # Store the output.
@@ -587,10 +588,10 @@ class HistProjector:
         output_hist = self.output_hist(**output_hist_args)  # type: ignore
 
         # Store the final output hist
-        if not hasattr(self.observable_dict, self.output_attribute_name):
-            raise ValueError("Attempted to assign hist to non-existent attribute {attribute_name} of object {self.observable_dict}. Check the attribute name!")
+        if not hasattr(self.output_observable, self.output_attribute_name):
+            raise ValueError("Attempted to assign hist to non-existent attribute {attribute_name} of object {self.output_observable}. Check the attribute name!")
         # Actually store the histogram.
-        setattr(self.observable_dict, self.output_attribute_name, output_hist)
+        setattr(self.output_observable, self.output_attribute_name, output_hist)
 
         # Return the observable
         return output_hist
@@ -601,12 +602,12 @@ class HistProjector:
         Args:
             kwargs (dict): Additional named args to be passed to projection_name(...) and output_key_name(...)
         Returns:
-            The projected histograms. The projected histograms are also stored in ``observable_dict``.
+            The projected histograms. The projected histograms are also stored in ``output_observable``.
         """
         # Setup function arguments with values which don't change per loop.
         get_hist_args = copy.deepcopy(kwargs)
         projection_name_args = copy.deepcopy(kwargs)
-        for key, input_observable in self.observables_to_project_from.items():
+        for key, input_observable in self.observable_to_project_from.items():
             output_hist, projection_name, projection_name_args, = self._project_observable(
                 input_key = key,
                 input_observable = input_observable,
@@ -622,9 +623,9 @@ class HistProjector:
                 "projection_name": projection_name
             })
             output_key_name = self.output_key_name(**output_hist_args)  # type: ignore
-            self.observable_dict[output_key_name] = self.output_hist(**output_hist_args)  # type: ignore
+            self.output_observable[output_key_name] = self.output_hist(**output_hist_args)  # type: ignore
 
-        return self.observable_dict
+        return self.output_observable
 
     def project(self, **kwargs: Dict[str, Any]) -> Union[T_Hist, Dict[str, T_Hist]]:
         """ Perform the requested projection(s).
@@ -635,12 +636,12 @@ class HistProjector:
         Args:
             kwargs (dict): Additional named args to be passed to projection_name(...) and output_key_name(...)
         Returns:
-            The projected histogram(s). The projected histograms are also stored in ``observable_dict``.
+            The projected histogram(s). The projected histograms are also stored in ``output_observable``.
         """
-        if isinstance(self.observables_to_project_from, dict):
-            return self._project_dict(**kwargs)
-        else:
+        if self.single_observable_projection:
             return self._project_single_observable(**kwargs)
+        else:
+            return self._project_dict(**kwargs)
 
     def cleanup_cuts(self, hist: T_Hist, cut_axes: Iterable[HistAxisRange]) -> None:
         """ Cleanup applied cuts by resetting the axis to the full range.

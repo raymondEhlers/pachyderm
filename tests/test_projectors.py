@@ -355,44 +355,44 @@ def determine_projector_input_args(single_observable: bool,
         hist: Histogram to be projected.
         hist_label: Label for the histogram to be projected.
     Returns:
-        Keyword arguments, single_observable, observable_dict
+        Keyword arguments, single_observable, output_observable
     """
     kwdargs: Dict[str, Any] = {}
     # These observables have to be defined here so we don't lose reference to them.
     observable = SingleObservable(hist = None)
-    observable_dict: Dict[str, projectors.T_Hist] = {}
+    output_observable: Dict[str, projectors.T_Hist] = {}
 
     # The arguments depend on the observable type.
     if single_observable:
-        kwdargs["observable_dict"] = observable
+        kwdargs["output_observable"] = observable
         kwdargs["output_attribute_name"] = "hist"
-        kwdargs["observables_to_project_from"] = hist
+        kwdargs["observable_to_project_from"] = hist
     else:
-        kwdargs["observable_dict"] = observable_dict
-        kwdargs["observables_to_project_from"] = {hist_label: hist}
+        kwdargs["output_observable"] = output_observable
+        kwdargs["observable_to_project_from"] = {hist_label: hist}
 
-    return kwdargs, observable, observable_dict
+    return kwdargs, observable, output_observable
 
 def check_and_get_projection(single_observable: bool,
                              observable: SingleObservable,
-                             observable_dict: Dict[str, projectors.T_Hist]) -> projectors.T_Hist:
+                             output_observable: Dict[str, projectors.T_Hist]) -> projectors.T_Hist:
     """ Run basic checks and get the projection.
 
     Args:
         single_observable: True if we are testing with a signal observable.
         observable: Single observable object which may contain the projection.
-        observable_dict: Dict which many contain the projection.
+        output_observable: Dict which many contain the projection.
     Returns:
         The projected histogram.
     """
     if single_observable:
-        assert len(observable_dict) == 0
+        assert len(output_observable) == 0
         assert observable.hist is not None
         proj = observable.hist
     else:
-        assert len(observable_dict) == 1
+        assert len(output_observable) == 1
         assert observable.hist is None
-        proj = next(iter(observable_dict.values()))
+        proj = next(iter(output_observable.values()))
 
     return proj
 
@@ -409,7 +409,7 @@ class TestProjectorsWithRoot():
 
         # Args
         projection_name_format = "{test} world"
-        kwdargs, observable, observable_dict = determine_projector_input_args(
+        kwdargs, observable, output_observable = determine_projector_input_args(
             single_observable = single_observable,
             hist = None,
             hist_label = "histogram",
@@ -496,7 +496,7 @@ class TestProjectorsWithRoot():
         # Setup projector
         kwdargs = {}
         # These observables have to be defined here so we don't lose reference to them.
-        kwdargs, observable, observable_dict = determine_projector_input_args(
+        kwdargs, observable, output_observable = determine_projector_input_args(
             single_observable = single_observable,
             hist = test_root_hists.hist2D,
             hist_label = "hist2D",
@@ -526,11 +526,11 @@ class TestProjectorsWithRoot():
         proj = check_and_get_projection(
             single_observable = single_observable,
             observable = observable,
-            observable_dict = observable_dict,
+            output_observable = output_observable,
         )
         assert proj.GetName() == "hist"
 
-        logger.debug(f"observable_dict: {observable_dict}, proj.GetEntries(): {proj.GetEntries()}")
+        logger.debug(f"output_observable: {output_observable}, proj.GetEntries(): {proj.GetEntries()}")
 
         # Check the axes (they should be in the same order that they are defined above).
         # Use the axis max as a proxy (this function name sux).
@@ -592,7 +592,7 @@ class TestProjectorsWithRoot():
             projection_dependent_cut_axes = [setup_hist_axis_range(cut) for cut in projection_dependent_cut_axes]
         projection_axes = setup_hist_axis_range(projection_axes)
         # Setup projector
-        kwdargs, observable, observable_dict = determine_projector_input_args(
+        kwdargs, observable, output_observable = determine_projector_input_args(
             single_observable = single_observable,
             hist = test_root_hists.hist3D,
             hist_label = "hist3D",
@@ -618,11 +618,11 @@ class TestProjectorsWithRoot():
         proj = check_and_get_projection(
             single_observable = single_observable,
             observable = observable,
-            observable_dict = observable_dict,
+            output_observable = output_observable,
         )
         assert proj.GetName() == "hist"
 
-        logger.debug(f"observable_dict: {observable_dict}, proj.GetEntries(): {proj.GetEntries()}")
+        logger.debug(f"output_observable: {output_observable}, proj.GetEntries(): {proj.GetEntries()}")
 
         expected_bins = 5
         # If we don't expect a count, we've restricted the range further, so we need to reflect this in our check.
@@ -691,7 +691,7 @@ class TestProjectorsWithRoot():
                 additional_cuts = setup_hist_axis_range(additional_cuts)
         projection_axes = [setup_hist_axis_range(cut) for cut in projection_axes]
         # Setup projector
-        kwdargs, observable, observable_dict = determine_projector_input_args(
+        kwdargs, observable, output_observable = determine_projector_input_args(
             single_observable = single_observable,
             hist = test_root_hists.hist3D,
             hist_label = "hist3D",
@@ -722,11 +722,11 @@ class TestProjectorsWithRoot():
         proj = check_and_get_projection(
             single_observable = single_observable,
             observable = observable,
-            observable_dict = observable_dict,
+            output_observable = output_observable,
         )
         assert proj.GetName() == "hist"
 
-        logger.debug(f"observable_dict: {observable_dict}, proj.GetEntries(): {proj.GetEntries()}")
+        logger.debug(f"output_observable: {output_observable}, proj.GetEntries(): {proj.GetEntries()}")
 
         # Check the axes (they should be in the same order that they are defined above).
         # Use the axis max as a proxy (this function name sux).
@@ -760,11 +760,11 @@ class TestProjectorsWithRoot():
         import ROOT  # noqa: F401
 
         # Setup projector
-        observable_dict = {}
-        observables_to_project_from = {"hist3D": test_root_hists.hist3D}
+        output_observable = {}
+        observable_to_project_from = {"hist3D": test_root_hists.hist3D}
         projection_name_format = "hist"
-        obj = projectors.HistProjector(observable_dict = observable_dict,
-                                       observables_to_project_from = observables_to_project_from,
+        obj = projectors.HistProjector(output_observable = output_observable,
+                                       observable_to_project_from = observable_to_project_from,
                                        projection_name_format = projection_name_format,
                                        projection_information = {})
 
@@ -883,7 +883,7 @@ class TestsForTHnSparseProjection():
         # Setup objects
         sparse, _ = test_sparse
         # Setup projector
-        kwdargs, observable, observable_dict = determine_projector_input_args(
+        kwdargs, observable, output_observable = determine_projector_input_args(
             single_observable = single_observable,
             hist = sparse,
             hist_label = "hist_sparse",
@@ -909,11 +909,11 @@ class TestsForTHnSparseProjection():
         proj = check_and_get_projection(
             single_observable = single_observable,
             observable = observable,
-            observable_dict = observable_dict,
+            output_observable = output_observable,
         )
         assert proj.GetName() == "hist"
 
-        logger.debug(f"observable_dict: {observable_dict}, proj.GetEntries(): {proj.GetEntries()}")
+        logger.debug(f"output_observable: {output_observable}, proj.GetEntries(): {proj.GetEntries()}")
 
         # Find the non-zero bin content so that it can be checked below.
         non_zero_bins = []
