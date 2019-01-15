@@ -2,17 +2,19 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
-## [1.4] -
+## [1.4] - 14 January 2019
 
 ### Added
 
 - Added very simple context manager for opening ROOT files. Basically a simpler version of
   `rootpy.io.root_open`. See: `0d7a923f19d714125ec5f1eaed55ad9203ae718e`.
-- Outliers removal module. It removes outliers from a given histogram. It was developed based on previous
-  code. See:
 
 ### Changed
 
+- Heavily modified the `projectors` module to simplify projecting single objects. See:
+  `d578b97fc2b97f0888170ca678014d8807faf876`.
+- Modify the `HistProjector` initialization names and objects for improved clarity. See:
+  `7eb6f18bb72d0c12cbd47e4bf05178a6d934895c`
 - Clarify typing information. See: `eac9586a7d7c0bf1e2be1f0ef2235fb75bf0e676` and
   `4de3493092b413dbaaeccebc3b3a10d70b3ad0df`.
 
