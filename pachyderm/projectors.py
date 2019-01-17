@@ -589,7 +589,7 @@ class HistProjector:
 
         # Store the final output hist
         if not hasattr(self.output_observable, self.output_attribute_name):
-            raise ValueError("Attempted to assign hist to non-existent attribute {attribute_name} of object {self.output_observable}. Check the attribute name!")
+            raise ValueError(f"Attempted to assign hist to non-existent attribute {self.output_attribute_name} of object {self.output_observable}. Check the attribute name!")
         # Actually store the histogram.
         setattr(self.output_observable, self.output_attribute_name, output_hist)
 
