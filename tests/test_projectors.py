@@ -342,9 +342,9 @@ class SingleObservable:
     hist: Any
 
 def determine_projector_input_args(single_observable: bool,
-                                   hist: projectors.T_Hist,
+                                   hist: projectors.Hist,
                                    hist_label: str
-                                   ) -> Tuple[Dict[str, Any], SingleObservable, Dict[str, projectors.T_Hist]]:
+                                   ) -> Tuple[Dict[str, Any], SingleObservable, Dict[str, projectors.Hist]]:
     """ Determine some projector input arguments.
 
     Note:
@@ -360,7 +360,7 @@ def determine_projector_input_args(single_observable: bool,
     kwdargs: Dict[str, Any] = {}
     # These observables have to be defined here so we don't lose reference to them.
     observable = SingleObservable(hist = None)
-    output_observable: Dict[str, projectors.T_Hist] = {}
+    output_observable: Dict[str, projectors.Hist] = {}
 
     # The arguments depend on the observable type.
     if single_observable:
@@ -375,7 +375,7 @@ def determine_projector_input_args(single_observable: bool,
 
 def check_and_get_projection(single_observable: bool,
                              observable: SingleObservable,
-                             output_observable: Dict[str, projectors.T_Hist]) -> projectors.T_Hist:
+                             output_observable: Dict[str, projectors.Hist]) -> projectors.Hist:
     """ Run basic checks and get the projection.
 
     Args:
