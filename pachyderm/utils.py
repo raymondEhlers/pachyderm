@@ -7,7 +7,6 @@
 
 import logging
 import numpy as np
-import ruamel.yaml
 
 from pachyderm import histogram
 
@@ -22,41 +21,6 @@ epsilon = 1e-5
 ###################
 # Utility functions
 ###################
-def read_YAML(filename: str, file_access_mode: str = "r") -> ruamel.yaml.comments.CommentedMap:
-    """ Read the YAML file at filename.
-
-    Uses the round trip mode.
-
-    Args:
-        filename (str): Filename of the YAML file to be read.
-        file_access_mode (str): Mode under which the file should be opened
-    Returns:
-        dict-like: Dict containing the parameters read from the YAML file.
-    """
-    parameters = None
-    with open(filename, file_access_mode) as f:
-        yaml = ruamel.yaml.YAML(typ = "rt")
-        yaml.default_flow_style = False
-        parameters = yaml.load(f)
-    return parameters
-
-def write_YAML(parameters: dict, filename: str, file_access_mode: str = "w") -> None:
-    """ Write the given output dict to file using YAML.
-
-    Uses the round trip mode.
-
-    Args:
-        parameters (dict): Output parameters to be written to the YAML file.
-        filename (str): Filename of the YAML file to write.
-        file_access_mode (str): Mode under which the file should be opened
-    Returns:
-        None.
-    """
-    with open(filename, file_access_mode) as f:
-        yaml = ruamel.yaml.YAML(typ = "rt")
-        yaml.default_flow_style = False
-        yaml.dump(parameters, f)
-
 def moving_average(arr: np.ndarray, n: int = 3) -> np.ndarray:
     """ Calculate the moving overage over an array.
 
