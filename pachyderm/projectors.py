@@ -26,6 +26,56 @@ class TH1AxisType(enum.Enum):
     y_axis = 1
     z_axis = 2
 
+def hist_axis_func(axis_type: enum.Enum) -> Callable[[Hist], Axis]:
+    """ Wrapper to retrieve the axis of a given histogram.
+
+    This can be convenient outside of just projections, so it's made available in the API.
+
+    Args:
+        axis_type: The type of axis to retrieve.
+    Returns:
+        Callable to retrieve the specified axis when given a hist.
+    """
+    def axis_func(hist: Hist) -> Axis:
+        """ Retrieve the axis associated with the ``HistAxisRange`` object for a given hist.
+
+        Args:
+            hist: Histogram from which the selected axis should be retrieved.
+            axis_type: Enumeration corresponding to the axis to be restricted. The numerical
+                value of the enum should be axis number (for a THnBase).
+        Returns:
+            ROOT.TAxis: The axis associated with the ``HistAxisRange`` object.
+        """
+        # Determine the axis_type value
+        # Use try here instead of checking for a particular type to protect against type changes
+        # (say in the enum)
+        try:
+            # Try to extract the value from an enum
+            hist_axis_type = axis_type.value
+        except AttributeError:
+            # Seems that we received an int, so just use that value
+            hist_axis_type = axis_type
+
+        if hasattr(hist, "ProjectionND") and hasattr(hist, "Projection"):
+            # THnBase defines ProjectionND and Projection, so we will use those as proxies.
+            # Return the proper THn access
+            #logger.debug(f"From hist: {hist}, hist_axis_type: {hist_axis_type}, axis: {hist.GetAxis(hist_axis_type.value)}")
+            return hist.GetAxis(hist_axis_type)
+        else:
+            # If it's not a THn, then it must be a TH1 derived
+            axis_function_map = {
+                TH1AxisType.x_axis.value: hist.GetXaxis,
+                TH1AxisType.y_axis.value: hist.GetYaxis,
+                TH1AxisType.z_axis.value: hist.GetZaxis
+            }
+
+            # Retrieve the axis function and execute it. It is done separately to
+            # clarify any possible errors.
+            return_func = axis_function_map[hist_axis_type]
+            return return_func()
+
+    return axis_func
+
 RangeMinMaxType = Union[float, Callable[[Any], float]]
 
 class HistAxisRange(generic_class.EqualityMixin):
@@ -64,43 +114,10 @@ class HistAxisRange(generic_class.EqualityMixin):
 
     @property
     def axis(self) -> Callable[[Any], Any]:
-        """ Wrapper to determine the axis to return based on the hist type. """
-        def axis_func(hist: Hist) -> Axis:
-            """ Retrieve the axis associated with the ``HistAxisRange`` object for a given hist.
-
-            Args:
-                hist: Histogram from which the selected axis should be retrieved.
-            Returns:
-                ROOT.TAxis: The axis associated with the ``HistAxisRange`` object.
-            """
-            # Determine the axis_type value
-            # Use try here instead of checking for a particular type to protect against type changes
-            # (say in the enum)
-            try:
-                # Try to extract the value from an enum
-                axis_type = self.axis_type.value
-            except AttributeError:
-                # Seems that we received an int, so just use that value
-                axis_type = self.axis_type
-
-            if hasattr(hist, "ProjectionND") and hasattr(hist, "Projection"):
-                # THnBase defines ProjectionND and Projection, so we will use those as proxies.
-                # Return the proper THn access
-                #logger.debug(f"From hist: {hist}, axis_type: {self.axis_type}, axis: {hist.GetAxis(self.axis_type.value)}")
-                return hist.GetAxis(axis_type)
-            else:
-                # If it's not a THn, then it must be a TH1 derived
-                axis_function_map = {
-                    TH1AxisType.x_axis.value: hist.GetXaxis,
-                    TH1AxisType.y_axis.value: hist.GetYaxis,
-                    TH1AxisType.z_axis.value: hist.GetZaxis
-                }
-
-                # Retrieve the axis function and execute it. It is done separately to
-                # clarify any possible errors.
-                return_func = axis_function_map[axis_type]
-                return return_func()
-
+        """ Determine the axis to return based on the hist type. """
+        axis_func = hist_axis_func(
+            axis_type = self.axis_type
+        )
         return axis_func
 
     def apply_range_set(self, hist: Hist) -> None:
