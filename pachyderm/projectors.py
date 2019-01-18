@@ -8,19 +8,10 @@
 import copy
 import enum
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 from pachyderm import generic_class
-
-# Typing helper
-try:
-    import ROOT
-    T_Hist = Union[ROOT.TH1, ROOT.THnBase]
-    T_Axis = Type[ROOT.TAxis]
-except ImportError:
-    # It doesn't like the possibility of redefining this, so we need to tell ``mypy`` to ignore it.
-    T_Hist = Any  # type: ignore
-    T_Axis = Any  # type: ignore
+from pachyderm.typing_helpers import Hist, Axis
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -74,7 +65,7 @@ class HistAxisRange(generic_class.EqualityMixin):
     @property
     def axis(self) -> Callable[[Any], Any]:
         """ Wrapper to determine the axis to return based on the hist type. """
-        def axis_func(hist: T_Hist) -> T_Axis:
+        def axis_func(hist: Hist) -> Axis:
             """ Retrieve the axis associated with the ``HistAxisRange`` object for a given hist.
 
             Args:
@@ -112,7 +103,7 @@ class HistAxisRange(generic_class.EqualityMixin):
 
         return axis_func
 
-    def apply_range_set(self, hist: T_Hist) -> None:
+    def apply_range_set(self, hist: Hist) -> None:
         """ Apply the associated range set to the axis of a given hist.
 
         Note:
@@ -245,8 +236,8 @@ class HistProjector:
         projection_axes (list): List of axes which should be projected.
     """
     def __init__(self,
-                 observable_to_project_from: Union[Dict[str, Any], T_Hist, Any],
-                 output_observable: Union[Dict[str, Any], T_Hist, Any],
+                 observable_to_project_from: Union[Dict[str, Any], Hist, Any],
+                 output_observable: Union[Dict[str, Any], Hist, Any],
                  projection_name_format: str,
                  output_attribute_name: str = None,
                  projection_information: Optional[Dict[str, Any]] = None):
@@ -303,7 +294,7 @@ class HistProjector:
 
         return ret_val
 
-    def call_projection_function(self, hist: T_Hist) -> T_Hist:
+    def call_projection_function(self, hist: Hist) -> Hist:
         """ Calls the actual projection function for the hist.
 
         Args:
@@ -334,7 +325,7 @@ class HistProjector:
 
         return projected_hist
 
-    def _project_THn(self, hist: T_Hist) -> Any:
+    def _project_THn(self, hist: Hist) -> Any:
         """ Perform the actual THn -> THn or TH1 projection.
 
         This projection could be to 1D, 2D, 3D, or ND.
@@ -369,7 +360,7 @@ class HistProjector:
 
         return projected_hist
 
-    def _project_TH3(self, hist: T_Hist) -> Any:
+    def _project_TH3(self, hist: Hist) -> Any:
         """ Perform the actual TH3 -> TH1 projection.
 
         This projection could be to 1D or 2D.
@@ -410,7 +401,7 @@ class HistProjector:
 
         return projected_hist
 
-    def _project_TH2(self, hist: T_Hist) -> Any:
+    def _project_TH2(self, hist: Hist) -> Any:
         """ Perform the actual TH2 -> TH1 projection.
 
         This projection can only be to 1D.
@@ -455,7 +446,7 @@ class HistProjector:
                             input_observable: Any,
                             get_hist_args: Dict[str, Any] = None,
                             projection_name_args: Dict[str, Any] = None,
-                            **kwargs) -> T_Hist:
+                            **kwargs) -> Hist:
         """ Perform a projection for a single observable.
 
         Note:
@@ -560,7 +551,7 @@ class HistProjector:
 
         return output_hist, projection_name, projection_name_args
 
-    def _project_single_observable(self, **kwargs: Dict[str, Any]) -> T_Hist:
+    def _project_single_observable(self, **kwargs: Dict[str, Any]) -> Hist:
         """ Driver function for projecting and storing a single observable.
 
         Args:
@@ -596,7 +587,7 @@ class HistProjector:
         # Return the observable
         return output_hist
 
-    def _project_dict(self, **kwargs: Dict[str, Any]) -> Dict[str, T_Hist]:
+    def _project_dict(self, **kwargs: Dict[str, Any]) -> Dict[str, Hist]:
         """ Driver function for projecting and storing a dictionary of observables.
 
         Args:
@@ -627,7 +618,7 @@ class HistProjector:
 
         return self.output_observable
 
-    def project(self, **kwargs: Dict[str, Any]) -> Union[T_Hist, Dict[str, T_Hist]]:
+    def project(self, **kwargs: Dict[str, Any]) -> Union[Hist, Dict[str, Hist]]:
         """ Perform the requested projection(s).
 
         Note:
@@ -643,7 +634,7 @@ class HistProjector:
         else:
             return self._project_dict(**kwargs)
 
-    def cleanup_cuts(self, hist: T_Hist, cut_axes: Iterable[HistAxisRange]) -> None:
+    def cleanup_cuts(self, hist: Hist, cut_axes: Iterable[HistAxisRange]) -> None:
         """ Cleanup applied cuts by resetting the axis to the full range.
 
         Inspired by: https://github.com/matplo/rootutils/blob/master/python/2.7/THnSparseWrapper.py
@@ -695,7 +686,7 @@ class HistProjector:
         """
         return observable
 
-    def output_key_name(self, input_key: str, output_hist: T_Hist, projection_name: str, **kwargs) -> str:
+    def output_key_name(self, input_key: str, output_hist: Hist, projection_name: str, **kwargs) -> str:
         """ Returns the key under which the output object should be stored.
 
         Note:
@@ -714,7 +705,7 @@ class HistProjector:
         """
         return projection_name
 
-    def output_hist(self, output_hist: T_Hist, input_observable: Any, **kwargs: Dict[str, Any]) -> Union[T_Hist, Any]:
+    def output_hist(self, output_hist: Hist, input_observable: Any, **kwargs: Dict[str, Any]) -> Union[Hist, Any]:
         """ Return an output object. It should store the ``output_hist``.
 
         Note:

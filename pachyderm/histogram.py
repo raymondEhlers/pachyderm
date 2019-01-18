@@ -8,7 +8,9 @@
 from dataclasses import dataclass
 import logging
 import numpy as np
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Union
+
+from pachyderm.typing_helpers import Hist
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -214,7 +216,7 @@ class Histogram1D:
         return (bin_edges, y, errors)
 
     @classmethod
-    def from_existing_hist(cls, hist: Any):
+    def from_existing_hist(cls, hist: Union[Hist, Any]):
         """ Convert an existing histogram.
 
         Note:
@@ -244,7 +246,7 @@ class Histogram1D:
 
         return cls(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
 
-def get_array_from_hist2D(hist: Any, set_zero_to_NaN: bool = True, return_bin_edges: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_edges: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """ Extract x, y, and bin values from a 2D ROOT histogram.
 
     Converts the histogram into a numpy array, and suitably processes it for a surface plot
