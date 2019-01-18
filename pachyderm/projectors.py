@@ -131,7 +131,7 @@ class HistAxisRange(generic_class.EqualityMixin):
 
     @staticmethod
     def apply_func_to_find_bin(
-        func: Callable[..., Union[float, int, Any]],
+        func: Union[None, Callable[..., Union[float, int, Any]]],
         values: Optional[float] = None
     ) -> Callable[[Any], Union[float, int]]:
         """ Closure to determine the bin associated with a value on an axis.
