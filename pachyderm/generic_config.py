@@ -13,14 +13,14 @@ import enum
 import itertools
 import logging
 import string
-import ruamel.yaml
 from typing import Any, Dict, List, Tuple, Type
 
-logger = logging.getLogger(__name__)
-# Make it a bit easier to specify the CommentedMap type.
-DictLike = Type[ruamel.yaml.comments.CommentedMap]
+from pachyderm import yaml
+from pachyderm.yaml import DictLike
 
-def load_configuration(yaml: "ruamel.yaml.YAML", filename: str) -> DictLike:
+logger = logging.getLogger(__name__)
+
+def load_configuration(yaml: yaml.ruamel.yaml.YAML, filename: str) -> DictLike:
     """ Load an analysis configuration from a file.
 
     Args:

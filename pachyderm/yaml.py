@@ -44,6 +44,7 @@ from typing import Any, Iterable, Optional, Sequence, Type, TypeVar
 logger = logging.getLogger(__name__)
 
 # Typing helpers
+DictLike = ruamel.yaml.comments.CommentedMap
 Representer = Type[ruamel.yaml.representer.BaseRepresenter]
 Constructor = Type[ruamel.yaml.constructor.BaseConstructor]
 T_EnumToYAML = TypeVar("T_EnumToYAML", bound = enum.Enum)
