@@ -87,7 +87,7 @@ def _project_to_part_level(hist: Hist, particle_level_axis: T_ParticleLevelAxis)
     return output_object.output
 
 def _determine_outliers_index(hist: Hist,
-                              moving_average_threshold: float = 2.0,
+                              moving_average_threshold: float = 1.0,
                               number_of_values_to_search_ahead: int = 5,
                               limit_of_number_of_values_below_threshold: int = None) -> int:
     """ Determine the location of where outliers begin in a 1D histogram.
@@ -118,7 +118,7 @@ def _determine_outliers_index(hist: Hist,
         limit_of_number_of_values_below_threshold: Number of consecutive bins below the threshold to be considered
             the beginning of outliers. Default: None, which will correspond to number_of_values_to_search_ahead - 1.
     Returns:
-        Index of the histogram axes where the outliers begin.
+        ROOT (ie 1-indexed) index of the histogram axes where the outliers begin.
     """
     # Validation
     import ROOT
@@ -137,21 +137,49 @@ def _determine_outliers_index(hist: Hist,
     # It is much more convenient to work with a numpy array.
     hist_to_check = histogram.Histogram1D.from_existing_hist(hist)
 
-    logger.debug(f"y: {hist_to_check.y}")
-
-    # Must have at least one bin above the specified threshold.
-    found_at_least_one_bin_above_threshold = False
-    # Index we will search for from which outliers will be cut.
-    cut_index = -1
-
     # Calculate the moving average for the entire axis, looking ahead including the current bin + 4 = 5 ahead.
     number_of_values_to_search_ahead = 5
     moving_average = utils.moving_average(hist_to_check.y, n = number_of_values_to_search_ahead)
-    below_threshold = moving_average < moving_average_threshold
-    #below_threshold = moving_average[moving_average < moving_average_threshold]
 
-    logger.debug(f"moving_average: {moving_average}")
-    #logger.debug(f"below_threshold: {below_threshold}")
+    #logger.debug(f"y: {hist_to_check.y}")
+    #logger.debug(f"moving_average: {moving_average}")
+
+    cut_index = _determine_outliers_for_moving_avreage(
+        moving_average = moving_average,
+        moving_average_threshold = moving_average_threshold,
+        number_of_values_to_search_ahead = number_of_values_to_search_ahead,
+        limit_of_number_of_values_below_threshold = limit_of_number_of_values_below_threshold,
+    )
+
+    if cut_index != -1:
+        # ROOT histograms are 1 indexed, so we add another 1.
+        cut_index += 1
+
+    return cut_index
+
+def _determine_outliers_for_moving_avreage(moving_average: np.ndarray,
+                                           moving_average_threshold: float,
+                                           number_of_values_to_search_ahead: int,
+                                           limit_of_number_of_values_below_threshold: int) -> int:
+    """ Determine outliers to remove from a given moving average.
+
+    Note:
+        The index returned is when the moving average first drops below the threshold for a moving average
+        calculated with that bin at the center. This is somewhat different from a standard moving average
+        calculation which would only look forward in the array.
+
+    Args:
+        moving_average: Moving average.
+        moving_average_threshold: Value of moving average under which we consider the moving average
+            to be 0. Default: 2.
+        number_of_values_to_search_ahead: Number of values to search ahead in the array when calculating
+            the moving average. Default: 5.
+        limit_of_number_of_values_below_threshold: Number of consecutive bins below the threshold to be considered
+            the beginning of outliers. Default: None, which will correspond to number_of_values_to_search_ahead - 1.
+    Returns:
+        0-indexed index of the histogram axes where the outliers begin.
+    """
+    below_threshold = moving_average < moving_average_threshold
 
     # Build up a list of values to check if they are below threshold. This list allows us to easily look
     # forward in the below_threshold array.
@@ -163,8 +191,14 @@ def _determine_outliers_index(hist: Hist,
             below_threshold[i:-(limit_of_number_of_values_below_threshold - 1 - i) or None]
         )
 
-    logger.debug(f"values_to_check: {values_to_check}")
-    logger.debug(f"hist length: {len(hist_to_check.x)}, moving avg length: {len(moving_average)}, l: {[len(v) for v in values_to_check]}")
+    # Some helpful logging information.
+    #logger.debug(f"values_to_check: {values_to_check}")
+    #logger.debug(f"moving avg length: {len(moving_average)}, length of values_to_check entries: {[len(v) for v in values_to_check]}")
+
+    # Must have at least one bin above the specified threshold.
+    found_at_least_one_bin_above_threshold = False
+    # Index we will search for from which outliers will be cut.
+    cut_index = -1
 
     # Determine the index where the limit_of_number_of_values_below_threshold bins are consequentially below the threshold.
     for i, values in enumerate(zip(*values_to_check)):
@@ -172,30 +206,21 @@ def _determine_outliers_index(hist: Hist,
         above_threshold = [not value for value in values]
         # We require the values to go above the moving average threshold at least once.
         if any(above_threshold):
-            logger.debug(f"Found bin i {i} above threshold with moving average: {moving_average[i]}, hist value: {hist_to_check.y[i]}")
+            #logger.debug(f"Found bin i {i} above threshold with moving average: {moving_average[i]}")
             found_at_least_one_bin_above_threshold = True
 
         # All values from which we are looking ahead must be below the threshold to consider the index
         # as below threshold.
         if found_at_least_one_bin_above_threshold and all(np.invert(above_threshold)):
             # The previous outlier removal implementation used a moving average centered on a value
-            # (ie. checked arr[-2 + current_index: current_index + 3]). Thus, we need to shift the
-            # cut_index that we assign by limit_of_number_of_values_below_threshold / 2 for the index where
-            # we have found all values below the threshold.
-            logger.debug(f"i at founding cut_index: {i} with moving_average: {moving_average[i]}, hist value: {hist_to_check.y[i]}")
+            # (ie. it checked ``arr[-2 + current_index:current_index + 3]``). Thus, we need to
+            # shift the cut_index that we assign by limit_of_number_of_values_below_threshold // 2 for
+            # the index where we have found all values below the threshold.
+            logger.debug(f"i at found cut_index: {i} with moving_average: {moving_average[i]}")
             cut_index = i + limit_of_number_of_values_below_threshold // 2
-            # NOTE: ROOT histograms are 1 indexed, so we add another 1.
-            # TODO: I don't think this value is quite right because values isn't the full length of the hist.
-            cut_index += 1
-            logger.debug(f"hist at cut_index: {hist_to_check.y[cut_index]}, cut_index minus slice: {hist_to_check.y[cut_index - 4: cut_index]}")
             break
-    else:
-        # We never hit the break statement.
-        cut_index = -1
 
     return cut_index
-
-#def _determine_outliers_for_moving_avreage(moving_average: Sequence[float], ) -> int:
 
 def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, particle_level_axis: T_ParticleLevelAxis) -> None:
     """ Remove outliers from a given histogram.
