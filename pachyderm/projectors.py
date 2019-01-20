@@ -394,14 +394,15 @@ class HistProjector:
         # Need to concatenate the names of the axes together
         projection_axis_name = ""
         for axis in self.projection_axes:
+            # Determine the axis name based on the name of the axis type.
             # [:1] returns just the first letter. For example, we could get "xy" if the first axis as
             # x_axis and the second was y_axis.
             # NOTE: Careful. This depends on the name of the enumerated values!!! Since this isn't terribly
-            #       safe, we then perform additonal validation on the same to ensure that it is one of the
+            #       safe, we then perform additional validation on the same to ensure that it is one of the
             #       expected axis names.
-            proj_axis_name = axis.name[:1]
+            proj_axis_name = axis.axis_type.name[:1]
             if proj_axis_name not in ["x", "y", "z"]:
-                raise ValueError("Projection axis name {proj_axis_name} is not 'x', 'y', or 'z'. Please check your configuration.")
+                raise ValueError(f"Projection axis name {proj_axis_name} is not 'x', 'y', or 'z'. Please check your configuration.")
             projection_axis_name += proj_axis_name
 
         # Handle ROOT Project3D quirk...

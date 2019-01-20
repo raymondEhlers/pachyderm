@@ -26,7 +26,6 @@ class SparseAxisLabels(enum.Enum):
 @pytest.fixture
 def create_hist_axis_range():
     """ Create a HistAxisRange object to use for testing. """
-    #axis_type, axis = request.param
     object_args = {
         "axis_range_name": "z_axis_test_projector",
         "axis_type": projectors.TH1AxisType.y_axis,
@@ -283,17 +282,17 @@ HistAxisRanges = dataclasses.make_dataclass("HistAxisRanges", ["x_axis", "y_axis
 hist_axis_ranges = HistAxisRanges(
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.x_axis,
-        axis_range_name = "x_axis",
+        axis_range_name = "an_x_axis",
         min_val = 0.1,
         max_val = 0.8),
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.y_axis,
-        axis_range_name = "y_axis",
+        axis_range_name = "an_y_axis",
         min_val = 0,
         max_val = 12),
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.z_axis,
-        axis_range_name = "z_axis",
+        axis_range_name = "an_z_axis",
         min_val = 10,
         max_val = 60)
 )
@@ -301,17 +300,17 @@ hist_axis_ranges = HistAxisRanges(
 hist_axis_ranges_without_entries = HistAxisRanges(
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.x_axis,
-        axis_range_name = "x_axis_no_entries",
+        axis_range_name = "an_x_axis_no_entries",
         min_val = 0.2,
         max_val = 0.8),
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.y_axis,
-        axis_range_name = "y_axis_no_entries",
+        axis_range_name = "an_y_axis_no_entries",
         min_val = 4,
         max_val = 12),
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.z_axis,
-        axis_range_name = "z_axis_no_entries",
+        axis_range_name = "an_z_axis_no_entries",
         min_val = 20,
         max_val = 60)
 )
@@ -321,17 +320,17 @@ hist_axis_ranges_without_entries = HistAxisRanges(
 hist_axis_ranges_restricted = (
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.y_axis,
-        axis_range_name = "y_axis_lower",
+        axis_range_name = "an_y_axis_lower",
         min_val = 0,
         max_val = 4),
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.y_axis,
-        axis_range_name = "y_axis_middle",
+        axis_range_name = "an_y_axis_middle",
         min_val = 4,
         max_val = 8),
     projectors.HistAxisRange(
         axis_type = projectors.TH1AxisType.y_axis,
-        axis_range_name = "y_axis_upper",
+        axis_range_name = "an_y_axis_upper",
         min_val = 8,
         max_val = 12)
 )
@@ -446,7 +445,7 @@ class TestProjectorsWithRoot():
         expected_str += "\n\tadditional_axis_cuts:\n"
         expected_str += "\t\t- my_axis"
         expected_str += "\n\tprojection_dependent_cut_axes:\n"
-        expected_str += "\t\t- ['x_axis_no_entries']"
+        expected_str += "\t\t- ['an_x_axis_no_entries']"
         expected_str += "\n\tprojection_axes:\n"
         expected_str += "\t\t- projection_axis"
 
