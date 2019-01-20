@@ -3,7 +3,7 @@
 Tests are implemented using `pytest`. To execute the testing, I tend to use something like:
 
 ```bash
-$ pytest -l --cov=pachyderm --cov-report html --cov-branch --durations=5 --mpl tests/
+$ pytest -l --cov=pachyderm --cov-report html --cov-branch --durations=5 tests/
 ```
 
 This assumes you are running from the root repository folder and will report on which tests are the slowest as
