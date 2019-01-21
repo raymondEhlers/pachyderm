@@ -2,6 +2,32 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.5] - 20 January 2019
+
+### Added
+
+- Outliers removal module, `remove_outliers`. It removes outliers from a given histogram. It was developed
+  based on previous code. See: `dd472b3dff0715f015d27d083258555bd9674028`,
+  `12268cb696daa9d80ca680fc219e5d5ab01f67d2`, and `6b62e751c773c05be11019980c67d9ef69d1e487`.
+- Centralized shared typing. See: `4e00fd66994971b67d40031627cd6b536c0439d0`.
+
+### Changed
+
+- Improved YAML dependencies and typing. It is now only handled in the `yaml` module. See:
+  `ba364f65d152617c5cd1ee88de88a25c69048203`.
+- Provide access to wrapper to get a `TAxis` object given a histogram and a selected axis number. See:
+  `9569bda571fea44142bf3d46bb2d11b4f979562b`.
+
+### Fixed
+
+- Fixed 3D projectors axis determination. The axis name was being taken rather than the name of the axis type.
+  See: `c32ebea1321054eea71bed1c7c6d68c0b3794a9a`.
+
+### Removed
+
+- Obsolete YAML read and write code. We can now directly write classes, which is much easier. See:
+  `f87ede530519761be35b098a66b86f0cb4e26aab`.
+
 ## [1.4] - 14 January 2019
 
 ### Added
