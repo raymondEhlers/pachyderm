@@ -510,7 +510,7 @@ class HistProjector:
 
         # First apply the cuts
         # Restricting the range with SetRange(User) works properly for both THn and TH1.
-        logger.info(f"hist: {hist}")
+        logger.debug(f"hist: {hist}")
         for axis in self.additional_axis_cuts:
             logger.debug(f"Apply additional axis hist range: {axis.name}")
             axis.apply_range_set(hist)
