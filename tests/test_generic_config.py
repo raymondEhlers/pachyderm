@@ -552,6 +552,7 @@ def test_apply_formatting_skip_latex(logging_mixin, formatting_config):
 def setup_analysis_iterator(logging_mixin):
     """ Setup for testing iteration over analysis objects. """
     KeyIndex = dataclasses.make_dataclass("KeyIndex", ["a", "b", "c"], frozen = True)
+    analysis_iterables = {"a": ["a1", "a2"], "b": ["b1", "b2"], "c": ["c"]}
     test_dict = {
         KeyIndex(a = "a1", b = "b1", c = "c"): "obj1",
         KeyIndex(a = "a1", b = "b2", c = "c"): "obj2",
@@ -559,11 +560,11 @@ def setup_analysis_iterator(logging_mixin):
         KeyIndex(a = "a2", b = "b2", c = "c"): "obj4",
     }
 
-    return KeyIndex, test_dict
+    return KeyIndex, analysis_iterables, test_dict
 
 def test_iterate_with_no_selected_items(setup_analysis_iterator):
     """ Test iterating over analysis objects without any selection. """
-    KeyIndex, test_dict = setup_analysis_iterator
+    KeyIndex, _, test_dict = setup_analysis_iterator
 
     # Create the iterator
     object_iter = generic_config.iterate_with_selected_objects(
@@ -582,7 +583,7 @@ def test_iterate_with_no_selected_items(setup_analysis_iterator):
 def test_iterate_with_selected_items(setup_analysis_iterator):
     """ Test iterating over analysis objects with a selection. """
     # Setup
-    KeyIndex, test_dict = setup_analysis_iterator
+    KeyIndex, _, test_dict = setup_analysis_iterator
 
     # Create the iterator
     object_iter = generic_config.iterate_with_selected_objects(
@@ -600,7 +601,7 @@ def test_iterate_with_selected_items(setup_analysis_iterator):
 def test_iterate_with_multiple_selected_items(setup_analysis_iterator):
     """ Test iterating over analysis objects with multiple selections. """
     # Setup
-    KeyIndex, test_dict = setup_analysis_iterator
+    KeyIndex, _, test_dict = setup_analysis_iterator
 
     # Create the iterator
     object_iter = generic_config.iterate_with_selected_objects(
@@ -615,3 +616,31 @@ def test_iterate_with_multiple_selected_items(setup_analysis_iterator):
     with pytest.raises(StopIteration):
         next(object_iter)
 
+@pytest.mark.parametrize("selection", [
+    "a",
+    ["a"],
+], ids = ["Single selection", "List of selections"])
+def test_iterate_with_selected_objects_in_order(setup_analysis_iterator, selection):
+    """ Test iterating over analysis objects with non-selected attributes. """
+    # Setup
+    KeyIndex, analysis_iterables, test_dict = setup_analysis_iterator
+
+    object_iter = generic_config.iterate_with_selected_objects_in_order(
+        analysis_objects = test_dict,
+        analysis_iterables = analysis_iterables,
+        selection = selection,
+    )
+
+    # Expected output should be in two groups. Both are ordered in "a".
+    expected_output = [
+        [(KeyIndex(a = "a1", b = "b1", c = "c"), "obj1"), (KeyIndex(a = "a2", b = "b1", c = "c"), "obj3")],
+        [(KeyIndex(a = "a1", b = "b2", c = "c"), "obj2"), (KeyIndex(a = "a2", b = "b2", c = "c"), "obj4")],
+    ]
+
+    # Iterate over it.
+    for value, expected in zip(object_iter, expected_output):
+        assert value == expected
+
+    # It should be exhausted now.
+    with pytest.raises(StopIteration):
+        next(object_iter)

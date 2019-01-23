@@ -13,7 +13,7 @@ import enum
 import itertools
 import logging
 import string
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, Iterator, List, Sequence, Tuple, Type, Union
 
 from pachyderm import yaml
 from pachyderm.yaml import DictLike
@@ -390,7 +390,7 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
 
     return new_obj
 
-def iterate_with_selected_objects(analysis_objects: Dict[Any, Any], **selections: Dict[str, Any]) -> Any:
+def iterate_with_selected_objects(analysis_objects: Dict[Any, Any], **selections: Dict[str, Any]) -> Iterator[Tuple[Any, Any]]:
     """ Iterate over an analysis dictionary with selected attributes.
 
     Args:
@@ -407,3 +407,90 @@ def iterate_with_selected_objects(analysis_objects: Dict[Any, Any], **selections
         if selected_obj:
             yield key_index, obj
 
+def iterate_with_selected_objects_in_order(analysis_objects: Dict[Any, Any],
+                                           analysis_iterables: Dict[str, Sequence[Any]],
+                                           selection: Union[str, Sequence[str]]) -> Iterator[List[Tuple[Any, Any]]]:
+    """ Iterate over an analysis dictionary, yielding the selected attributes in order.
+
+    So if there are three iterables, a, b, and c, if we selected c, then we iterate over a and b,
+    and return c in the same order each time for each set of values of a and b. As an example, consider
+    the set of iterables:
+
+    .. code-block:: python
+
+        >>> a = ["a1", "a2"]
+        >>> b = ["b1", "b2"]
+        >>> c = ["c1", "c2"]
+
+    then it will effectively return:
+
+    .. code-block:: python
+
+        >>> for a_val in a:
+        ...     for b_val in b:
+        ...         for c_val in c:
+        ...             obj(a_val, b_val, c_val)
+
+    This will yield:
+
+    .. code-block:: python
+
+        >>> output = list(iterate_with_selected_objects_in_order(..., selecteions = ["a"]))
+        [("a1", "b1", "c1"), ("a2", "b1", "c1"), ("a1", "b2", "c1"), ("a2", "b2", "c1"), ...]
+
+    This is particularly nice because we can then select on a set of iterables to be returned without
+    having to specify the rest of the iterables that we don't really care about.
+
+    Args:
+        analysis_objects: Analysis objects dictionary.
+        analysis_iterables: Iterables used in constructing the analysis objects.
+        selection: Selection of analysis selections to return. Can be either a string or a sequence of
+            selections.
+    Yields:
+        object: Matching analysis object.
+    """
+    # Validation
+    if isinstance(selection, str):
+        selection = [selection]
+    # Help out mypy. We don't check if it is a list to allow for other sequences.
+    assert not isinstance(selection, str)
+
+    # Extract the selected iterators from the possible iterators so we can select on them later.
+    # First, we want want each set of iterators to be of the form:
+    # {"selection1": [value1, value2, ...], "selection2": [value3, value4, ...]}
+    selected_iterators = {}
+    for s in selection:
+        selected_iterators[s] = analysis_iterables.pop(s)
+
+    logger.debug(f"Initial analysis_iterables: {analysis_iterables}")
+    logger.debug(f"Initial selected_iterators: {selected_iterators}")
+
+    # Now, we convert them to the form:
+    # [[("selection1", value1), ("selection1", value2)], [("selection2", value3), ("selection2", value4)]]
+    # This allows them to iterated over conveniently via itertools.product(...)
+    selected_iterators = [[(k, v) for v in values] for k, values in selected_iterators.items()]  # type: ignore
+    analysis_iterables = [[(k, v) for v in values] for k, values in analysis_iterables.items()]  # type: ignore
+
+    logger.debug(f"Final analysis_iterables: {analysis_iterables}")
+    logger.debug(f"Final selected_iterators: {selected_iterators}")
+    # Useful debug information, but too verbose for standard usage.
+    #logger.debug(f"analysis_iterables product: {list(itertools.product(*analysis_iterables))}")
+    #logger.debug(f"selected_iterators product: {list(itertools.product(*selected_iterators))}")
+
+    for values in itertools.product(*analysis_iterables):
+        selected_analysis_objects = []
+        for selected_values in itertools.product(*selected_iterators):
+            for key_index, obj in analysis_objects.items():
+                selected_via_analysis_iterables = all(
+                    getattr(key_index, k) == v for k, v in values
+                )
+                selected_via_selected_iterators = all(
+                    getattr(key_index, k) == v for k, v in selected_values
+                )
+                selected_obj = selected_via_analysis_iterables and selected_via_selected_iterators
+
+                if selected_obj:
+                    selected_analysis_objects.append((key_index, obj))
+
+        logger.debug("Yielding: {selected_analysis_objects}")
+        yield selected_analysis_objects
