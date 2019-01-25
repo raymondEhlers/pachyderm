@@ -169,6 +169,7 @@ class TestOutliersRemovalIntegration:
         # The expected cut axis is where the array changes to 0, and then shifted
         # to the index that corresponds to the moving average being calculated from the middle
         # as opposed to only looking forward. See the function docs.
+        # Concretely, here it is 8.
         # NOTE: Getting the first instance isn't so concise with numpy...
         expected_cut_index = np.where(moving_average == 0)[0][0] + limit_of_number_of_values_below_threshold // 2
 

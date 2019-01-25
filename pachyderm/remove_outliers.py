@@ -338,5 +338,6 @@ class OutliersRemovalManager:
             # No need to do more than just report for now
             logger.info(f"Hist {hist_name}: pre- vs post- outliers removal mean percentage difference: {mean_percentage_difference}, median percentage difference: {median_percentage_difference}")
 
+        logger.debug(f"Outliers removal complete! Found outliers_start_index: {outliers_start_index}")
         return outliers_start_index
 
