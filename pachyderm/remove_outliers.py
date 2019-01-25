@@ -20,7 +20,7 @@ from pachyderm import utils
 logger = logging.getLogger(__name__)
 
 # Typing helper
-T_ParticleLevelAxis = Union[projectors.TH1AxisType, enum.Enum]
+OutliersRemovalAxis = Union[projectors.TH1AxisType, enum.Enum]
 
 def _get_mean_and_median(hist: Hist) -> Tuple[float, float]:
     """ Retrieve the mean and median from a ROOT histogram.
@@ -51,40 +51,45 @@ class _OutputObject:
     """ Helper object to retrieve the result of a projector. """
     output: Hist
 
-def _project_to_part_level(hist: Hist, particle_level_axis: T_ParticleLevelAxis) -> Hist:
+def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxis) -> Hist:
     """ Project the input histogram to the particle level axis.
 
     Args:
         hist: Histogram to check for outliers.
-        particle_level_axis: Identifies the particle level axis.
+        outliers_removal_axis: Axis along which outliers removal will be performed. Usually
+            the particle level aixs.
     Returns:
         The histogram to check for outliers.
     """
     # Setup the projector
     import ROOT
-    projection_information: Dict[str, Any] = {}
-    output_object = _OutputObject(None)
-    projector = projectors.HistProjector(
-        observable_to_project_from = hist,
-        output_observable = output_object,
-        output_attribute_name = "output",
-        projection_name_format = "particle_level_hist",
-        projection_information = projection_information,
-    )
-    # No additional_axis_cuts or projection_dependent_cut_axes
-    # Projection axis
-    projector.projection_axes.append(
-        projectors.HistAxisRange(
-            axis_type = particle_level_axis,
-            axis_range_name = "particle_level_axis",
-            min_val = projectors.HistAxisRange.apply_func_to_find_bin(None, 1),
-            max_val = projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.GetNbins),
+    if isinstance(hist, (ROOT.TH2, ROOT.TH3)):
+        projection_information: Dict[str, Any] = {}
+        output_object = _OutputObject(None)
+        projector = projectors.HistProjector(
+            observable_to_project_from = hist,
+            output_observable = output_object,
+            output_attribute_name = "output",
+            projection_name_format = "outliers_removal_hist",
+            projection_information = projection_information,
         )
-    )
+        # No additional_axis_cuts or projection_dependent_cut_axes
+        # Projection axis
+        projector.projection_axes.append(
+            projectors.HistAxisRange(
+                axis_type = outliers_removal_axis,
+                axis_range_name = "outliers_removal_axis",
+                min_val = projectors.HistAxisRange.apply_func_to_find_bin(None, 1),
+                max_val = projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.GetNbins),
+            )
+        )
 
-    # Perform the actual projection and return the output.
-    projector.project()
-    return output_object.output
+        # Perform the actual projection and return the output.
+        projector.project()
+        return output_object.output
+
+    # If we already have a 1D hist, just return that existing hist.
+    return hist
 
 def _determine_outliers_index(hist: Hist,
                               moving_average_threshold: float = 1.0,
@@ -222,13 +227,14 @@ def _determine_outliers_for_moving_avreage(moving_average: np.ndarray,
 
     return cut_index
 
-def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, particle_level_axis: T_ParticleLevelAxis) -> None:
+def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, outliers_removal_axis: OutliersRemovalAxis) -> None:
     """ Remove outliers from a given histogram.
 
     Args:
         hist: Histogram to check for outliers.
         outliers_start_index: Index in the truth axis where outliers begin.
-        particle_level_axis: Identifies the particle level axis.
+        outliers_removal_axis: Axis along which outliers removal will be performed. Usually
+            the particle level aixs.
     Returns:
         None. The histogram is modified in place.
     """
@@ -241,7 +247,7 @@ def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, particle_l
         z = ctypes.c_int(0)
         # Maps axis to valaues
         # This is kind of dumb, but it works.
-        outliers_removal_axis_values: Dict[T_ParticleLevelAxis, ctypes.c_int] = {
+        outliers_removal_axis_values: Dict[OutliersRemovalAxis, ctypes.c_int] = {
             projectors.TH1AxisType.x_axis: x,
             projectors.TH1AxisType.y_axis: y,
             projectors.TH1AxisType.z_axis: z,
@@ -252,7 +258,7 @@ def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, particle_l
             # Watch out for any problems
             if hist.GetBinContent(index) < hist.GetBinError(index):
                 logger.warning(f"Bin content < error. Name: {hist.GetName()}, Bin content: {hist.GetBinContent(index)}, Bin error: {hist.GetBinError(index)}, index: {index}, ({x.value}, {y.value})")
-            if outliers_removal_axis_values[particle_level_axis].value >= outliers_start_index:
+            if outliers_removal_axis_values[outliers_removal_axis].value >= outliers_start_index:
                 #logger.debug("Cutting for index {}. x bin {}. Cut index: {}".format(index, x, cutIndex))
                 hist.SetBinContent(index, 0)
                 hist.SetBinError(index, 0)
@@ -261,18 +267,16 @@ def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, particle_l
 
 @dataclass
 class OutliersRemovalManager:
-    particle_level_axis: T_ParticleLevelAxis
     moving_average_threshold: float = field(default = 1.0)
 
-    def run(self, hist: Hist = None, hists: Dict[str, Hist] = None) -> int:
+    def run(self, outliers_removal_axis: OutliersRemovalAxis, hist: Hist = None, hists: Dict[str, Hist] = None) -> int:
         """ Remove outliers from the given histogram(s).
 
         Args:
+            outliers_removal_axis: Axis along which outliers removal will be performed. Usually
+                the particle level aixs.
             hist: Histogram to check for outliers. Either this or ``hists`` must be specified.
             hists: Histograms to check for outliers. Either this or ``hist`` must be specified.
-            limit: Cut off under which we consider the moving average to be 0.
-            reference_index: External index noting where outliers were removed for other hists
-                (and potentially where they should be removed for this hist.)
         Return:
             Bin index value from which the outliers were removed. The histogram(s) is modified in place.
         """
@@ -286,7 +290,7 @@ class OutliersRemovalManager:
             hists = {"hist": hist}
         # To help mypy typing
         assert hists is not None
-        # Final validation
+        # Final hist validation
         for h in hists:
             if hasattr(h, "ProjectionND") and hasattr(h, "Projection"):
                 raise ValueError("Cannot remove outliers from THn hists. Project to TH3 or lower first.")
@@ -302,7 +306,7 @@ class OutliersRemovalManager:
 
         for hist_name, hist in hists.items():
             # Setup
-            hist_to_check = _project_to_part_level(hist = hist, particle_level_axis = self.particle_level_axis)
+            hist_to_check = _project_to_part_level(hist = hist, outliers_removal_axis = outliers_removal_axis)
 
             # Check these values before and after outlier removal.
             (pre_removal_mean[hist_name], pre_removal_median[hist_name]) = _get_mean_and_median(hist_to_check)
@@ -323,15 +327,15 @@ class OutliersRemovalManager:
             _remove_outliers_from_hist(
                 hist = hist,
                 outliers_start_index = outliers_start_index,
-                particle_level_axis = self.particle_level_axis
+                outliers_removal_axis = outliers_removal_axis,
             )
 
             # Now check the mean and median to see how much they've changed.
-            hist_to_check = _project_to_part_level(hist = hist, particle_level_axis = self.particle_level_axis)
+            hist_to_check = _project_to_part_level(hist = hist, outliers_removal_axis = outliers_removal_axis)
             (post_removal_mean[hist_name], post_removal_median[hist_name]) = _get_mean_and_median(hist_to_check)
             mean_percentage_difference = (post_removal_mean[hist_name] - pre_removal_mean[hist_name]) / post_removal_mean[hist_name]
             median_percentage_difference = (post_removal_median[hist_name] - pre_removal_median[hist_name]) / post_removal_median[hist_name]
-            # No need to do more than report
+            # No need to do more than just report for now
             logger.info(f"Hist {hist_name}: pre- vs post- outliers removal mean percentage difference: {mean_percentage_difference}, median percentage difference: {median_percentage_difference}")
 
         return outliers_start_index

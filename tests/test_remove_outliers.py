@@ -128,8 +128,8 @@ class TestOutliersRemovalIntegration:
         initial_hist = input_hist.Clone("InitialHist")
 
         # Setup and run the manager.
-        outliers_manager = remove_outliers.OutliersRemovalManager(particle_level_axis = projectors.TH1AxisType.y_axis)
-        outliers_start_index = outliers_manager.run(hist = input_hist)
+        outliers_manager = remove_outliers.OutliersRemovalManager()
+        outliers_start_index = outliers_manager.run(outliers_removal_axis = projectors.TH1AxisType.y_axis, hist = input_hist)
 
         # Now, check if the input_hist has been modified in place.
         # Since the function that we use is power law that isn't symmetric around a bin, it's
