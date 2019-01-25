@@ -31,6 +31,42 @@ def test_moving_average(logging_mixin, inputs, expected):
     expected = expected / n
     assert np.array_equal(utils.moving_average(arr = arr, n = n), expected)
 
+@pytest.mark.parametrize("path, expected", [
+    ("standard_attr", "standard_attr_value"),
+    ("attr1.attr3.my_attr", "recursive_attr_value"),
+], ids = ["Standard attribute", "Recursive attribute"])
+def test_recursive_getattr(logging_mixin, mocker, path, expected):
+    """ Tests for recursive getattr. """
+    # Setup mock objects from which we will recursively grab attributes
+    mock_obj1 = mocker.MagicMock(spec = ["standard_attr", "attr1"])
+    mock_obj2 = mocker.MagicMock(spec = ["attr3"])
+    mock_obj3 = mocker.MagicMock(spec = ["my_attr"])
+    mock_obj1.standard_attr = "standard_attr_value"
+    mock_obj1.attr1 = mock_obj2
+    mock_obj2.attr3 = mock_obj3
+    mock_obj3.my_attr = "recursive_attr_value"
+
+    # For convenience
+    obj = mock_obj1
+    # Check the returned value
+    assert expected == utils.recursive_getattr(obj, path)
+
+def test_recursive_getattr_defualt_value(logging_mixin, mocker):
+    """ Test for retrieving a default value with getattr. """
+    obj = mocker.MagicMock(spec = ["sole_attr"])
+    assert "default_value" == utils.recursive_getattr(obj, "nonexistent_attr", "default_value")
+
+def test_recursive_getattr_fail(logging_mixin, mocker):
+    """ Test for failure of recursive getattr.
+
+    It will fail the same was as the standard getattr.
+    """
+    obj = mocker.MagicMock(spec = ["sole_attr"])
+
+    with pytest.raises(AttributeError) as exception_info:
+        utils.recursive_getattr(obj, "nonexistent_attr")
+    assert "nonexistent_attr" in exception_info.value.args[0]
+
 @pytest.mark.ROOT
 class TestWithRootHists():
     def test_get_array_for_fit(self, logging_mixin, mocker, test_root_hists):

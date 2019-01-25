@@ -5,8 +5,10 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+import functools
 import logging
 import numpy as np
+from typing import Any
 
 from pachyderm import histogram
 
@@ -35,6 +37,24 @@ def moving_average(arr: np.ndarray, n: int = 3) -> np.ndarray:
     ret = np.cumsum(arr, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
+
+def recursive_getattr(obj: Any, attr: str, *args) -> Any:
+    """ Recursive ``getattar``.
+
+    This can be used as a drop in for the standard ``getattr(...)``. Credit to:
+    https://stackoverflow.com/a/31174427
+
+    Args:
+        obj: Object to retrieve the attribute from
+        attr: Name of the attribute, with each successive attribute separated by a ".".
+    Returns:
+        The requested attribute. (Same as ``getattr``).
+    Raises:
+        AttributeError: If the attribute was not found and no default was provided. (Same as ``getattr``).
+    """
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+    return functools.reduce(_getattr, [obj] + attr.split('.'))
 
 def get_array_for_fit(observables: dict, track_pt_bin: int, jet_pt_bin: int) -> histogram.Histogram1D:
     """ Get a Histogram1D associated with the selected jet and track pt bins.
