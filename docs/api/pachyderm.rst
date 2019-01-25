@@ -17,10 +17,26 @@ pachyderm.generic\_config module
     :undoc-members:
     :show-inheritance:
 
+pachyderm.histogram module
+--------------------------
+
+.. automodule:: pachyderm.histogram
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pachyderm.projectors module
 ---------------------------
 
 .. automodule:: pachyderm.projectors
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pachyderm.remove_outliers module
+--------------------------------
+
+.. automodule:: pachyderm.remove_outliers
     :members:
     :undoc-members:
     :show-inheritance:
@@ -37,6 +53,14 @@ pachyderm.version module
 ------------------------
 
 .. automodule:: pachyderm.version
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pachyderm.yaml module
+---------------------
+
+.. automodule:: pachyderm.yaml
     :members:
     :undoc-members:
     :show-inheritance:
