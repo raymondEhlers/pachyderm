@@ -45,7 +45,7 @@ def recursive_getattr(obj: Any, attr: str, *args) -> Any:
     https://stackoverflow.com/a/31174427
 
     Args:
-        obj: Object to retrieve the attribute from
+        obj: Object to retrieve the attribute from.
         attr: Name of the attribute, with each successive attribute separated by a ".".
     Returns:
         The requested attribute. (Same as ``getattr``).
@@ -55,6 +55,24 @@ def recursive_getattr(obj: Any, attr: str, *args) -> Any:
     def _getattr(obj, attr):
         return getattr(obj, attr, *args)
     return functools.reduce(_getattr, [obj] + attr.split('.'))
+
+def recursive_setattr(obj: Any, attr: str, val: Any) -> Any:
+    """ Recusrive ``setattr``.
+
+    This can be used as a drop in for the standard ``setattr(...)``. Credit to:
+    https://stackoverflow.com/a/31174427
+
+    Args:
+        obj: Object to retrieve the attribute from.
+        attr: Name of the attribute, with each successive attribute separated by a ".".
+        value: Value to set the attribute to.
+    Returns:
+        The requested attribute. (Same as ``getattr``).
+    Raises:
+        AttributeError: If the attribute was not found and no default was provided. (Same as ``getattr``).
+    """
+    pre, _, post = attr.rpartition('.')
+    return setattr(recursive_getattr(obj, pre) if pre else obj, post, val)
 
 def get_array_for_fit(observables: dict, track_pt_bin: int, jet_pt_bin: int) -> histogram.Histogram1D:
     """ Get a Histogram1D associated with the selected jet and track pt bins.

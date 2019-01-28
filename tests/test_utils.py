@@ -5,9 +5,11 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+from dataclasses import dataclass
 import logging
 import numpy as np
 import pytest
+from typing import Any
 
 from pachyderm import histogram
 from pachyderm import utils
@@ -66,6 +68,45 @@ def test_recursive_getattr_fail(logging_mixin, mocker):
     with pytest.raises(AttributeError) as exception_info:
         utils.recursive_getattr(obj, "nonexistent_attr")
     assert "nonexistent_attr" in exception_info.value.args[0]
+
+@pytest.fixture
+def setup_recursive_setattr(logging_mixin):
+    """ Setup an object for testing the recursive setattr. """
+    # We don't mock the objects because I'm not entirely sure how mock wll interact with setattr.
+    @dataclass
+    class SecondLevel:
+        attribute2: Any
+
+    @dataclass
+    class FirstLevel:
+        attribute1: SecondLevel
+
+    # We want to return both the object and the relevant information to set the value
+    obj = FirstLevel(SecondLevel("initial value"))
+    path = "attribute1.attribute2"
+
+    return obj, path
+
+def test_recursive_setattr(setup_recursive_setattr):
+    """ Test setting an attribute with recursive setattr. """
+    # Setup
+    obj, path = setup_recursive_setattr
+
+    # Set the attribute and check the result
+    new_value = "new value"
+    utils.recursive_setattr(obj, path, new_value)
+    assert utils.recursive_getattr(obj, path) == new_value
+
+def test_recursive_setattr_fail(setup_recursive_setattr):
+    """ Test failing to set an attribute with recursive setattr. """
+    # Setup
+    obj, path = setup_recursive_setattr
+
+    # Use a random path, which should fail.
+    with pytest.raises(AttributeError) as exception_info:
+        utils.recursive_setattr(obj, "random.fake.path", "fake value")
+    # It will only return that "random" was not found, as it can't look further into the path.
+    assert "random" in exception_info.value.args[0]
 
 @pytest.mark.ROOT
 class TestWithRootHists():
