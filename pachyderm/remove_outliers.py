@@ -149,7 +149,7 @@ def _determine_outliers_index(hist: Hist,
     #logger.debug(f"y: {hist_to_check.y}")
     #logger.debug(f"moving_average: {moving_average}")
 
-    cut_index = _determine_outliers_for_moving_avreage(
+    cut_index = _determine_outliers_for_moving_average(
         moving_average = moving_average,
         moving_average_threshold = moving_average_threshold,
         number_of_values_to_search_ahead = number_of_values_to_search_ahead,
@@ -162,7 +162,7 @@ def _determine_outliers_index(hist: Hist,
 
     return cut_index
 
-def _determine_outliers_for_moving_avreage(moving_average: np.ndarray,
+def _determine_outliers_for_moving_average(moving_average: np.ndarray,
                                            moving_average_threshold: float,
                                            number_of_values_to_search_ahead: int,
                                            limit_of_number_of_values_below_threshold: int) -> int:
