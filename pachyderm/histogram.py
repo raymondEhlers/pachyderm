@@ -229,9 +229,9 @@ class Histogram1D:
             Histogram: Dataclass with x, y, and errors
         """
         try:
-            # Convert jet_hadron.base.analysis_objects.HistogramContainer -> TH1 or uproot hist.
-            # It goes HistogramContainer.hist -> TH1 or uproot hist
-            logger.debug("Converting HistogramContainer to standard hist")
+            # Convert a histogram containing object -> TH1 or uproot hist.
+            # It goes "HistogramContainer".hist -> TH1 or uproot hist
+            #logger.debug("Converting HistogramContainer to standard hist")
             hist = hist.hist
         except AttributeError:
             # Just use the existing histogram
