@@ -37,6 +37,38 @@ def test_mean_and_median(logging_mixin, test_root_hists):
     assert np.isclose(mean, expected_mean)
     assert np.isclose(median, expected_median)
 
+@pytest.mark.parametrize("moving_average, expected_cut_index", [
+    # The expected cut axis here is where the array changes to 0, and then shifted
+    # to the index that corresponds to the moving average being calculated from the middle
+    # as opposed to only looking forward. See the function docs.
+    # The moving average drops below at 6, so the cut index is: 6 + 4 // 2 = 8
+    (np.array([2, 2, 2, 2, 2, 2, 0, 0, 0, 0]), 8),
+    # Have a non-zero entry early on, then no entries, then back below.
+    # It should ignore the early drop, and the moving average drops below
+    # at 12, so the cut index is: 12 + 4 // 2 = 14
+    (np.array([2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0]), 14),
+], ids = ["Constant until below", "Early bump above threshold"])
+def test_outliers_determination_from_moving_average(logging_mixin, moving_average, expected_cut_index):
+    """ Test outliers determination for a pathological moving average.
+
+    Note:
+        Remember that this test uses values that are the moving averages directly - not
+        the values from which the moving average would be calculated!
+    """
+    # Setup
+    limit_of_number_of_values_below_threshold = 4
+
+    # Determine the outliers.
+    cut_index = remove_outliers._determine_outliers_for_moving_average(
+        moving_average = moving_average,
+        moving_average_threshold = 1.0,
+        number_of_values_to_search_ahead = 5,
+        limit_of_number_of_values_below_threshold = limit_of_number_of_values_below_threshold
+    )
+
+    # Check the final result.
+    assert cut_index == expected_cut_index
+
 @pytest.fixture(params = ["2D", "3D"])
 def setup_outliers_hist(request, logging_mixin):
     import ROOT
@@ -160,26 +192,3 @@ class TestOutliersRemovalIntegration:
                 assert input_hist.GetBinContent(index) == initial_hist.GetBinContent(index)
                 assert input_hist.GetBinError(index) == initial_hist.GetBinError(index)
 
-    def test_outliers_determination_from_moving_average(logging_mixin):
-        """ Test outliers determination for a pathological moving average. """
-        # Setup
-        limit_of_number_of_values_below_threshold = 4
-        moving_average = np.array([2, 2, 2, 2, 2, 2, 0, 0, 0, 0])
-
-        # The expected cut axis is where the array changes to 0, and then shifted
-        # to the index that corresponds to the moving average being calculated from the middle
-        # as opposed to only looking forward. See the function docs.
-        # Concretely, here it is 8.
-        # NOTE: Getting the first instance isn't so concise with numpy...
-        expected_cut_index = np.where(moving_average == 0)[0][0] + limit_of_number_of_values_below_threshold // 2
-
-        # Determine the outliers.
-        cut_index = remove_outliers._determine_outliers_for_moving_avreage(
-            moving_average = moving_average,
-            moving_average_threshold = 1.0,
-            number_of_values_to_search_ahead = 5,
-            limit_of_number_of_values_below_threshold = limit_of_number_of_values_below_threshold
-        )
-
-        # Check the final result.
-        assert cut_index == expected_cut_index

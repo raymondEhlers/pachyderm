@@ -207,6 +207,13 @@ def _determine_outliers_for_moving_average(moving_average: np.ndarray,
 
     # Determine the index where the limit_of_number_of_values_below_threshold bins are consequentially below the threshold.
     for i, values in enumerate(zip(*values_to_check)):
+        # Skip the first bin because some old pt hard bin trains had a large number of erroneous entries
+        # in the first bin (regardless of the actual pt hard bin). This should be resolved in the embedding
+        # helper now. In any case, it doesn't make sense to encounter outliers in the first bin, so this is a
+        # fine bin to skip.
+        if i == 0:
+            continue
+
         # True if below threshold, so check if not True.
         above_threshold = [not value for value in values]
         # We require the values to go above the moving average threshold at least once.
