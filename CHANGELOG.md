@@ -2,6 +2,39 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.6] - 29 January 2019
+
+### Added
+
+- Iteration over analysis objects grouped by selections. See: `0164157982147142561f33d4a790156513cbba34`.
+- Recursive `getattr(...)`. Function from [Stack Overflow](https://stackoverflow.com/a/31174427). See:
+  `381d6ec2be0e7482b92ff3d3afd9847a9aa84375`.
+- Recursive `setattr(...)`. Function from [Stack Overflow](https://stackoverflow.com/a/31174427). See:
+  `22ba4c6df527dc67d10c729ab85192ba8ef173b5`.
+- Raise exception if mean or median after outliers removal changes by more than 1%. Such a condition almost
+  certainly indicates that something went wrong with the outliers removal. See:
+  `c7d5d0c449a826a4cc7a5c7f83608751da37bd6d`.
+
+### Changed
+
+- Quiet down some logging information.
+- Naming of `particle_level_axis` -> `outliers_removal_axis` in the `remove_outliers` module. While it is
+  common to the particle level axis, it isn't always. Further, sometimes we use the axis for projections,
+  and sometimes it is just for determining which axis to use when removing outliers. So it's better to use a
+  more general name. See: `12bde27f421eac59e310029c10f2ca750bcd6da6`.
+- Specify the outliers removal axis when calling `run(...)` instead of at object creation. This way, we can
+  use the manager over for different histograms which many have different axes. See:
+  `12bde27f421eac59e310029c10f2ca750bcd6da6`.
+- Ignore the first bin of the outliers removal. Some older embedding trains had some erroneous entries in the
+  1st bin of the pt hard spectra, regardless of the pt hard bin. In any case, we would never expect to have
+  outliers in the first bin. See: `354013e1713d2c4d84d48f0a1d21a6bc06afea2e`.
+
+### Fixed
+
+- Included new modules in the docs. See: `3c2d30f363e04eca181f7c05d40306bfbb0d0470`.
+- Typo: `_determine_outliers_for_moving_avreage` -> `_determine_outliers_for_moving_average`. See:
+  `11ce7d01905004dfcd3104549548b58ca17e3808`.
+
 ## [1.5] - 20 January 2019
 
 ### Added
