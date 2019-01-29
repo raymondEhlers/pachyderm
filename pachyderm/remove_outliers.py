@@ -340,10 +340,17 @@ class OutliersRemovalManager:
             # Now check the mean and median to see how much they've changed.
             hist_to_check = _project_to_part_level(hist = hist, outliers_removal_axis = outliers_removal_axis)
             (post_removal_mean[hist_name], post_removal_median[hist_name]) = _get_mean_and_median(hist_to_check)
-            mean_percentage_difference = (post_removal_mean[hist_name] - pre_removal_mean[hist_name]) / post_removal_mean[hist_name]
-            median_percentage_difference = (post_removal_median[hist_name] - pre_removal_median[hist_name]) / post_removal_median[hist_name]
-            # No need to do more than just report for now
-            logger.info(f"Hist {hist_name}: pre- vs post- outliers removal mean percentage difference: {mean_percentage_difference}, median percentage difference: {median_percentage_difference}")
+            mean_fractional_difference = (post_removal_mean[hist_name] - pre_removal_mean[hist_name]) / post_removal_mean[hist_name]
+            median_fractional_difference = (post_removal_median[hist_name] - pre_removal_median[hist_name]) / post_removal_median[hist_name]
+            logger.info(
+                f"Hist {hist_name}: pre- vs post- outliers removal mean fractional difference:"
+                f" {mean_fractional_difference}, median fractional difference: {median_fractional_difference}"
+            )
+            # Provide some very broad checks. We should be very surprised if the post outliers values vary by more than 5%
+            if mean_fractional_difference > 0.01:
+                raise RuntimeError(f"Mean fractional difference is greater than 1%! {mean_fractional_difference}")
+            if median_fractional_difference > 0.01:
+                raise RuntimeError(f"Median fractional difference is greater than 1%! {median_fractional_difference}")
 
         logger.debug(f"Outliers removal complete! Found outliers_start_index: {outliers_start_index}")
         return outliers_start_index
