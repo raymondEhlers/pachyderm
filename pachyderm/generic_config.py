@@ -435,8 +435,8 @@ def iterate_with_selected_objects_in_order(analysis_objects: Dict[Any, Any],
 
     .. code-block:: python
 
-        >>> output = list(iterate_with_selected_objects_in_order(..., selecteions = ["a"]))
-        [("a1", "b1", "c1"), ("a2", "b1", "c1"), ("a1", "b2", "c1"), ("a2", "b2", "c1"), ...]
+        >>> output = list(iterate_with_selected_objects_in_order(..., selection = ["a"]))
+        [[("a1", "b1", "c1"), ("a2", "b1", "c1")], [("a1", "b2", "c1"), ("a2", "b2", "c1")], ...]
 
     This is particularly nice because we can then select on a set of iterables to be returned without
     having to specify the rest of the iterables that we don't really care about.
@@ -492,5 +492,6 @@ def iterate_with_selected_objects_in_order(analysis_objects: Dict[Any, Any],
                 if selected_obj:
                     selected_analysis_objects.append((key_index, obj))
 
-        logger.debug("Yielding: {selected_analysis_objects}")
+        logger.debug(f"Yielding: {selected_analysis_objects}")
         yield selected_analysis_objects
+
