@@ -8,6 +8,7 @@
 import dataclasses
 import copy
 import enum
+import itertools
 import logging
 import pytest
 from io import StringIO
@@ -464,7 +465,8 @@ def test_create_objects_from_iterables(logging_mixin, object_creation_config, ob
     # Check the precise values passed to the object.
     for rp_angle in reaction_plane_orientations:
         for qVector in qvectors:
-            created_object = objects[key_index(reaction_plane_orientation = rp_angle, qVector = qVector)]
+            expected_key_index = key_index(reaction_plane_orientation = rp_angle, qVector = qVector)
+            created_object = objects[expected_key_index]
             assert created_object.reaction_plane_orientation == rp_angle
             assert created_object.qVector == qVector
             assert created_object.a == args["a"]
@@ -472,6 +474,21 @@ def test_create_objects_from_iterables(logging_mixin, object_creation_config, ob
             logger.debug(f"options_fmt: {created_object.options_fmt}")
             assert created_object.options_fmt == formatting_options["options_fmt"].format(reaction_plane_orientation = rp_angle, qVector = qVector)
             assert created_object.nested_fmt == [[{"val": f"{qVector}_{rp_angle}"}]]
+
+            # Check that the KeyIndex iterators work
+            found_key_index = False
+            for obj_key_index in objects:
+                if obj_key_index == expected_key_index:
+                    found_key_index = True
+                    expected_key_index_values = {
+                        "reaction_plane_orientation": rp_angle,
+                        "qVector": qVector,
+                    }
+                    for (k, v), (expected_k, expected_v) in itertools.zip_longest(obj_key_index, expected_key_index_values.items()):
+                        assert k == expected_k
+                        assert v == expected_v
+
+            assert found_key_index is True
 
 def test_missing_iterable_for_object_creation(logging_mixin, object_and_creation_args):
     """ Test object creation when the iterables are missing. """
@@ -552,6 +569,7 @@ def test_apply_formatting_skip_latex(logging_mixin, formatting_config):
 def setup_analysis_iterator(logging_mixin):
     """ Setup for testing iteration over analysis objects. """
     KeyIndex = dataclasses.make_dataclass("KeyIndex", ["a", "b", "c"], frozen = True)
+    KeyIndex.__iter__ = generic_config._key_index_iter
     analysis_iterables = {"a": ["a1", "a2"], "b": ["b1", "b2"], "c": ["c"]}
     test_dict = {
         KeyIndex(a = "a1", b = "b1", c = "c"): "obj1",
@@ -561,6 +579,28 @@ def setup_analysis_iterator(logging_mixin):
     }
 
     return KeyIndex, analysis_iterables, test_dict
+
+def test_key_index_iterator(setup_analysis_iterator):
+    """ Test the iterator over the KeyIndex values. """
+    KeyIndex, _, _ = setup_analysis_iterator
+
+    # The values are randomly selected.
+    kwargs = {
+        "a": "12",
+        "b": 3,
+        "c": "Hello"
+    }
+    key_index = KeyIndex(**kwargs)
+
+    # Check the entire dict. It should be in order, so this should be fine, and it helps
+    # ensure that we check every key of the dict.
+    iter_values = dict(key_index)
+    assert kwargs == iter_values
+
+    # We also check explicit iteration just for good measure.
+    for (k, v), (k_expected, v_expected) in itertools.zip_longest(key_index, kwargs.items()):
+        assert k == k_expected
+        assert v == v_expected
 
 def test_iterate_with_no_selected_items(setup_analysis_iterator):
     """ Test iterating over analysis objects without any selection. """

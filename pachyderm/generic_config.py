@@ -233,6 +233,19 @@ def determine_selection_of_iterable_values_from_config(config: DictLike, possibl
 
     return iterables
 
+def _key_index_iter(self) -> Iterator[Tuple[str, Any]]:
+    """ Allows for iteration over the ``KeyIndex`` values.
+
+    This function is intended to be assigned to a newly created KeyIndex class. It enables iteration
+    over the ``KeyIndex`` names and values. We don't use a mixin to avoid issues with YAML.
+
+    Note:
+        This isn't recursive like ``dataclasses.asdict(...)``. Generally, we don't want those recursive
+        conversion properties. Plus, this approach is much faster.
+    """
+    for k, v in vars(self).items():
+        yield k, v
+
 def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_options: dict, key_index_name: str = "KeyIndex") -> Tuple[Any, Dict[str, Any], dict]:
     """ Create objects for each set of values based on the given arguments.
 
@@ -288,6 +301,8 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         [(name, type(iterable)) for name, iterable in iterables.items()],
         frozen = True
     )
+    # Allow for iteration over the key index values
+    KeyIndex.__iter__ = _key_index_iter
     # ``itertools.product`` produces all possible permutations of the iterables values.
     # NOTE: Product preserves the order of the iterables values, which is important for properly
     #       assigning the values to the ``KeyIndex``.
