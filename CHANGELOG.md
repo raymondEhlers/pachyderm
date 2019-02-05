@@ -2,6 +2,18 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.6.1] - 5 February 2019
+
+### Added
+
+- Added iterator (`__iter__`) over names and values to the KeyIndex object. See:
+  `a7dfa745aefbc381a245017dbde722f368ad39de`.
+
+### Fixed
+
+- Added `__init__.py` to the `tests` directory. Otherwise, test fixture discovery sometimes fails. See:
+  `c1a1f059e2c921f5e1afb3dfc9dc5624a2754596`.
+
 ## [1.6] - 29 January 2019
 
 ### Added
