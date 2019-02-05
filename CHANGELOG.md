@@ -6,7 +6,7 @@ Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Added iterator (`__iter__`) over names and values to the KeyIndex object. See:
+- Added iterator (`__iter__`) over names and values to the `KeyIndex` object. See:
   `a7dfa745aefbc381a245017dbde722f368ad39de`.
 
 ### Fixed
