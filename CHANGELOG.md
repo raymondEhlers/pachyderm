@@ -2,6 +2,14 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.6.2] - 18 February 2019
+
+### Changed
+
+- Refactor `KeyIndex` creation into a separate function so it can be accessed by other packages. In
+  particular, this allows for their creation (with the iterable field access, etc) from analysis packages.
+  See: `d821908c80e5e81df43986cb0831f112b706b91b`.
+
 ## [1.6.1] - 5 February 2019
 
 ### Added
