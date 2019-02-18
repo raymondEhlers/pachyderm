@@ -246,7 +246,53 @@ def _key_index_iter(self) -> Iterator[Tuple[str, Any]]:
     for k, v in vars(self).items():
         yield k, v
 
-def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_options: dict, key_index_name: str = "KeyIndex") -> Tuple[Any, Dict[str, Any], dict]:
+def create_key_index_object(key_index_name: str, iterables: Dict[str, Any]) -> Any:
+    """ Create a ``KeyIndex`` class based on the passed attributes.
+
+    This is wrapped into a helper function to allow for the ``__itter__`` to be specified for the object.
+    Further, this allows it to be called outside the package when it is needed in analysis tasks..
+
+    Args:
+        key_index_name: Name of the iterable key index.
+        iterables: Iterables which will be specified by this ``KeyIndex``. The keys should be the names of
+            the values, while the values should be the iterables themselves.
+    Returns:
+        A ``KeyIndex`` class which can be used to specify an object. The keys and values will be iterable.
+    Raises:
+        TypeError: If one of the iterables which is passed is an iterator that can be exhausted. The iterables
+            must all be passed within containers which can recreate the iterator each time it is called to
+            iterate.
+    """
+    # Validation
+    # We are going to use the iterators when determining the fields, so we need to notify if an iterator was
+    # passed, as this will cause a problem later. Instead of passing an iterator, a iterable should be passed,
+    # which can recreate the iter.
+    # See: https://effectivepython.com/2015/01/03/be-defensive-when-iterating-over-arguments/
+    for name, iterable in iterables.items():
+        if iter(iterable) == iter(iterable):
+            raise TypeError(
+                f"Iterable {name} is in iterator which can be exhausted. Please pass the iterable"
+                f" in a container that can recreate the iterable. See the comments here for more info."
+            )
+
+    # We need the types of the fields to create the dataclass. However, we are provided with iterables
+    # in the values of the iterables dict. Thus, we need to look at one value of each iterable, and use
+    # that to determine the type of that particular iterable. This is safe to do because the iterables
+    # must always have at least one entry (or else they wouldn't be one of the iterables).
+    # NOTE: The order here matters when we create the ``KeyIndex`` later, so we cannot just take all
+    #       objects from the iterables and blindly use set because set won't preserve the order.
+    fields = [(name, type(next(iter(iterable)))) for name, iterable in iterables.items()]
+    KeyIndex = dataclasses.make_dataclass(
+        key_index_name,
+        fields,
+        frozen = True
+    )
+    # Allow for iteration over the key index values
+    KeyIndex.__iter__ = _key_index_iter
+
+    return KeyIndex
+
+def create_objects_from_iterables(obj, args: dict, iterables: Dict[str, Any], formatting_options: Dict[str, Any], key_index_name: str = "KeyIndex") -> Tuple[Any, Dict[str, Any], dict]:
     """ Create objects for each set of values based on the given arguments.
 
     The iterable values are available under a key index ``dataclass`` which is used to index the returned
@@ -282,8 +328,8 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
         args: Arguments to be passed to the object to create it.
         iterables: Iterables to be used to create the objects, with entries of the form
             ``"name_of_iterable": iterable``.
-        formatting_options (dict): Values to be used in formatting strings in the arguments.
-        key_obj_name (str): Name of the iterable key object.
+        formatting_options: Values to be used in formatting strings in the arguments.
+        key_index_name: Name of the iterable key index.
     Returns:
         (object, list, dict, dict): Roughly, (KeyIndex, iterables, objects). Specifically, the
             key_index is a new dataclass which defines the parameters used to create the object, iterables
@@ -294,15 +340,12 @@ def create_objects_from_iterables(obj, args: dict, iterables: dict, formatting_o
     # Setup
     objects = {}
     names = list(iterables)
-    logger.debug("iterables: {iterables}".format(iterables = iterables))
+    logger.debug(f"iterables: {iterables}")
     # Create the key index object, where the name of each field is the name of each iterable.
-    KeyIndex = dataclasses.make_dataclass(
-        key_index_name,
-        [(name, type(iterable)) for name, iterable in iterables.items()],
-        frozen = True
+    KeyIndex = create_key_index_object(
+        key_index_name = key_index_name,
+        iterables = iterables,
     )
-    # Allow for iteration over the key index values
-    KeyIndex.__iter__ = _key_index_iter
     # ``itertools.product`` produces all possible permutations of the iterables values.
     # NOTE: Product preserves the order of the iterables values, which is important for properly
     #       assigning the values to the ``KeyIndex``.
