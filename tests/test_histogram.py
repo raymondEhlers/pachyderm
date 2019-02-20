@@ -5,6 +5,7 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+from dataclasses import dataclass
 import logging
 import numpy as np
 import os
@@ -393,4 +394,127 @@ class TestWithRootHists:
             assert np.isnan(hist_array[0][1])
         else:
             assert np.isclose(hist_array[0][1], 0.0)
+
+@dataclass
+class HistInfo:
+    """ Convenience for storing hist testing information.
+
+    Could reuse the Histogram1D object, but since we're testing it here, it seems better to use
+    a separate object.
+    """
+    y: np.array
+    errors_squared: np.array
+
+    def convert_to_histogram_1D(self, bin_edges: np.array) -> histogram.Histogram1D:
+        """ Convert these stored values into a Histogram1D. """
+        return histogram.Histogram1D(
+            bin_edges = bin_edges,
+            y = self.y,
+            errors_squared = self.errors_squared,
+        )
+
+class TestHistogramOperators:
+    """ Test Histogram1D operators.
+
+    In princple, we could refactor all of the tests by explicitly calling
+    the functions. But since the expected values are different for each test,
+    and the test code itself is very simple, there doesn't seem to be much point.
+    """
+    _bin_edges = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    _filled_two_times = HistInfo(np.array([0, 0, 2., 0, 0, 0, 0, 0, 0, 0]),
+                                 np.array([0, 0, 2., 0, 0, 0, 0, 0, 0, 0]))
+    _filled_four_times = HistInfo(np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]),
+                                  np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]))
+    _filled_once_with_weight_of_2 = HistInfo(np.array([0, 0, 2., 0, 0, 0, 0, 0, 0, 0]),
+                                             np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]))
+    _filled_twice_with_weight_of_2 = HistInfo(np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]),
+                                              np.array([0, 0, 8., 0, 0, 0, 0, 0, 0, 0]))
+
+    @pytest.mark.parametrize("h1_info, h2_info, expected", [
+        (_filled_two_times, _filled_four_times,
+            HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_two_times, _filled_twice_with_weight_of_2,
+            HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 10, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
+            HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]))),
+    ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
+    def test_addition(self, logging_mixin, h1_info: HistInfo, h2_info: HistInfo, expected: HistInfo):
+        """ Test addition. """
+        # Setup
+        h1 = h1_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h2 = h2_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h1 + h2
+
+        # Check result
+        assert np.allclose(h3.bin_edges, self._bin_edges)
+        assert np.allclose(h3.y, expected.y)
+        assert np.allclose(h3.errors_squared, expected.errors_squared)
+
+    @pytest.mark.parametrize("h1_info, h2_info, expected", [
+        (_filled_two_times, _filled_four_times,
+            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_two_times, _filled_twice_with_weight_of_2,
+            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 10, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
+            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]))),
+    ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
+    def test_subtraction(self, logging_mixin, h1_info: HistInfo, h2_info: HistInfo, expected: HistInfo):
+        """ Test subtraction. """
+        # Setup
+        h1 = h1_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h2 = h2_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h2 - h1
+
+        # Check result
+        assert np.allclose(h3.bin_edges, self._bin_edges)
+        assert np.allclose(h3.y, expected.y)
+        assert np.allclose(h3.errors_squared, expected.errors_squared)
+
+    @pytest.mark.parametrize("h1_info, h2_info, expected", [
+        (_filled_two_times, _filled_four_times,
+            HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 48, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_two_times, _filled_twice_with_weight_of_2,
+            HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 64, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
+            HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 96, 0, 0, 0, 0, 0, 0, 0]))),
+    ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
+    def test_multiply(self, logging_mixin, h1_info: HistInfo, h2_info: HistInfo, expected: HistInfo):
+        """ Test multiplication. """
+        # Setup
+        h1 = h1_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h2 = h2_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h2 * h1
+
+        # Check result
+        assert np.allclose(h3.bin_edges, self._bin_edges)
+        assert np.allclose(h3.y, expected.y)
+        assert np.allclose(h3.errors_squared, expected.errors_squared)
+
+    @pytest.mark.parametrize("h1_info, h2_info, expected", [
+        (_filled_two_times, _filled_four_times,
+            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 3, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_two_times, _filled_twice_with_weight_of_2,
+            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 4, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
+            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
+    ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
+    def test_divide(self, logging_mixin, h1_info: HistInfo, h2_info: HistInfo, expected):
+        """ Test divison. """
+        # Setup
+        h1 = h1_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h2 = h2_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h2 / h1
+
+        # Check result
+        assert np.allclose(h3.bin_edges, self._bin_edges)
+        assert np.allclose(h3.y, expected.y)
+        assert np.allclose(h3.errors_squared, expected.errors_squared)
 
