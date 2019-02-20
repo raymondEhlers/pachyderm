@@ -2,6 +2,15 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.7] - 20 February 2019
+
+### Added
+
+- `Histogram1D` operators (add, subtract, multiply, divide) with other hists, including error propagation. These
+  operations were confirmed by comparing against the same operations in ROOT histograms (it turns out that the
+  error propagation is exactly as expected, but the ROOT code was sometimes difficult to interpret). See:
+  `052ea365e4e6a8a4d6bce38779ed9fe2edcfc089` and `7df8ceaa445d5c7aea4c62f6b32bc198eb59ccc3`.
+
 ## [1.6.2] - 18 February 2019
 
 ### Changed
