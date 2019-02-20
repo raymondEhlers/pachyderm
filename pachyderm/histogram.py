@@ -165,6 +165,114 @@ class Histogram1D:
 
         return self._x
 
+    def copy(self):
+        """ Copies the object.
+
+        In principle, this should be the same as ``copy.deepcopy(...)``, at least when this was written in
+        Feb 2019. But ``deepcopy(...)`` often seems to have very bad performance (and perhaps does additional
+        implicit copying), so we copy these numpy arrays by hand.
+        """
+        # We want to copy bin_edges, y, and errors_squared, but not anything else.
+        # Namely, we skip _x here. In principle, it wouldn't really be a problem to
+        # copy, but there may be other "_" fields that we want to skip later, so we
+        # do the right thing now.
+        kwargs = {k: np.array(v, copy = True) for k, v in vars(self).items() if not k.startswith("_")}
+        return type(self)(**kwargs)
+
+    def __add__(self, other):
+        """ Handles ``a = b + c.`` """
+        new = self.copy()
+        new += other
+        return new
+
+    def __radd__(self, other):
+        """ For use with sum(...). """
+        if other == 0:
+            return self
+        else:
+            return self + other
+
+    def __iadd__(self, other):
+        """ Handles ``a += b``. """
+        if not np.allclose(self.bin_edges, other.bin_edges):
+            raise TypeError(
+                f"Binning is different for given histograms."
+                f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
+                f"Cannot add!"
+            )
+        self.y += other.y
+        self.errors_squared += other.errors_squared
+        return self
+
+    def __sub__(self, other):
+        """ Handles ``a = b - c``. """
+        new = self.copy()
+        new -= other
+        return new
+
+    def __isub__(self, other):
+        """ Handles ``a += b``. """
+        if not np.allclose(self.bin_edges, other.bin_edges):
+            raise TypeError(
+                f"Binning is different for given histograms."
+                f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
+                f"Cannot subtract!"
+            )
+        self.y -= other.y
+        self.errors_squared += other.errors_squared
+        return self
+
+    def __mul__(self, other):
+        """ Handles ``a = b * c``. """
+        new = self.copy()
+        new *= other
+        return new
+
+    def __imul__(self, other):
+        """ Handles ``a *= b``. """
+        if not np.allclose(self.bin_edges, other.bin_edges):
+            raise TypeError(
+                f"Binning is different for given histograms."
+                f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
+                f"Cannot multiply!"
+            )
+        # NOTE: We need to calculate the errors_squared first because the depend on the existing y values
+        # Errors are from ROOT::TH1::Multiply(const TH1 *h1)
+        # NOTE: This is just error propagation, simplified with a = b * c!
+        self.errors_squared = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
+        self.y *= other.y
+        return self
+
+    def __truediv__(self, other):
+        """ Handles ``a = b / c``. """
+        new = self.copy()
+        new /= other
+        return new
+
+    def __itruediv__(self, other):
+        """ Handles ``a /= b``. """
+        if not np.allclose(self.bin_edges, other.bin_edges):
+            raise TypeError(
+                f"Binning is different for given histograms."
+                f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
+                f"Cannot divide!"
+            )
+        # Errors are from ROOT::TH1::Divide(const TH1 *h1)
+        # NOTE: This is just error propagation, simplified with the a = b / c!
+        # NOTE: We need to calculate the errors_squared first before setting y because the errors depend on
+        #       the existing y values
+        errors_squared_numerator = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
+        errors_squared_denominator = other.y ** 4
+        # NOTE: We have to be a bit clever when we divide to avoid dividing by bins with 0 entries. The
+        #       approach taken here basically replaces any divide by 0s with a 0 in the output hist.
+        #       For more info, see: https://stackoverflow.com/a/37977222
+        self.errors_squared = np.divide(
+            errors_squared_numerator, errors_squared_denominator,
+            out = np.zeros_like(errors_squared_numerator), where = errors_squared_denominator != 0,
+        )
+        self.y = np.divide(self.y, other.y, out = np.zeros_like(self.y), where = other.y != 0)
+        return self
+
     @staticmethod
     def _from_uproot(hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ Convert a uproot histogram to a set of array for creating a Histogram.
@@ -178,7 +286,7 @@ class Histogram1D:
             tuple: (x, y, errors) where x is the bin centers, y is the bin values, and
                 errors are the sumw2 bin errors.
         """
-        # This excluces underflow and overflow
+        # This excludes underflow and overflow
         (y, bin_edges) = hist.numpy()
 
         # Also retrieve errors from sumw2.
@@ -210,7 +318,7 @@ class Histogram1D:
         # NOTE: The y value and bin error are stored with the hist, not the axis.
         y = np.array([hist.GetBinContent(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
         errors = np.array(hist.GetSumw2())
-        # Exclude the under/overflow binsov
+        # Exclude the under/overflow bins
         errors = errors[1:-1]
 
         return (bin_edges, y, errors)
