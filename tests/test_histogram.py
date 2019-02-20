@@ -13,6 +13,7 @@ import pytest
 import uproot
 
 from pachyderm import histogram
+from pachyderm.typing_helpers import Hist
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -335,7 +336,7 @@ class TestWithRootHists:
         expected_hist = histogram.Histogram1D.from_existing_hist(hist)
 
         # The naming is a bit confusing here, but basically we want to compare the
-        # non-uniform binnning in a ROOT hist vs a Histogram1D. We also then extract the bin
+        # non-uniform binning in a ROOT hist vs a Histogram1D. We also then extract the bin
         # edges here as an extra cross-check.
         assert np.allclose(expected_hist.bin_edges, expected_bin_edges)
         # Then we check all of the fields to be safe.
@@ -399,24 +400,42 @@ class TestWithRootHists:
 class HistInfo:
     """ Convenience for storing hist testing information.
 
-    Could reuse the Histogram1D object, but since we're testing it here, it seems better to use
+    Could reuse the ``Histogram1D`` object, but since we're testing it here, it seems better to use
     a separate object.
     """
     y: np.array
     errors_squared: np.array
 
     def convert_to_histogram_1D(self, bin_edges: np.array) -> histogram.Histogram1D:
-        """ Convert these stored values into a Histogram1D. """
+        """ Convert these stored values into a ``Histogram1D``. """
         return histogram.Histogram1D(
             bin_edges = bin_edges,
             y = self.y,
             errors_squared = self.errors_squared,
         )
 
-class TestHistogramOperators:
-    """ Test Histogram1D operators.
+    def convert_to_ROOT_hist(self, bin_edges: np.array) -> Hist:
+        """ Convert these stored values in a ROOT.TH1F.
 
-    In princple, we could refactor all of the tests by explicitly calling
+        This isn't very robust, which is why I'm not including it in ``Histogram1D``. However,
+        something simple is sufficient for our purposes here.
+        """
+        import ROOT
+        hist = ROOT.TH1F("tempHist", "tempHist", len(bin_edges) - 1, bin_edges.astype(float))
+        hist.Sumw2()
+
+        # Exclude under- and overflow
+        for i, (val, error_squared) in enumerate(zip(self.y, self.errors_squared), start = 1):
+            # ROOT hists are 1-indexed.
+            hist.SetBinContent(i, val)
+            hist.SetBinError(i, np.sqrt(error_squared))
+
+        return hist
+
+class TestHistogramOperators:
+    """ Test ``Histogram1D`` operators.
+
+    In principle, we could refactor all of the tests by explicitly calling
     the functions. But since the expected values are different for each test,
     and the test code itself is very simple, there doesn't seem to be much point.
     """
@@ -430,7 +449,7 @@ class TestHistogramOperators:
     _filled_twice_with_weight_of_2 = HistInfo(np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]),
                                               np.array([0, 0, 8., 0, 0, 0, 0, 0, 0, 0]))
 
-    @pytest.mark.parametrize("h1_info, h2_info, expected", [
+    @pytest.fixture(params = [
         (_filled_two_times, _filled_four_times,
             HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
         (_filled_two_times, _filled_twice_with_weight_of_2,
@@ -438,11 +457,20 @@ class TestHistogramOperators:
         (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
             HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]))),
     ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
-    def test_addition(self, logging_mixin, h1_info: HistInfo, h2_info: HistInfo, expected: HistInfo):
-        """ Test addition. """
+    def setup_addition(self, request, logging_mixin):
+        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+
+        However, each test performs rather different steps, so there is little else to do here.
+        """
         # Setup
-        h1 = h1_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
-        h2 = h2_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h2 = request.param[1].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        return (*request.param, h1, h2)
+
+    def test_addition(self, setup_addition):
+        """ Test addition in ``Histogram1D``. """
+        # Setup
+        h1_info, h2_info, expected, h1, h2 = setup_addition
 
         # Operation
         h3 = h1 + h2
@@ -452,7 +480,35 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.parametrize("h1_info, h2_info, expected", [
+    @pytest.mark.ROOT
+    def test_compare_addition_to_ROOT(self, setup_addition):
+        """ Compare the result of ``Histogram1D`` addition vs ROOT. """
+        # Setup
+        h1_info, h2_info, expected, h1, h2 = setup_addition
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h2_root = h2_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h1 + h2
+        h1_root.Add(h2_root)
+
+        # Check result
+        assert check_hist(h1_root, h3)
+
+    def test_sum_function(self, setup_addition):
+        """ Test addition using sum(...) with ``Histogram1D``. """
+        # Setup
+        h1_info, h2_info, expected, h1, h2 = setup_addition
+
+        # Operation
+        h3 = sum([h1, h2])
+
+        # Check result
+        assert np.allclose(h3.bin_edges, self._bin_edges)
+        assert np.allclose(h3.y, expected.y)
+        assert np.allclose(h3.errors_squared, expected.errors_squared)
+
+    @pytest.fixture(params = [
         (_filled_two_times, _filled_four_times,
             HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
         (_filled_two_times, _filled_twice_with_weight_of_2,
@@ -460,11 +516,20 @@ class TestHistogramOperators:
         (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
             HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]))),
     ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
-    def test_subtraction(self, logging_mixin, h1_info: HistInfo, h2_info: HistInfo, expected: HistInfo):
+    def setup_subtraction(self, request, logging_mixin):
+        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+
+        However, each test performs rather different steps, so there is little else to do here.
+        """
+        # Setup
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h2 = request.param[1].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        return (*request.param, h1, h2)
+
+    def test_subtraction(self, setup_subtraction):
         """ Test subtraction. """
         # Setup
-        h1 = h1_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
-        h2 = h2_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1_info, h2_info, expected, h1, h2 = setup_subtraction
 
         # Operation
         h3 = h2 - h1
@@ -474,7 +539,22 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.parametrize("h1_info, h2_info, expected", [
+    @pytest.mark.ROOT
+    def test_compare_subtraction_to_ROOT(self, setup_subtraction):
+        """ Compare the result of ``Histogram1D`` subtraction vs ROOT. """
+        # Setup
+        h1_info, h2_info, expected, h1, h2 = setup_subtraction
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h2_root = h2_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h2 - h1
+        h2_root.Add(h1_root, -1)
+
+        # Check result
+        assert check_hist(h2_root, h3)
+
+    @pytest.fixture(params = [
         (_filled_two_times, _filled_four_times,
             HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 48, 0, 0, 0, 0, 0, 0, 0]))),
         (_filled_two_times, _filled_twice_with_weight_of_2,
@@ -482,11 +562,20 @@ class TestHistogramOperators:
         (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
             HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 96, 0, 0, 0, 0, 0, 0, 0]))),
     ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
-    def test_multiply(self, logging_mixin, h1_info: HistInfo, h2_info: HistInfo, expected: HistInfo):
+    def setup_multiplication(self, request, logging_mixin):
+        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+
+        However, each test performs rather different steps, so there is little else to do here.
+        """
+        # Setup
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h2 = request.param[1].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        return (*request.param, h1, h2)
+
+    def test_multiplication(self, setup_multiplication):
         """ Test multiplication. """
         # Setup
-        h1 = h1_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
-        h2 = h2_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1_info, h2_info, expected, h1, h2 = setup_multiplication
 
         # Operation
         h3 = h2 * h1
@@ -496,7 +585,22 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.parametrize("h1_info, h2_info, expected", [
+    @pytest.mark.ROOT
+    def test_compare_multiplication_to_ROOT(self, setup_multiplication):
+        """ Compare the result of ``Histogram1D`` multiplication vs ROOT. """
+        # Setup
+        h1_info, h2_info, expected, h1, h2 = setup_multiplication
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h2_root = h2_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h2 * h1
+        h2_root.Multiply(h1_root)
+
+        # Check result
+        assert check_hist(h2_root, h3)
+
+    @pytest.fixture(params = [
         (_filled_two_times, _filled_four_times,
             HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 3, 0, 0, 0, 0, 0, 0, 0]))),
         (_filled_two_times, _filled_twice_with_weight_of_2,
@@ -504,11 +608,20 @@ class TestHistogramOperators:
         (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
             HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
     ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
-    def test_divide(self, logging_mixin, h1_info: HistInfo, h2_info: HistInfo, expected):
-        """ Test divison. """
+    def setup_division(self, request, logging_mixin):
+        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+
+        However, each test performs rather different steps, so there is little else to do here.
+        """
         # Setup
-        h1 = h1_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
-        h2 = h2_info.convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h2 = request.param[1].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        return (*request.param, h1, h2)
+
+    def test_division(self, setup_division):
+        """ Test division. """
+        # Setup
+        h1_info, h2_info, expected, h1, h2 = setup_division
 
         # Operation
         h3 = h2 / h1
@@ -517,4 +630,19 @@ class TestHistogramOperators:
         assert np.allclose(h3.bin_edges, self._bin_edges)
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
+
+    @pytest.mark.ROOT
+    def test_compare_division_to_ROOT(self, setup_division):
+        """ Compare the result of ``Histogram1D`` division vs ROOT. """
+        # Setup
+        h1_info, h2_info, expected, h1, h2 = setup_division
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h2_root = h2_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h2 / h1
+        h2_root.Divide(h1_root)
+
+        # Check result
+        assert check_hist(h2_root, h3)
 
