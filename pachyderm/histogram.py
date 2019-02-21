@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 import logging
 import numpy as np
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple, TypeVar, Union
 
 from pachyderm.typing_helpers import Hist
 
@@ -123,6 +123,9 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
         for obj_temp in list(obj):
             _retrieve_object(output_dict[obj.GetName()], obj_temp)
 
+# Typing helpers
+_T = TypeVar("_T", bound = "Histogram1D")
+
 @dataclass
 class Histogram1D:
     """ Contains histogram data.
@@ -179,20 +182,20 @@ class Histogram1D:
         kwargs = {k: np.array(v, copy = True) for k, v in vars(self).items() if not k.startswith("_")}
         return type(self)(**kwargs)
 
-    def __add__(self, other):
+    def __add__(self: _T, other: _T) -> _T:
         """ Handles ``a = b + c.`` """
         new = self.copy()
         new += other
         return new
 
-    def __radd__(self, other):
+    def __radd__(self: _T, other: _T) -> _T:
         """ For use with sum(...). """
         if other == 0:
             return self
         else:
             return self + other
 
-    def __iadd__(self, other):
+    def __iadd__(self: _T, other: _T) -> _T:
         """ Handles ``a += b``. """
         if not np.allclose(self.bin_edges, other.bin_edges):
             raise TypeError(
@@ -204,13 +207,13 @@ class Histogram1D:
         self.errors_squared += other.errors_squared
         return self
 
-    def __sub__(self, other):
+    def __sub__(self: _T, other: _T) -> _T:
         """ Handles ``a = b - c``. """
         new = self.copy()
         new -= other
         return new
 
-    def __isub__(self, other):
+    def __isub__(self: _T, other: _T) -> _T:
         """ Handles ``a += b``. """
         if not np.allclose(self.bin_edges, other.bin_edges):
             raise TypeError(
@@ -222,13 +225,13 @@ class Histogram1D:
         self.errors_squared += other.errors_squared
         return self
 
-    def __mul__(self, other):
+    def __mul__(self: _T, other: _T) -> _T:
         """ Handles ``a = b * c``. """
         new = self.copy()
         new *= other
         return new
 
-    def __imul__(self, other):
+    def __imul__(self: _T, other: _T) -> _T:
         """ Handles ``a *= b``. """
         if not np.allclose(self.bin_edges, other.bin_edges):
             raise TypeError(
@@ -243,13 +246,13 @@ class Histogram1D:
         self.y *= other.y
         return self
 
-    def __truediv__(self, other):
+    def __truediv__(self: _T, other: _T) -> _T:
         """ Handles ``a = b / c``. """
         new = self.copy()
         new /= other
         return new
 
-    def __itruediv__(self, other):
+    def __itruediv__(self: _T, other: _T) -> _T:
         """ Handles ``a /= b``. """
         if not np.allclose(self.bin_edges, other.bin_edges):
             raise TypeError(
