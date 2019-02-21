@@ -512,6 +512,8 @@ def iterate_with_selected_objects_in_order(analysis_objects: Dict[Any, Any],
         selection = [selection]
     # Help out mypy. We don't check if it is a list to allow for other sequences.
     assert not isinstance(selection, str)
+    # We don't want to impact the original analysis iterables when we pop some values below.
+    analysis_iterables = copy.copy(analysis_iterables)
 
     # Extract the selected iterators from the possible iterators so we can select on them later.
     # First, we want want each set of iterators to be of the form:
