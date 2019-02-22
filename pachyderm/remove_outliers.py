@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 import enum
 import logging
 import numpy as np
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Mapping, Tuple, Union
 
 from pachyderm import histogram
 from pachyderm import projectors
@@ -276,7 +276,7 @@ def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, outliers_r
 class OutliersRemovalManager:
     moving_average_threshold: float = field(default = 1.0)
 
-    def run(self, outliers_removal_axis: OutliersRemovalAxis, hist: Hist = None, hists: Dict[str, Hist] = None) -> int:
+    def run(self, outliers_removal_axis: OutliersRemovalAxis, hist: Hist = None, hists: Mapping[str, Hist] = None) -> int:
         """ Remove outliers from the given histogram(s).
 
         Args:

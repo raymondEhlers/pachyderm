@@ -448,7 +448,7 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
 
     return new_obj
 
-def iterate_with_selected_objects(analysis_objects: Dict[Any, Any], **selections: Dict[str, Any]) -> Iterator[Tuple[Any, Any]]:
+def iterate_with_selected_objects(analysis_objects: Mapping[Any, Any], **selections: Mapping[str, Any]) -> Iterator[Tuple[Any, Any]]:
     """ Iterate over an analysis dictionary with selected attributes.
 
     Args:
@@ -465,7 +465,7 @@ def iterate_with_selected_objects(analysis_objects: Dict[Any, Any], **selections
         if selected_obj:
             yield key_index, obj
 
-def iterate_with_selected_objects_in_order(analysis_objects: Dict[Any, Any],
+def iterate_with_selected_objects_in_order(analysis_objects: Mapping[Any, Any],
                                            analysis_iterables: Dict[str, Sequence[Any]],
                                            selection: Union[str, Sequence[str]]) -> Iterator[List[Tuple[Any, Any]]]:
     """ Iterate over an analysis dictionary, yielding the selected attributes in order.
