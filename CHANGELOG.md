@@ -2,6 +2,18 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.7.1] - 22 February 2019
+
+### Fixed
+
+- Don't modify the passed analysis iterables when iterating with
+  `iterate_with_selected_objects_in_order(...)`. See: `7daf01ea590e9ccbdc6511d6a5379757409537fa`.
+- Indicate that the package is typed (it already was, but the typing wasn't being checked in downstream
+  packages). See: `409922e80541155d414c2c101eb913b4ab9fd9ac`.
+- Improved typing information in the `histogram` module. See: `dded82643a8c7c7acc684d64c958eed63c84b3e6`.
+- Improved typing information in the `generic_config` module. See: `c9a8f57fea5f72e62841f264d768e785cd6da3c5`,
+  and `03ad1faf0cb295c7387badd1e59082c5740fbdfb`.
+
 ## [1.7] - 20 February 2019
 
 ### Added
