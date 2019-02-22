@@ -13,7 +13,7 @@ import enum
 import itertools
 import logging
 import string
-from typing import Any, Dict, Iterator, List, Sequence, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Mapping, Sequence, Tuple, Type, Union
 
 from pachyderm import yaml
 from pachyderm.yaml import DictLike
@@ -190,7 +190,7 @@ def determine_override_options(selected_options: tuple, override_opts: DictLike,
 
     return override_dict
 
-def determine_selection_of_iterable_values_from_config(config: DictLike, possible_iterables: Dict[str, Type[enum.Enum]]) -> Dict[str, List[Any]]:
+def determine_selection_of_iterable_values_from_config(config: DictLike, possible_iterables: Mapping[str, Type[enum.Enum]]) -> Dict[str, List[Any]]:
     """ Determine iterable values to use to create objects for a given configuration.
 
     All values of an iterable can be included be setting the value to ``True`` (Not as a single value list,
