@@ -2,6 +2,13 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.7.2] - 22 February 2019
+
+### Changed
+
+- Relaxed some `Dict` -> `Mapping` typing information where possible for greater compatibility with inputs.
+  See: `53ae9f762f344978161ff662226f7fa9202c8b84`.
+
 ## [1.7.1] - 22 February 2019
 
 ### Fixed
