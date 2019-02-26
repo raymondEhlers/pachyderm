@@ -8,7 +8,8 @@
 import functools
 import logging
 import numpy as np
-from typing import Any
+import operator
+from typing import Any, Mapping, Sequence, Union
 
 from pachyderm import histogram
 
@@ -73,6 +74,25 @@ def recursive_setattr(obj: Any, attr: str, val: Any) -> Any:
     """
     pre, _, post = attr.rpartition('.')
     return setattr(recursive_getattr(obj, pre) if pre else obj, post, val)
+
+def recursive_getitem(d: Mapping[str, Any], keys: Union[str, Sequence[str]]) -> Any:
+    """ Recursively retrieve an item from a nested dict.
+
+    Credit to: https://stackoverflow.com/a/52260663
+
+    Args:
+        d: Mapping of strings to objects.
+        keys: Names of the keys under which the object is stored. Can also just be a single string.
+    Returns:
+        The object stored under the keys.
+    Raises:
+        KeyError: If one of the keys isnt' found.
+    """
+    # If only a string, then just just return the item
+    if isinstance(keys, str):
+        return d[keys]
+    else:
+        return functools.reduce(operator.getitem, keys, d)
 
 def get_array_for_fit(observables: dict, track_pt_bin: int, jet_pt_bin: int) -> histogram.Histogram1D:
     """ Get a Histogram1D associated with the selected jet and track pt bins.

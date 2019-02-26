@@ -108,6 +108,37 @@ def test_recursive_setattr_fail(setup_recursive_setattr):
     # It will only return that "random" was not found, as it can't look further into the path.
     assert "random" in exception_info.value.args[0]
 
+@pytest.fixture
+def setup_recursive_getitem(logging_mixin):
+    """ Setup a test dict for use with recursive_getitem. """
+    expected = "hello"
+    keys = ["a", "b"]
+    d = {"a": {"b": expected}}
+
+    return d, keys, expected
+
+def test_recursive_getitem(setup_recursive_getitem):
+    """ Tests for recursive getitem. """
+    d, keys, expected = setup_recursive_getitem
+
+    assert utils.recursive_getitem(d, keys) == expected
+
+def test_recursive_getitem_single_key(setup_recursive_getitem):
+    """ Tests for recursive getitem with a single key. """
+    d, keys, expected = setup_recursive_getitem
+
+    assert utils.recursive_getitem(d["a"], keys[1:]) == expected
+
+def test_recursive_getitem_fail(setup_recursive_getitem):
+    """ Tests failing for recursive getitem. """
+    d, keys, expected = setup_recursive_getitem
+
+    # Use a random set of keys, which will fail.
+    with pytest.raises(KeyError) as exception_info:
+        utils.recursive_getitem(d, ["fake", "keys"])
+    # It will only return that "random" was not found, as it can't look further into the path.
+    assert "fake" in exception_info.value.args[0]
+
 @pytest.mark.ROOT
 class TestWithRootHists():
     def test_get_array_for_fit(self, logging_mixin, mocker, test_root_hists):
