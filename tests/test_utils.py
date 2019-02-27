@@ -127,7 +127,7 @@ def test_recursive_getitem_single_key(setup_recursive_getitem):
     """ Tests for recursive getitem with a single key. """
     d, keys, expected = setup_recursive_getitem
 
-    assert utils.recursive_getitem(d["a"], keys[1:]) == expected
+    assert utils.recursive_getitem(d["a"], "b") == expected
 
 def test_recursive_getitem_fail(setup_recursive_getitem):
     """ Tests failing for recursive getitem. """
