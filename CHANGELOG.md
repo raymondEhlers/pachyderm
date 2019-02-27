@@ -2,6 +2,14 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.7.3] - 26 February 2019
+
+### Added
+
+- `recursive_getitem` to retrieve an item from a recursive dict. In principle, this should also work for other
+  objects which implement `__get_item__(...)`, but it is not tested for those other objects. See:
+  `5982c6bfd5a13a4b8f09464ca27ac24ba8477f6f` and `a3653859c94bc892082842ecc7997e4facda1e60`.
+
 ## [1.7.2] - 22 February 2019
 
 ### Changed
