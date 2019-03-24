@@ -41,7 +41,7 @@ def retrieve_root_list(test_root_hists):
     # Create values for the test
     # We only use 1D hists so we can do the comparison effectively.
     # This is difficult because root hists don't handle operator==
-    # very well. Identical hists will be not equal in smoe cases...
+    # very well. Identical hists will be not equal in some cases...
     hists = []
     h = test_root_hists.hist1D
     for i in range(3):
@@ -66,7 +66,7 @@ def retrieve_root_list(test_root_hists):
         lCopy = l1.Clone("mainList")
         lSecondCopy = l3.Clone("secondList")
         # The objects will be destroyed when l is written.
-        # However, we write it under the l name to ensure it is read corectly later
+        # However, we write it under the l name to ensure it is read correctly later
         f = ROOT.TFile(filename, "RECREATE")
         f.cd()
         lCopy.Write(l1.GetName(), ROOT.TObject.kSingleKey)
@@ -109,7 +109,7 @@ class TestOpenRootFile:
 
         logger.debug(f"{output}")
 
-        # This isn't the most sophisticated way of comparsion, but bin-by-bin is sufficient for here.
+        # This isn't the most sophisticated way of comparison, but bin-by-bin is sufficient for here.
         # We take advantage that we know the structure of the file so we don't need to handle recursion
         # or higher dimensional hists.
         output_inner_list = output["mainList"].pop("innerList")
@@ -124,7 +124,7 @@ class TestOpenRootFile:
                 assert np.allclose(oValues, eValues)
 
     def test_failing_to_open_file(self, logging_mixin):
-        """ Test for raising the proper exception for a file that doens't exist. """
+        """ Test for raising the proper exception for a file that doesn't exist. """
         fake_filename = "fake_filename.root"
         with pytest.raises(IOError) as exception_info:
             with histogram.RootOpen(filename = fake_filename):
@@ -141,7 +141,7 @@ class TestRetrievingHistgramsFromAList:
         output = histogram.get_histograms_in_file(filename = filename)
         logger.info(f"{output}")
 
-        # This isn't the most sophisticated way of comparsion, but bin-by-bin is sufficient for here.
+        # This isn't the most sophisticated way of comparison, but bin-by-bin is sufficient for here.
         # We take advantage that we know the structure of the file so we don't need to handle recursion
         # or higher dimensional hists.
         output_inner_list = output["mainList"].pop("innerList")
@@ -164,7 +164,7 @@ class TestRetrievingHistgramsFromAList:
         # The first level of the output is removed by `get_histograms_in_list()`
         expected = expected["mainList"]
 
-        # This isn't the most sophisticated way of comparsion, but bin-by-bin is sufficient for here.
+        # This isn't the most sophisticated way of comparison, but bin-by-bin is sufficient for here.
         # We take advantage that we know the structure of the file so we don't need to handle recursion
         # or higher dimensional hists.
         output_inner_list = output.pop("innerList")
@@ -247,7 +247,7 @@ def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1
 
     Args:
         input_hist (histogram.Histogram1D): Converted histogram.
-        expected (histogram.Histogram1D): Expected hiostgram.
+        expected (histogram.Histogram1D): Expected histogram.
     Returns:
         bool: True if the histograms are the same.
     """
@@ -303,7 +303,7 @@ class TestWithRootHists:
 
         Note:
             This test is from the legacy get_array_from_hist(...) function. This functionality is
-            superceded by Histogram1D.from_existing_hist(...), but we leave this test for good measure.
+            superseded by Histogram1D.from_existing_hist(...), but we leave this test for good measure.
         """
         hist = test_root_hists.hist1D
         hist_array = histogram.Histogram1D.from_existing_hist(hist)
