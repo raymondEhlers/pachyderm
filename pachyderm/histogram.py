@@ -154,16 +154,30 @@ class Histogram1D:
         return np.sqrt(self.errors_squared)
 
     @property
+    def bin_widths(self) -> np.ndarray:
+        """ Bin widths calculated from the bin edges.
+
+        Returns:
+            Array of the bin widths.
+        """
+        return self.bin_edges[1:] - self.bin_edges[:-1]
+
+    @property
     def x(self) -> np.ndarray:
         """ The histogram bin centers (``x``).
 
         This property caches the x value so we don't have to calculate it every time.
+
+        Args:
+            None
+        Returns:
+            Array of center of bins.
         """
         try:
             return self._x
         except AttributeError:
-            bin_widths = (self.bin_edges[1:] - self.bin_edges[:-1]) / 2
-            x = self.bin_edges[:-1] + bin_widths
+            half_bin_widths = self.bin_widths / 2
+            x = self.bin_edges[:-1] + half_bin_widths
             self._x: np.ndarray = x
 
         return self._x

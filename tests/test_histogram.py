@@ -339,6 +339,8 @@ class TestWithRootHists:
         # non-uniform binning in a ROOT hist vs a Histogram1D. We also then extract the bin
         # edges here as an extra cross-check.
         assert np.allclose(expected_hist.bin_edges, expected_bin_edges)
+        # Check the calculated bin widths
+        assert np.allclose(expected_hist.bin_widths, expected_bin_edges[1:] - expected_bin_edges[:-1])
         # Then we check all of the fields to be safe.
         # (This is a bit redundant because both objects will use Histogram1D, but it doesn't hurt).
         assert check_hist(hist, expected_hist)
