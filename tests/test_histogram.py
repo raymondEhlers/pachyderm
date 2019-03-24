@@ -748,15 +748,19 @@ class TestIntegrateHistogram1D:
         # Setup
         min_arg, max_arg, using_values = request.param
         import ROOT
-        bins = np.array([1, 2, 3, 4, 5])
+        bins = np.array([1, 2, 3, 4, 6], dtype = np.float64)
         values = np.array([5, 6, 7, 8])
 
-        h_root = ROOT.TH1F("test", "test", 4, 1, 5)
+        h_root = ROOT.TH1F("test", "test", 4, bins)
+        h_root.Sumw2()
         for b, i in zip(bins, values):
             for _ in range(i):
                 h_root.Fill(b)
+        # Ensure that we test with weighting too.
+        h_root.Fill(4.5, 4)
+        # And correspondingly increase the values (in case we decide to use them at some other time).
+        values[3] += 4
 
-        #h = histogram.Histogram1D(bin_edges = bins, y = values, errors_squared = values)
         h = histogram.Histogram1D.from_existing_hist(h_root)
 
         # Setup args
@@ -808,4 +812,22 @@ class TestIntegrateHistogram1D:
         # Check result
         assert np.isclose(res, expected_result)
         assert np.isclose(res_error, expected_error)
+
+    def test_integral_validation_for_min_values(self, setup_hists_and_args):
+        """ Should fail when passed both min value and min bin. """
+        # Setup
+        args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
+
+        with pytest.raises(ValueError) as exception_info:
+            h.integral(min_value = 3, min_bin = 4)
+        assert "Only specify one" in exception_info.value.args[0]
+
+    def test_integral_validation_for_max_values(self, setup_hists_and_args):
+        """ Should fail when passed both max value and max bin. """
+        # Setup
+        args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
+
+        with pytest.raises(ValueError) as exception_info:
+            h.integral(max_value = 3, max_bin = 4)
+        assert "Only specify one" in exception_info.value.args[0]
 
