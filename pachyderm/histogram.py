@@ -196,6 +196,116 @@ class Histogram1D:
         kwargs = {k: np.array(v, copy = True) for k, v in vars(self).items() if not k.startswith("_")}
         return type(self)(**kwargs)
 
+    def counts_in_interval(self,
+                           min_value: float = None, max_value: float = None,
+                           min_bin: int = None, max_bin: int = None) -> Tuple[float, float]:
+        """ Count the number of counts within bins in an interval.
+
+        Note:
+            TODO: Describe limits and where they are inclusive or not.
+
+        Note:
+            Specify either the min and max values or the min and max bins. The arguments cannot be mixed.
+
+        Args:
+            min_value: Minimum value for the integral (we will find the bin which contains this value).
+            max_value: Maximum value for the integral (we will find the bin which contains this value).
+            min_bin: Minimum bin for the integral.
+            max_bin: Maximum bin for the integral.
+        Returns:
+            (value, error): Integral value, error
+        """
+        return self._integral(
+            min_value = min_value, max_value = max_value,
+            min_bin = min_bin, max_bin = max_bin,
+            multiply_by_bin_width = False,
+        )
+
+    def integral(self,
+                 min_value: float = None, max_value: float = None,
+                 min_bin: int = None, max_bin: int = None) -> Tuple[float, float]:
+        """ Integrate the histogram over the given range.
+
+        Note:
+            TODO: Describe limits and where they are inclusive or not.
+
+        Note:
+            Specify either the min and max values or the min and max bins. The arguments cannot be mixed.
+
+        Args:
+            min_value: Minimum value for the integral (we will find the bin which contains this value).
+            max_value: Maximum value for the integral (we will find the bin which contains this value).
+            min_bin: Minimum bin for the integral.
+            max_bin: Maximum bin for the integral.
+        Returns:
+            (value, error): Integral value, error
+        """
+        return self._integral(
+            min_value = min_value, max_value = max_value,
+            min_bin = min_bin, max_bin = max_bin,
+            multiply_by_bin_width = True,
+        )
+
+    def _integral(self,
+                  min_value: float = None, max_value: float = None,
+                  min_bin: int = None, max_bin: int = None,
+                  multiply_by_bin_width: bool = False) -> Tuple[float, float]:
+        """ Integrate the histogram over the specified range.
+
+        This function provides the underlying implementation of the integral, giving the option to multiply
+        by the bin with (in which case, one gets the integral), or not (in which case, one gets the number
+        of counts in the range).
+
+        Note:
+            TODO: Describe limits and where they are inclusive or not.
+
+        Args:
+            min_value: Minimum value for the integral (we will find the bin which contains this value).
+            max_value: Maximum value for the integral (we will find the bin which contains this value).
+            min_bin: Minimum bin for the integral.
+            max_bin: Maximum bin for the integral.
+            multiply_by_bin_width: If true, we will multiply each value by the bin width. The should be done
+                for integrals, but not for counting values in an interval.
+        Returns:
+            (value, error): Integral value, error
+        """
+        # Validate arguments
+        # Specified both values and bins, which is invalid.
+        if min_value is not None and min_bin is not None:
+            raise ValueError("Specified both min value and min bin. Only specify one.")
+        if max_value is not None and max_bin is not None:
+            raise ValueError("Specified both max value and max bin. Only specify one.")
+        if (min_value is not None or max_value is not None) and (min_bin is not None or max_bin is not None):
+            raise ValueError("Specify either bins or values - not both.")
+
+        # Determine the bins from the values
+        if min_value is not None:
+            min_bin = np.searchsorted(self.bin_edges, min_value, side = "right")
+        if max_value is not None:
+            max_bin = np.searchsorted(self.bin_edges, max_value, side = "right")
+
+        # Help out mypy.
+        assert min_bin is not None
+        assert max_bin is not None
+
+        # Provide the opportunity to scale by bin width
+        widths = np.ones(len(self.y))
+        if multiply_by_bin_width:
+            widths = self.bin_widths
+
+        # Integrate by summing up all of the bins and the errors.
+        # Perform the integral.
+        # NOTE: We integral from min_bin - 1 because this matches the ROOT convention of including the bin
+        #       where the min value was found. So if I have binning of [1, 2, 3] and I set my min value to 1.3,
+        #       `searchsorted` will return 1, and therefore we need to remove 1 to be include the bin where 1.3 resides.
+        #       Practically, this means that if the user wants to integrate over 1 bin, then the min bin and max bin
+        #       should be the same.
+        logger.debug(f"Integrating from {min_bin - 1} - {max_bin}")
+        value = np.sum(self.y[min_bin - 1:max_bin] * widths[min_bin - 1:max_bin])
+        error_squared = np.sum(self.errors_squared[min_bin - 1:max_bin] * widths[min_bin - 1:max_bin] ** 2)
+
+        return value, np.sqrt(error_squared)
+
     def __add__(self: _T, other: _T) -> _T:
         """ Handles ``a = b + c.`` """
         new = self.copy()

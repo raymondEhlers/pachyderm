@@ -679,3 +679,79 @@ class TestHistogramOperators:
         # Check result
         assert check_hist(h2_root, h3)
 
+@pytest.mark.ROOT
+class TestIntegrateHistogram1D:
+    """ Test for counting and integrating bins stored in a ``Histogram1D``.
+
+    These tests require ROOT because we compare against ROOT to check that the values
+    are correct.
+    """
+    @pytest.fixture(params = [
+        (1, 4, False),
+        (1.2, 4.3, True),
+    ], ids = ["Bins", "Values"])
+    def setup_hists_and_args(self, request, logging_mixin):
+        """ Setup hist for testing integration. """
+        # Setup
+        min_arg, max_arg, using_values = request.param
+        import ROOT
+        bins = np.array([1, 2, 3, 4, 5])
+        values = np.array([5, 6, 7, 8])
+
+        h_root = ROOT.TH1F("test", "test", 4, 1, 5)
+        for b, i in zip(bins, values):
+            for _ in range(i):
+                h_root.Fill(b)
+
+        #h = histogram.Histogram1D(bin_edges = bins, y = values, errors_squared = values)
+        h = histogram.Histogram1D.from_existing_hist(h_root)
+
+        # Setup args
+        args = {}
+        if using_values:
+            root_min_arg = h_root.GetXaxis().FindBin(min_arg)
+            root_max_arg = h_root.GetXaxis().FindBin(max_arg)
+            args = {
+                "min_value": min_arg,
+                "max_value": max_arg,
+            }
+        else:
+            root_min_arg = min_arg
+            root_max_arg = max_arg
+            args = {
+                "min_bin": min_arg,
+                "max_bin": max_arg,
+            }
+
+        return args, h, root_min_arg, root_max_arg, h_root
+
+    def test_integrate(self, setup_hists_and_args):
+        """ Test integration of bins. """
+        # Setup
+        import ROOT
+        args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
+
+        # Integrate
+        expected_error = ROOT.Double(0)
+        expected_result = h_root.IntegralAndError(root_min_arg, root_max_arg, expected_error, "width")
+        res, res_error = h.integral(**args)
+
+        # Check result
+        assert np.isclose(res, expected_result)
+        assert np.isclose(res_error, expected_error)
+
+    def test_counts_in_interval(self, setup_hists_and_args):
+        """ Test the counting of values stored within bins in an interval. """
+        # Setup
+        import ROOT
+        args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
+
+        # Count
+        expected_error = ROOT.Double(0)
+        expected_result = h_root.IntegralAndError(root_min_arg, root_max_arg, expected_error, "")
+        res, res_error = h.counts_in_interval(**args)
+
+        # Check result
+        assert np.isclose(res, expected_result)
+        assert np.isclose(res_error, expected_error)
+
