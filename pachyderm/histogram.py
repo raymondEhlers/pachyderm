@@ -182,6 +182,24 @@ class Histogram1D:
 
         return self._x
 
+    def find_bin(self, value: float) -> int:
+        """ Find the bin corresponding to the specified value.
+
+        Note:
+            Bins are 0-indexed here, while in ROOT they are 1-indexed.
+
+        Args:
+            value: Value for which we want want the corresponding bin.
+        Returns:
+            Bin corresponding to the value.
+        """
+        # This will return the index position where the value should be inserted.
+        # This means that if we have the bin edges [0, 1, 2], and we pass value 1.5, it will return
+        # index 2, but we want to return bin 1, so we subtract one from the result.
+        # NOTE: By specifying that ``side = "right"``, it find values as arr[i] <= value < arr[i - 1],
+        #       which matches the ROOT convention.
+        return np.searchsorted(self.bin_edges, value, side = "right") - 1
+
     def copy(self):
         """ Copies the object.
 
@@ -280,9 +298,9 @@ class Histogram1D:
 
         # Determine the bins from the values
         if min_value is not None:
-            min_bin = np.searchsorted(self.bin_edges, min_value, side = "right")
+            min_bin = self.find_bin(min_value)
         if max_value is not None:
-            max_bin = np.searchsorted(self.bin_edges, max_value, side = "right")
+            max_bin = self.find_bin(max_value)
 
         # Help out mypy.
         assert min_bin is not None
@@ -300,9 +318,9 @@ class Histogram1D:
         #       `searchsorted` will return 1, and therefore we need to remove 1 to be include the bin where 1.3 resides.
         #       Practically, this means that if the user wants to integrate over 1 bin, then the min bin and max bin
         #       should be the same.
-        logger.debug(f"Integrating from {min_bin - 1} - {max_bin}")
-        value = np.sum(self.y[min_bin - 1:max_bin] * widths[min_bin - 1:max_bin])
-        error_squared = np.sum(self.errors_squared[min_bin - 1:max_bin] * widths[min_bin - 1:max_bin] ** 2)
+        logger.debug(f"Integrating from {min_bin} - {max_bin + 1}")
+        value = np.sum(self.y[min_bin:max_bin + 1] * widths[min_bin:max_bin + 1])
+        error_squared = np.sum(self.errors_squared[min_bin:max_bin + 1] * widths[min_bin:max_bin + 1] ** 2)
 
         return value, np.sqrt(error_squared)
 

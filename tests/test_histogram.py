@@ -398,6 +398,58 @@ class TestWithRootHists:
         else:
             assert np.isclose(hist_array[0][1], 0.0)
 
+@pytest.fixture
+def setup_basic_hist(logging_mixin):
+    """ Setup a basic `Histogram1D` for basic tests.
+
+    This histogram contains 4 bins, with edges of [0, 1, 2, 3, 5], values of [2, 2, 3, 0], with
+    errors of [4, 2, 3, 0], simulating the first bin being filled once with a weight of 2, and the
+    rest being filled normally. It could be reproduced in ROOT with:
+
+    >>> bins = np.array([0, 1, 2, 3, 5], dtype = np.float64)
+    >>> hist = ROOT.TH1F("test", "test", 4, binning)
+    >>> hist.Fill(0, 2)
+    >>> hist.Fill(1)
+    >>> hist.Fill(1)
+    >>> hist.Fill(2)
+    >>> hist.Fill(2)
+    >>> hist.Fill(2)
+
+    Args:
+        None.
+    Returns:
+        hist, bin_edges, y, errors_squared
+    """
+    bin_edges = np.array([0, 1, 2, 3, 5])
+    y = np.array([2, 2, 3, 0])
+    # As if the first bin was filled with weight of 2.
+    errors_squared = np.array([4, 2, 3, 0])
+
+    h = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+
+    return h, bin_edges, y, errors_squared
+
+@pytest.mark.parametrize("value, expected_bin", [
+    (0, 0),
+    (0.5, 0),
+    (1, 1),
+    (1.0, 1),
+    (1.5, 1),
+    (1.99, 1),
+    (2, 2),
+    (3, 3),
+    (4.5, 3),
+], ids = ["start bin 0", "mid bin 0",
+          "start bin 1", "float start bin 1", "mid bin 1", "end bin 1",
+          "bin 2",
+          "bin 3", "upper bin 3"])
+def test_find_bin(logging_mixin, setup_basic_hist, value, expected_bin):
+    """ Test for finding the bin based on a given value. """
+    h, _, _, _ = setup_basic_hist
+    found_bin = h.find_bin(value)
+
+    assert found_bin == expected_bin
+
 @pytest.mark.parametrize("test_equality", [
     False,
     True,
@@ -406,12 +458,9 @@ class TestWithRootHists:
     False,
     True,
 ], ids = ["Do not access other attributes", "Access other attributes which are stored"])
-def test_histogram1D_equality(logging_mixin, test_equality, access_attributes_which_are_stored):
+def test_histogram1D_equality(logging_mixin, setup_basic_hist, test_equality, access_attributes_which_are_stored):
     """ Test for Histogram1D equality. """
-    bin_edges = np.array([0, 1, 2, 3, 4])
-    y = np.array([2, 2, 3, 2])
-    # As if the first bin was filled with weight of 2.
-    errors_squared = np.array([4, 2, 3, 2])
+    h, bin_edges, y, errors_squared = setup_basic_hist
 
     h1 = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
     h2 = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
@@ -687,11 +736,15 @@ class TestIntegrateHistogram1D:
     are correct.
     """
     @pytest.fixture(params = [
-        (1, 4, False),
+        (0, 3, False),  # Specified in the form of the 0-indexed `Histogram1D` bins.
         (1.2, 4.3, True),
     ], ids = ["Bins", "Values"])
     def setup_hists_and_args(self, request, logging_mixin):
-        """ Setup hist for testing integration. """
+        """ Setup hist for testing integration.
+
+        Note:
+            The `Histogram1D` bins are 0-indexed, while the ROOT bins are 1-indexed.
+        """
         # Setup
         min_arg, max_arg, using_values = request.param
         import ROOT
@@ -716,8 +769,9 @@ class TestIntegrateHistogram1D:
                 "max_value": max_arg,
             }
         else:
-            root_min_arg = min_arg
-            root_max_arg = max_arg
+            # Need the + 1 to convert from 0-indexed to 1-indexed bins.
+            root_min_arg = min_arg + 1
+            root_max_arg = max_arg + 1
             args = {
                 "min_bin": min_arg,
                 "max_bin": max_arg,
