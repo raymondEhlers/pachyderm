@@ -398,6 +398,37 @@ class TestWithRootHists:
         else:
             assert np.isclose(hist_array[0][1], 0.0)
 
+@pytest.mark.parametrize("test_equality", [
+    False,
+    True,
+], ids = ["Test inequality", "Test equality"])
+@pytest.mark.parametrize("access_attributes_which_are_stored", [
+    False,
+    True,
+], ids = ["Do not access other attributes", "Access other attributes which are stored"])
+def test_histogram1D_equality(logging_mixin, test_equality, access_attributes_which_are_stored):
+    """ Test for Histogram1D equality. """
+    bin_edges = np.array([0, 1, 2, 3, 4])
+    y = np.array([2, 2, 3, 2])
+    # As if the first bin was filled with weight of 2.
+    errors_squared = np.array([4, 2, 3, 2])
+
+    h1 = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+    h2 = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+
+    if access_attributes_which_are_stored:
+        # This attribute will be stored (but under "_x"), so we want to make sure that it
+        # doesn't disrupt the equality comparison.
+        h1.x
+
+    if not test_equality:
+        h1.bin_edges = np.array([5, 6, 7, 8, 9])
+
+    if test_equality:
+        assert h1 == h2
+    else:
+        assert h1 != h2
+
 @dataclass
 class HistInfo:
     """ Convenience for storing hist testing information.

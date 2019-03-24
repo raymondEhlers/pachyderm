@@ -290,6 +290,20 @@ class Histogram1D:
         self.y = np.divide(self.y, other.y, out = np.zeros_like(self.y), where = other.y != 0)
         return self
 
+    def __eq__(self, other):
+        """ Check for equality. """
+        attributes = [k for k in vars(self) if not k.startswith("_")]
+        other_attributes = [k for k in vars(other) if not k.startswith("_")]
+
+        # As a beginning check, they must have the same attributes available.
+        if attributes != other_attributes:
+            return False
+
+        # All attributes are np arrays, so we compare the arrays using ``np.allclose``
+        agreement = [np.allclose(getattr(self, a), getattr(other, a)) for a in attributes]
+        # All arrays must agree.
+        return all(agreement)
+
     @staticmethod
     def _from_uproot(hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ Convert a uproot histogram to a set of array for creating a Histogram.
