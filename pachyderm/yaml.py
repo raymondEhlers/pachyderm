@@ -73,7 +73,7 @@ def yaml(modules_to_register: Iterable[Any] = None, classes_to_register: Iterabl
 
     return yaml
 
-def register_classes(yaml, classes: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
+def register_classes(yaml: ruamel.yaml.YAML, classes: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
     """ Register externally defined classes. """
     # Validation
     if classes is None:
@@ -86,7 +86,7 @@ def register_classes(yaml, classes: Optional[Iterable[Any]] = None) -> ruamel.ya
 
     return yaml
 
-def register_module_classes(yaml, modules: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
+def register_module_classes(yaml: ruamel.yaml.YAML, modules: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
     """ Register all classes in the given modules with the YAML object.
 
     This is a simple helper function.
