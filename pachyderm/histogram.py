@@ -223,7 +223,7 @@ class Histogram1D:
             TODO: Describe limits and where they are inclusive or not.
 
         Note:
-            Specify either the min and max values or the min and max bins. The arguments cannot be mixed.
+            The arguments can be mixed (ie. a min bin and a max value), so be careful!
 
         Args:
             min_value: Minimum value for the integral (we will find the bin which contains this value).
@@ -248,7 +248,7 @@ class Histogram1D:
             TODO: Describe limits and where they are inclusive or not.
 
         Note:
-            Specify either the min and max values or the min and max bins. The arguments cannot be mixed.
+            The arguments can be mixed (ie. a min bin and a max value), so be careful!
 
         Args:
             min_value: Minimum value for the integral (we will find the bin which contains this value).
@@ -293,8 +293,6 @@ class Histogram1D:
             raise ValueError("Specified both min value and min bin. Only specify one.")
         if max_value is not None and max_bin is not None:
             raise ValueError("Specified both max value and max bin. Only specify one.")
-        if (min_value is not None or max_value is not None) and (min_bin is not None or max_bin is not None):
-            raise ValueError("Specify either bins or values - not both.")
 
         # Determine the bins from the values
         if min_value is not None:

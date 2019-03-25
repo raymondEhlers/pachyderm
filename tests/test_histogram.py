@@ -813,6 +813,27 @@ class TestIntegrateHistogram1D:
         assert np.isclose(res, expected_result)
         assert np.isclose(res_error, expected_error)
 
+    def test_integral_validation_for_mixed_bins_and_values(self, setup_hists_and_args):
+        """ Test mixed arguments of bins and values. """
+        # Setup
+        import ROOT
+        args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
+
+        # Mix the arguments so  that we pass "min_bin" with "max_value" or "min_value" with "max_bin"
+        if "min_value" in args:
+            args["min_bin"] = h.find_bin(args.pop("min_value"))
+        else:
+            args["min_value"] = h.bin_edges[args.pop("min_bin")]
+
+        # Integrate
+        expected_error = ROOT.Double(0)
+        expected_result = h_root.IntegralAndError(root_min_arg, root_max_arg, expected_error, "width")
+        res, res_error = h.integral(**args)
+
+        # Check result
+        assert np.isclose(res, expected_result)
+        assert np.isclose(res_error, expected_error)
+
     def test_integral_validation_for_min_values(self, setup_hists_and_args):
         """ Should fail when passed both min value and min bin. """
         # Setup
