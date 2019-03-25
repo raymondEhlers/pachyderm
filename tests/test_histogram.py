@@ -834,21 +834,31 @@ class TestIntegrateHistogram1D:
         assert np.isclose(res, expected_result)
         assert np.isclose(res_error, expected_error)
 
-    def test_integral_validation_for_min_values(self, setup_hists_and_args):
+class TestHistogramIntegralValidation:
+    """ Tests histogram integral validation. These tests don't require ROOT, so they are separate. """
+    def test_integral_validation_for_min_values(self, setup_basic_hist):
         """ Should fail when passed both min value and min bin. """
         # Setup
-        args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
+        h, _, _, _ = setup_basic_hist
 
         with pytest.raises(ValueError) as exception_info:
             h.integral(min_value = 3, min_bin = 4)
         assert "Only specify one" in exception_info.value.args[0]
 
-    def test_integral_validation_for_max_values(self, setup_hists_and_args):
+    def test_integral_validation_for_max_values(self, setup_basic_hist):
         """ Should fail when passed both max value and max bin. """
         # Setup
-        args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
+        h, _, _, _ = setup_basic_hist
 
         with pytest.raises(ValueError) as exception_info:
             h.integral(max_value = 3, max_bin = 4)
         assert "Only specify one" in exception_info.value.args[0]
 
+    def test_integral_validation_for_inverted_values(self, setup_basic_hist):
+        """ Should fail when min > max. """
+        # Setup
+        h, _, _, _ = setup_basic_hist
+
+        with pytest.raises(ValueError) as exception_info:
+            h.integral(min_value = 3, max_value = 1)
+        assert "greater than" in exception_info.value.args[0]

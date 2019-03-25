@@ -304,6 +304,13 @@ class Histogram1D:
         assert min_bin is not None
         assert max_bin is not None
 
+        # Final validation to ensure that the bins properly ordered, with the min <= max.
+        # NOTE: It is valid for the bins to be equal. In that case, we only take values from that single bin.
+        if min_bin > max_bin:
+            raise ValueError(
+                f"Passed min_bin {min_bin} which is greater than the max_bin {max_bin}. The min bin must be smaller."
+            )
+
         # Provide the opportunity to scale by bin width
         widths = np.ones(len(self.y))
         if multiply_by_bin_width:
