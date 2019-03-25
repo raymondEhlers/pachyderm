@@ -2,6 +2,24 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.8] - 24 March 2019
+
+### Added
+
+- Equality operator for `Histogram1D`. See: `d769eec644dc91de17bcb3cc92435346cd305196`.
+- Integrate and count over bins in a specified range of a `Histogram1D`. See:
+  `06fcb96076da89677bef5afc772b462db82ab39b`, `fd00a741e4f62e44cbfed6fa1eb3fe50b5aba8bb` (initial
+  implementation), `5f8853d6a7db8bdebe1464bf1cf34273a95059fc`, `794054b41d76fc92bf326743d97c71e431fbf20b`
+  (tests improved), and `e16613bdb4ef139d6a5564e68b46fd78a57124dd` (improve docs).
+- Implemented `find_bin(...)` method for `Histogram1D` to find the bin that corresponds to the given value.
+  See: `5ca286e3e4f8ffa2f0ab05a3679250bbe9166aa9`.
+- Refactor `bin_widths` into property for `Histogram1D` to ease calculating the bin widths. See:
+  `01578f75ec8203e176075005408b166845fb0725`.
+
+### Changed
+
+- Improved `yaml` module typing information. See: `effd1d5193891c5bd268e033cf18eb2be71db6f1`.
+
 ## [1.7.3] - 26 February 2019
 
 ### Added
