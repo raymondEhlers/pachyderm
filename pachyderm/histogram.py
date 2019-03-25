@@ -220,7 +220,8 @@ class Histogram1D:
         """ Count the number of counts within bins in an interval.
 
         Note:
-            TODO: Describe limits and where they are inclusive or not.
+            The integration limits could be described as inclusive. This matches the ROOT convention.
+            See ``histogram1D._integral(...)`` for further details on how these limits are determined.
 
         Note:
             The arguments can be mixed (ie. a min bin and a max value), so be careful!
@@ -245,7 +246,8 @@ class Histogram1D:
         """ Integrate the histogram over the given range.
 
         Note:
-            TODO: Describe limits and where they are inclusive or not.
+            The integration limits could be described as inclusive. This matches the ROOT convention.
+            See ``histogram1D._integral(...)`` for further details on how these limits are determined.
 
         Note:
             The arguments can be mixed (ie. a min bin and a max value), so be careful!
@@ -275,7 +277,11 @@ class Histogram1D:
         of counts in the range).
 
         Note:
-            TODO: Describe limits and where they are inclusive or not.
+            Limits of the integral could be described as inclusive. To understand this, consider an example
+            where the bin edges are ``[0, 1, 2, 5]``, and we request value limits of ``(1.2, 3.6)``. The limits
+            correspond to bins ``(1, 2)``, and therefore the integral will include the values from both bins 1 and 2.
+            This matches the ROOT convention, and means that if a user wants the counts in only one bin, they
+            should set the upper min and max bins to the same bin.
 
         Args:
             min_value: Minimum value for the integral (we will find the bin which contains this value).
@@ -318,11 +324,9 @@ class Histogram1D:
 
         # Integrate by summing up all of the bins and the errors.
         # Perform the integral.
-        # NOTE: We integral from min_bin - 1 because this matches the ROOT convention of including the bin
-        #       where the min value was found. So if I have binning of [1, 2, 3] and I set my min value to 1.3,
-        #       `searchsorted` will return 1, and therefore we need to remove 1 to be include the bin where 1.3 resides.
-        #       Practically, this means that if the user wants to integrate over 1 bin, then the min bin and max bin
-        #       should be the same.
+        # NOTE: We set the upper limits to + 1 from the found value because we want to include the bin
+        #       where the upper limit resides. This matches the ROOT convention. Practically, this means
+        #       that if the user wants to integrate over 1 bin, then the min bin and max bin should be the same.
         logger.debug(f"Integrating from {min_bin} - {max_bin + 1}")
         value = np.sum(self.y[min_bin:max_bin + 1] * widths[min_bin:max_bin + 1])
         error_squared = np.sum(self.errors_squared[min_bin:max_bin + 1] * widths[min_bin:max_bin + 1] ** 2)
