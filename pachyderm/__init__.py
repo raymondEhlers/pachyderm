@@ -9,6 +9,7 @@ __all__ = [
     "generic_class",
     "generic_config",
     "histogram",
+    "plot",
     "projectors",
     "utils",
 ]

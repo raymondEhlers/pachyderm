@@ -77,7 +77,8 @@ setup(
         # Depends on ROOT, but that can't be installed through pip.
         # The dependence is only implicit, so it can actually be installed without it,
         # but some functionality depends on it being available.
-        #"ROOT"
+        #"ROOT",
+        "matplotlib",
     ],
 
     # Include additional files
