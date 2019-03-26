@@ -2,6 +2,20 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.9] - 27 March 2019
+
+### Added
+
+- Plot module to handle tasks related to plotting. Currently, it just configures `matplotlib` styles which
+  were extracted from the `alice-jet-hadron` package. See: `82f4be7a344c124a3a51faf34f521fa125c21bbc`.
+- Integration tests to ensure that classes can be dumped by YAML. See:
+  `d03aa5a0d2a7ce0979c87086ccb5641b270a2e59`.
+
+### Changed
+
+- Updated pre-commit hooks with newer versions of the packages. See:
+  `b7b7f570b27412492ae24c65e956865943bc7fc1`.
+
 ## [1.8] - 24 March 2019
 
 ### Added
