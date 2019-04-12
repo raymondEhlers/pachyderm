@@ -331,7 +331,9 @@ class Histogram1D:
         value = np.sum(self.y[min_bin:max_bin + 1] * widths[min_bin:max_bin + 1])
         error_squared = np.sum(self.errors_squared[min_bin:max_bin + 1] * widths[min_bin:max_bin + 1] ** 2)
 
-        return value, np.sqrt(error_squared)
+        # We explicitly cast the final result to float to ensure that it doesn't cause any problems
+        # with saving the final values to YAML.
+        return float(value), float(np.sqrt(error_squared))
 
     def __add__(self: _T, other: _T) -> _T:
         """ Handles ``a = b + c.`` """
