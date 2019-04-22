@@ -150,9 +150,9 @@ def configure() -> None:
         # NOTE: This is disabled because if you forget to set the marker, then nothing will show up,
         #       which is a very frustrating user experience. Better to instead just disable it for a
         #       given plot.
-        #"lines.linestyle": "None",
+        #"lines.linestyle": "none",
         # Set the edge color to white.
-        "patch.edgecolor": "w",
+        "patch.edgecolor": "none",
         # Apparently this has to be enabled just for setting the edge color to be possible.
         "patch.force_edgecolor": True,
         # Tick label size.
