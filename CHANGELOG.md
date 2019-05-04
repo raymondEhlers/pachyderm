@@ -2,6 +2,27 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.9.2] - 4 May 2019
+
+### Added
+
+- Enabled strict `mypy` checks. See: `6ac6bf50b6787dea547516196c043a989e9cf70d`.
+
+### Changed
+
+- Changed the return typing of `selected_iterables` in `generic_config` from `Dict[str, Any]` to `Mapping[str,
+  Any]` to accept more generic mappings. See: `f9bf3a173e5a448bb174357d73950e024220da48`.
+
+### Fixed
+
+- Many minor typing fixes. See: `86669f2047de24ca5ef9694a9bd29e2f2ff6f58d` and
+  `9882e9950d958eb70fb85537f773043a7934e220`.
+
+### Removed
+
+- Obsolete code related to extracting analysis objects when fitting. See:
+  `4e1144baae727f93c52c8cad882983e1b07875e0`.
+
 ## [1.9.1] - 3 May 2019
 
 ### Changed
