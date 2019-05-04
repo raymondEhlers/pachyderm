@@ -13,7 +13,7 @@ import enum
 import itertools
 import logging
 import string
-from typing import Any, Dict, Iterator, List, Mapping, Sequence, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, Type, Union
 
 from pachyderm import yaml
 from pachyderm.yaml import DictLike
@@ -142,7 +142,8 @@ def simplify_data_representations(config: DictLike) -> DictLike:
 
     return config
 
-def determine_override_options(selected_options: tuple, override_opts: DictLike, set_of_possible_options: tuple = ()) -> Dict[str, Any]:
+def determine_override_options(selected_options: Tuple[Any, ...], override_opts: DictLike,
+                               set_of_possible_options: Optional[Tuple[Any, ...]] = None) -> Dict[str, Any]:
     """ Recursively extract the dict described in override_options().
 
     In particular, this searches for selected options in the override_opts dict. It stores only
@@ -155,12 +156,18 @@ def determine_override_options(selected_options: tuple, override_opts: DictLike,
             should be used to override the configuration options.
         set_of_possible_options (tuple of enums): Possible options for the override value categories.
     """
+    # Validation
+    if set_of_possible_options is None:
+        set_of_possible_options = ()
+
     override_dict: Dict[str, Any] = {}
     for option in override_opts:
         # We need to cast the option to a string to effectively compare to the selected option,
         # since only some of the options will already be strings
         if str(option) in list(map(lambda opt: str(opt), selected_options)):
-            override_dict.update(determine_override_options(selected_options, override_opts[option], set_of_possible_options))
+            override_dict.update(
+                determine_override_options(selected_options, override_opts[option], set_of_possible_options)
+            )
         else:
             logger.debug(f"override_opts: {override_opts}")
             # Look for whether the key is one of the possible but unselected options.
@@ -233,7 +240,7 @@ def determine_selection_of_iterable_values_from_config(config: DictLike, possibl
 
     return iterables
 
-def _key_index_iter(self) -> Iterator[Tuple[str, Any]]:
+def _key_index_iter(self: Any) -> Iterator[Tuple[str, Any]]:
     """ Allows for iteration over the ``KeyIndex`` values.
 
     This function is intended to be assigned to a newly created KeyIndex class. It enables iteration
@@ -246,11 +253,11 @@ def _key_index_iter(self) -> Iterator[Tuple[str, Any]]:
     for k, v in vars(self).items():
         yield k, v
 
-def create_key_index_object(key_index_name: str, iterables: Dict[str, Any]) -> Any:
+def create_key_index_object(key_index_name: str, iterables: Mapping[str, Any]) -> Any:
     """ Create a ``KeyIndex`` class based on the passed attributes.
 
     This is wrapped into a helper function to allow for the ``__itter__`` to be specified for the object.
-    Further, this allows it to be called outside the package when it is needed in analysis tasks..
+    Further, this allows it to be called outside the package when it is needed in analysis tasks.
 
     Args:
         key_index_name: Name of the iterable key index.
@@ -292,7 +299,9 @@ def create_key_index_object(key_index_name: str, iterables: Dict[str, Any]) -> A
 
     return KeyIndex
 
-def create_objects_from_iterables(obj, args: dict, iterables: Dict[str, Any], formatting_options: Dict[str, Any], key_index_name: str = "KeyIndex") -> Tuple[Any, Dict[str, Any], dict]:
+def create_objects_from_iterables(obj: Any, args: Dict[str, Any], iterables: Mapping[str, Any],
+                                  formatting_options: Dict[str, Any],
+                                  key_index_name: str = "KeyIndex") -> Tuple[Any, Mapping[str, Any], Mapping[Any, Any]]:
     """ Create objects for each set of values based on the given arguments.
 
     The iterable values are available under a key index ``dataclass`` which is used to index the returned
@@ -314,7 +323,7 @@ def create_objects_from_iterables(obj, args: dict, iterables: Dict[str, Any], fo
         ... )
         (
             KeyIndex,
-            {"a": ["a1", "a2"], "b": ["b1", "b2"]}
+            {"a": ["a1", "a2"], "b": ["b1", "b2"]},
             {
                 KeyIndex(a = "a1", b = "b1"): obj(a = "a1", b = "b1"),
                 KeyIndex(a = "a1", b = "b2"): obj(a = "a1", b = "b2"),
@@ -324,7 +333,7 @@ def create_objects_from_iterables(obj, args: dict, iterables: Dict[str, Any], fo
         )
 
     Args:
-        obj (object): The object to be constructed.
+        obj: The object to be constructed.
         args: Arguments to be passed to the object to create it.
         iterables: Iterables to be used to create the objects, with entries of the form
             ``"name_of_iterable": iterable``.
@@ -389,7 +398,7 @@ def create_objects_from_iterables(obj, args: dict, iterables: Dict[str, Any], fo
 
     return (KeyIndex, iterables, objects)
 
-class formatting_dict(dict):
+class formatting_dict(Dict[Any, Any]):
     """ Dict to handle missing keys when formatting a string.
 
     It returns the missing key for later use in formatting. See: https://stackoverflow.com/a/17215533
@@ -448,7 +457,8 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
 
     return new_obj
 
-def iterate_with_selected_objects(analysis_objects: Mapping[Any, Any], **selections: Mapping[str, Any]) -> Iterator[Tuple[Any, Any]]:
+def iterate_with_selected_objects(analysis_objects: Mapping[Any, Any],
+                                  **selections: Mapping[str, Any]) -> Iterator[Tuple[Any, Any]]:
     """ Iterate over an analysis dictionary with selected attributes.
 
     Args:
@@ -466,7 +476,7 @@ def iterate_with_selected_objects(analysis_objects: Mapping[Any, Any], **selecti
             yield key_index, obj
 
 def iterate_with_selected_objects_in_order(analysis_objects: Mapping[Any, Any],
-                                           analysis_iterables: Dict[str, Sequence[Any]],
+                                           analysis_iterables: Mapping[str, Sequence[Any]],
                                            selection: Union[str, Sequence[str]]) -> Iterator[List[Tuple[Any, Any]]]:
     """ Iterate over an analysis dictionary, yielding the selected attributes in order.
 
@@ -513,7 +523,7 @@ def iterate_with_selected_objects_in_order(analysis_objects: Mapping[Any, Any],
     # Help out mypy. We don't check if it is a list to allow for other sequences.
     assert not isinstance(selection, str)
     # We don't want to impact the original analysis iterables when we pop some values below.
-    analysis_iterables = copy.copy(analysis_iterables)
+    analysis_iterables = dict(copy.copy(analysis_iterables))
 
     # Extract the selected iterators from the possible iterators so we can select on them later.
     # First, we want want each set of iterators to be of the form:
