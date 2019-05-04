@@ -2,6 +2,18 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.9.1] - 3 May 2019
+
+### Changed
+
+- Don't plot lines around patches. See: `aaa1d8374fd871246290ce76f1796f2f7582b01d`.
+
+### Fixed
+
+- Histogram integral values now write properly to YAML. See: `c88dabceedcd0e4576802ab322b96592dcaf5233`.
+- Fix `mypy` typing in third party packages by adding `zip_safe = False` in the `setup.py`. See:
+  `d3d212b8569a2b994a33dc5d817d7bd7395dcc1a`.
+
 ## [1.9] - 27 March 2019
 
 ### Added
