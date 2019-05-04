@@ -11,8 +11,6 @@ import numpy as np
 import operator
 from typing import Any, Mapping, Sequence, Union
 
-from pachyderm import histogram
-
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -94,22 +92,3 @@ def recursive_getitem(d: Mapping[str, Any], keys: Union[str, Sequence[str]]) -> 
     else:
         return functools.reduce(operator.getitem, keys, d)
 
-def get_array_for_fit(observables: dict, track_pt_bin: int, jet_pt_bin: int) -> histogram.Histogram1D:
-    """ Get a Histogram1D associated with the selected jet and track pt bins.
-
-    This is often used to retrieve data for fitting.
-
-    Args:
-        observables (dict): The observables from which the hist should be retrieved.
-        track_pt_bin (int): Track pt bin of the desired hist.
-        jet_ptbin (int): Jet pt bin of the desired hist.
-    Returns:
-        Histogram1D: Converted TH1 or uproot histogram.
-    Raises:
-        ValueError: If the requested observable couldn't be found.
-    """
-    for name, observable in observables.items():
-        if observable.track_pt_bin == track_pt_bin and observable.jet_pt_bin == jet_pt_bin:
-            return histogram.Histogram1D.from_existing_hist(observable.hist)
-
-    raise ValueError("Cannot find fit with jet pt bin {jet_pt_bin} and track pt bin {track_pt_bin}")

@@ -11,7 +11,6 @@ import numpy as np
 import pytest
 from typing import Any
 
-from pachyderm import histogram
 from pachyderm import utils
 
 # Setup logger
@@ -138,31 +137,4 @@ def test_recursive_getitem_fail(setup_recursive_getitem):
         utils.recursive_getitem(d, ["fake", "keys"])
     # It will only return that "random" was not found, as it can't look further into the path.
     assert "fake" in exception_info.value.args[0]
-
-@pytest.mark.ROOT
-class TestWithRootHists():
-    def test_get_array_for_fit(self, logging_mixin, mocker, test_root_hists):
-        """ Test getting an array from a hist in a dict of observables. """
-        observables = {}
-        for i in range(5):
-            observables[i] = mocker.MagicMock(spec = ["jet_pt_bin", "track_pt_bin", "hist"],
-                                              jet_pt_bin = i, track_pt_bin = i + 2,
-                                              hist = None)
-        # We mock the Observable containing a HistogramContainer, which then contains a normal histogram.
-        # We only want one Observable to work. All others shouldn't have a hist to ensure that the test
-        # will fail if something has gone awry.
-        observables[3].hist = mocker.MagicMock(spec = ["hist"], hist = test_root_hists.hist1D)
-        hist_array = utils.get_array_for_fit(observables, jet_pt_bin = 3, track_pt_bin = 5)
-
-        # Expected values
-        expected_hist_array = histogram.Histogram1D.from_existing_hist(hist = test_root_hists.hist1D)
-
-        # This is basically a copy of test_histogram.check_hist, but since it is brief and convenient
-        # to have it here, we just leave it.
-        assert len(hist_array.x) > 0
-        assert np.array_equal(hist_array.x, expected_hist_array.x)
-        assert len(hist_array.y) > 0
-        assert np.array_equal(hist_array.y, expected_hist_array.y)
-        assert len(hist_array.errors) > 0
-        assert np.array_equal(hist_array.errors, expected_hist_array.errors)
 
