@@ -37,7 +37,7 @@ def moving_average(arr: np.ndarray, n: int = 3) -> np.ndarray:
     ret[n:] = ret[n:] - ret[:-n]
     return ret[n - 1:] / n
 
-def recursive_getattr(obj: Any, attr: str, *args) -> Any:
+def recursive_getattr(obj: Any, attr: str, *args: Any) -> Any:
     """ Recursive ``getattar``.
 
     This can be used as a drop in for the standard ``getattr(...)``. Credit to:
@@ -51,8 +51,8 @@ def recursive_getattr(obj: Any, attr: str, *args) -> Any:
     Raises:
         AttributeError: If the attribute was not found and no default was provided. (Same as ``getattr``).
     """
-    def _getattr(obj, attr):
-        return getattr(obj, attr, *args)
+    def _getattr(obj_recurse: Any, attr_recurse: str) -> Any:
+        return getattr(obj_recurse, attr_recurse, *args)
     return functools.reduce(_getattr, [obj] + attr.split('.'))
 
 def recursive_setattr(obj: Any, attr: str, val: Any) -> Any:
