@@ -183,7 +183,7 @@ class HistAxisRange(generic_class.EqualityMixin):
         Returns:
             Function to be called with an axis to determine the desired bin on that axis.
         """
-        def return_func(axis) -> Any:
+        def return_func(axis: Axis) -> Any:
             """ Apply the stored function and value to a given axis.
 
             Args:
@@ -256,7 +256,7 @@ class HistProjector:
                  observable_to_project_from: Union[Dict[str, Any], Hist, Any],
                  output_observable: Union[Dict[str, Any], Hist, Any],
                  projection_name_format: str,
-                 output_attribute_name: str = None,
+                 output_attribute_name: Optional[str] = None,
                  projection_information: Optional[Dict[str, Any]] = None):
         # Determine whether we projecting multiple objects.
         # If not, store the attribute under which we are going to store the output.
@@ -462,9 +462,9 @@ class HistProjector:
 
     def _project_observable(self, input_key: str,
                             input_observable: Any,
-                            get_hist_args: Dict[str, Any] = None,
-                            projection_name_args: Dict[str, Any] = None,
-                            **kwargs) -> Hist:
+                            get_hist_args: Optional[Dict[str, Any]] = None,
+                            projection_name_args: Optional[Dict[str, Any]] = None,
+                            **kwargs: Any) -> Hist:
         """ Perform a projection for a single observable.
 
         Note:
@@ -501,7 +501,7 @@ class HistProjector:
         # updates, so we update it again to be certain.
         projection_name_args.update(kwargs)
         # Put the values included by default last to ensure nothing overwrites these values
-        projection_name_args.update({  # type: ignore
+        projection_name_args.update({
             "input_key": input_key,
             "input_observable": input_observable,
             "input_hist": hist
@@ -569,7 +569,7 @@ class HistProjector:
 
         return output_hist, projection_name, projection_name_args
 
-    def _project_single_observable(self, **kwargs: Dict[str, Any]) -> Hist:
+    def _project_single_observable(self, **kwargs: Any) -> Hist:
         """ Driver function for projecting and storing a single observable.
 
         Args:
@@ -588,13 +588,13 @@ class HistProjector:
         )
         # Store the output.
         output_hist_args = projection_name_args
-        output_hist_args.update({  # type: ignore
+        output_hist_args.update({
             "output_hist": output_hist,
             "projection_name": projection_name
         })
 
         # Store the final histogram.
-        output_hist = self.output_hist(**output_hist_args)  # type: ignore
+        output_hist = self.output_hist(**output_hist_args)
 
         # Store the final output hist
         if not hasattr(self.output_observable, self.output_attribute_name):
@@ -605,7 +605,7 @@ class HistProjector:
         # Return the observable
         return output_hist
 
-    def _project_dict(self, **kwargs: Dict[str, Any]) -> Dict[str, Hist]:
+    def _project_dict(self, **kwargs: Any) -> Dict[str, Hist]:
         """ Driver function for projecting and storing a dictionary of observables.
 
         Args:
@@ -627,16 +627,16 @@ class HistProjector:
 
             # Store the output observable
             output_hist_args = projection_name_args
-            output_hist_args.update({  # type: ignore
+            output_hist_args.update({
                 "output_hist": output_hist,
                 "projection_name": projection_name
             })
-            output_key_name = self.output_key_name(**output_hist_args)  # type: ignore
-            self.output_observable[output_key_name] = self.output_hist(**output_hist_args)  # type: ignore
+            output_key_name = self.output_key_name(**output_hist_args)
+            self.output_observable[output_key_name] = self.output_hist(**output_hist_args)
 
         return self.output_observable
 
-    def project(self, **kwargs: Dict[str, Any]) -> Union[Hist, Dict[str, Hist]]:
+    def project(self, **kwargs: Any) -> Union[Hist, Dict[str, Hist]]:
         """ Perform the requested projection(s).
 
         Note:
@@ -704,7 +704,7 @@ class HistProjector:
         """
         return observable
 
-    def output_key_name(self, input_key: str, output_hist: Hist, projection_name: str, **kwargs) -> str:
+    def output_key_name(self, input_key: str, output_hist: Hist, projection_name: str, **kwargs: str) -> str:
         """ Returns the key under which the output object should be stored.
 
         Note:
@@ -723,7 +723,7 @@ class HistProjector:
         """
         return projection_name
 
-    def output_hist(self, output_hist: Hist, input_observable: Any, **kwargs: Dict[str, Any]) -> Union[Hist, Any]:
+    def output_hist(self, output_hist: Hist, input_observable: Any, **kwargs: Any) -> Union[Hist, Any]:
         """ Return an output object. It should store the ``output_hist``.
 
         Note:

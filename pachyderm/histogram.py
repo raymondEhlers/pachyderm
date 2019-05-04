@@ -8,14 +8,17 @@
 from dataclasses import dataclass
 import logging
 import numpy as np
-from typing import Any, Dict, Tuple, TypeVar, Union
+from types import TracebackType
+from typing import Any, cast, ContextManager, Dict, Optional, Tuple, Type, TypeVar, Union
 
-from pachyderm.typing_helpers import Hist
+from pachyderm.typing_helpers import Axis, Hist, TFile
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
-class RootOpen:
+_T_ContextManager = TypeVar("_T_ContextManager")
+
+class RootOpen(ContextManager[_T_ContextManager]):
     """ Very simple helper to open root files. """
     def __init__(self, filename: str, mode: str = "read"):
         import ROOT
@@ -23,12 +26,17 @@ class RootOpen:
         self.mode = mode
         self.f = ROOT.TFile.Open(self.filename, self.mode)
 
-    def __enter__(self):
+    def __enter__(self) -> TFile:
         if not self.f or self.f.IsZombie():
             raise IOError(f"Failed to open ROOT file '{self.filename}'.")
         return self.f
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, execption_type: Optional[Type[BaseException]],
+                 exception_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
+        """ We want to pass on all raised exceptions, but ensure that the file is always closed. """
+        # The typing information is from here:
+        # https://github.com/python/mypy/blob/master/docs/source/protocols.rst#context-manager-protocols
+
         # Pass on all of the exceptions, but make sure that the file is closed.
         # NOTE: The file isn't always valid because one has to deal with ROOT,
         #       so we have to explicitly check that is is valid before continuing.
@@ -49,7 +57,7 @@ def get_histograms_in_file(filename: str) -> Dict[str, Any]:
     """
     return get_histograms_in_list(filename = filename)
 
-def get_histograms_in_list(filename: str, list_name: str = None) -> Dict[str, Any]:
+def get_histograms_in_list(filename: str, list_name: Optional[str] = None) -> Dict[str, Any]:
     """ Get histograms from the file and make them available in a dict.
 
     Lists are recursively explored, with all lists converted to dictionaries, such that the return
@@ -65,7 +73,7 @@ def get_histograms_in_list(filename: str, list_name: str = None) -> Dict[str, An
     Raises:
         ValueError: If the list could not be found in the given file.
     """
-    hists: dict = {}
+    hists: Dict[str, Any] = {}
     with RootOpen(filename = filename, mode = "READ") as fIn:
         if list_name is not None:
             hist_list = fIn.Get(list_name)
@@ -198,25 +206,27 @@ class Histogram1D:
         # index 2, but we want to return bin 1, so we subtract one from the result.
         # NOTE: By specifying that ``side = "right"``, it find values as arr[i] <= value < arr[i - 1],
         #       which matches the ROOT convention.
-        return np.searchsorted(self.bin_edges, value, side = "right") - 1
+        return cast(
+            int,
+            np.searchsorted(self.bin_edges, value, side = "right") - 1
+        )
 
-    def copy(self):
+    def copy(self: _T) -> _T:
         """ Copies the object.
 
         In principle, this should be the same as ``copy.deepcopy(...)``, at least when this was written in
         Feb 2019. But ``deepcopy(...)`` often seems to have very bad performance (and perhaps does additional
         implicit copying), so we copy these numpy arrays by hand.
         """
-        # We want to copy bin_edges, y, and errors_squared, but not anything else.
-        # Namely, we skip _x here. In principle, it wouldn't really be a problem to
-        # copy, but there may be other "_" fields that we want to skip later, so we
-        # do the right thing now.
+        # We want to copy bin_edges, y, and errors_squared, but not anything else. Namely, we skip _x here.
+        # In principle, it wouldn't really be a problem to copy, but there may be other "_" fields that we
+        # want to skip later, so we do the right thing now.
         kwargs = {k: np.array(v, copy = True) for k, v in vars(self).items() if not k.startswith("_")}
         return type(self)(**kwargs)
 
     def counts_in_interval(self,
-                           min_value: float = None, max_value: float = None,
-                           min_bin: int = None, max_bin: int = None) -> Tuple[float, float]:
+                           min_value: Optional[float] = None, max_value: Optional[float] = None,
+                           min_bin: Optional[int] = None, max_bin: Optional[int] = None) -> Tuple[float, float]:
         """ Count the number of counts within bins in an interval.
 
         Note:
@@ -241,8 +251,8 @@ class Histogram1D:
         )
 
     def integral(self,
-                 min_value: float = None, max_value: float = None,
-                 min_bin: int = None, max_bin: int = None) -> Tuple[float, float]:
+                 min_value: Optional[float] = None, max_value: Optional[float] = None,
+                 min_bin: Optional[int] = None, max_bin: Optional[int] = None) -> Tuple[float, float]:
         """ Integrate the histogram over the given range.
 
         Note:
@@ -267,8 +277,8 @@ class Histogram1D:
         )
 
     def _integral(self,
-                  min_value: float = None, max_value: float = None,
-                  min_bin: int = None, max_bin: int = None,
+                  min_value: Optional[float] = None, max_value: Optional[float] = None,
+                  min_bin: Optional[int] = None, max_bin: Optional[int] = None,
                   multiply_by_bin_width: bool = False) -> Tuple[float, float]:
         """ Integrate the histogram over the specified range.
 
@@ -429,7 +439,7 @@ class Histogram1D:
         self.y = np.divide(self.y, other.y, out = np.zeros_like(self.y), where = other.y != 0)
         return self
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         """ Check for equality. """
         attributes = [k for k in vars(self) if not k.startswith("_")]
         other_attributes = [k for k in vars(other) if not k.startswith("_")]
@@ -444,7 +454,7 @@ class Histogram1D:
         return all(agreement)
 
     @staticmethod
-    def _from_uproot(hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _from_uproot(hist: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ Convert a uproot histogram to a set of array for creating a Histogram.
 
         Note:
@@ -467,7 +477,7 @@ class Histogram1D:
         return (bin_edges, y, errors)
 
     @staticmethod
-    def _from_th1(hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _from_th1(hist: Hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """ Convert a TH1 histogram to a Histogram.
 
         Note:
@@ -494,7 +504,7 @@ class Histogram1D:
         return (bin_edges, y, errors)
 
     @classmethod
-    def from_existing_hist(cls, hist: Union[Hist, Any]):
+    def from_existing_hist(cls: Type[_T], hist: Union[Hist, Any]) -> _T:
         """ Convert an existing histogram.
 
         Note:
@@ -599,7 +609,7 @@ def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_e
 
     return (X, Y, hist_array)
 
-def get_bin_edges_from_axis(axis) -> np.ndarray:
+def get_bin_edges_from_axis(axis: Axis) -> np.ndarray:
     """ Get bin edges from a ROOT hist axis.
 
     Note:

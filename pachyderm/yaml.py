@@ -39,7 +39,7 @@ import inspect
 import logging
 import numpy as np
 import ruamel.yaml
-from typing import Any, Iterable, Optional, Sequence, Type, TypeVar
+from typing import Any, cast, Iterable, List, Optional, Sequence, Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -50,16 +50,17 @@ Constructor = Type[ruamel.yaml.constructor.BaseConstructor]
 T_EnumToYAML = TypeVar("T_EnumToYAML", bound = enum.Enum)
 T_EnumFromYAML = TypeVar("T_EnumFromYAML", bound = enum.Enum)
 
-def yaml(modules_to_register: Iterable[Any] = None, classes_to_register: Iterable[Any] = None) -> ruamel.yaml.YAML:
+def yaml(modules_to_register: Optional[Iterable[Any]] = None,
+         classes_to_register: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
     """ Create a YAML object for loading a YAML configuration.
 
     Args:
         modules_to_register: Modules containing classes to be registered with the YAML object. Default: None.
         classes_to_register: Classes to be registered with the YAML object. Default: None.
     Returns:
-        A newly creating YAML object, configured as apporpirate.
+        A newly creating YAML object, configured as appropriate.
     """
-    # Defein a round-trip yaml object for us to work with. This object should be imported by other modules
+    # Define a round-trip YAML object for us to work with. This object should be imported by other modules
     # NOTE: "typ" is a not a typo. It stands for "type"
     yaml = ruamel.yaml.YAML(typ = "rt")
 
@@ -125,9 +126,13 @@ def numpy_to_yaml(representer: Representer, data: np.ndarray) -> Sequence[Any]:
         (It would register the type of the class, rather than of `numpy.ndarray`). Instead,
         we use the above approach to register this method explicitly with the representer.
     """
-    return representer.represent_sequence(
-        "!numpy_array",
-        data.tolist()
+    # The representer is seen by mypy as Any, so we need to explicitly note that it's a sequence.
+    return cast(
+        List[Any],
+        representer.represent_sequence(
+            "!numpy_array",
+            data.tolist()
+        ),
     )
 
 def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNode) -> np.ndarray:
@@ -153,7 +158,8 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
     logger.debug(f"{data}, {values}")
     return np.array(values)
 
-def enum_to_yaml(cls: Type[T_EnumToYAML], representer: Representer, data: T_EnumToYAML) -> ruamel.yaml.nodes.ScalarNode:
+def enum_to_yaml(cls: Type[T_EnumToYAML],
+                 representer: Representer, data: T_EnumToYAML) -> ruamel.yaml.nodes.ScalarNode:
     """ Encodes YAML representation.
 
     This is a mixin method for writing enum values to YAML. It needs to be added to the enum
@@ -180,7 +186,8 @@ def enum_to_yaml(cls: Type[T_EnumToYAML], representer: Representer, data: T_Enum
         f"{str(data)}"
     )
 
-def enum_from_yaml(cls: Type[T_EnumFromYAML], constructor: Constructor, node: ruamel.yaml.nodes.ScalarNode) -> T_EnumFromYAML:
+def enum_from_yaml(cls: Type[T_EnumFromYAML],
+                   constructor: Constructor, node: ruamel.yaml.nodes.ScalarNode) -> T_EnumFromYAML:
     """ Decode YAML representation.
 
     This is a mixin method for reading enum values from YAML. It needs to be added to the enum
@@ -196,6 +203,5 @@ def enum_from_yaml(cls: Type[T_EnumFromYAML], constructor: Constructor, node: ru
     Returns:
         The constructed YAML value from the name of the enumerated value.
     """
-    # mypy doesn't like indexing to construct the enumeration.
-    return cls[node.value]  # type: ignore
+    return cls[node.value]
 

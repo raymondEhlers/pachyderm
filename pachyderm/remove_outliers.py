@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 import enum
 import logging
 import numpy as np
-from typing import Any, Dict, List, Mapping, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 from pachyderm import histogram
 from pachyderm import projectors
@@ -94,7 +94,7 @@ def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxi
 def _determine_outliers_index(hist: Hist,
                               moving_average_threshold: float = 1.0,
                               number_of_values_to_search_ahead: int = 5,
-                              limit_of_number_of_values_below_threshold: int = None) -> int:
+                              limit_of_number_of_values_below_threshold: Optional[int] = None) -> int:
     """ Determine the location of where outliers begin in a 1D histogram.
 
     When the moving average falls below the limit, we consider the outliers to have begun.
@@ -276,7 +276,8 @@ def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, outliers_r
 class OutliersRemovalManager:
     moving_average_threshold: float = field(default = 1.0)
 
-    def run(self, outliers_removal_axis: OutliersRemovalAxis, hist: Hist = None, hists: Mapping[str, Hist] = None) -> int:
+    def run(self, outliers_removal_axis: OutliersRemovalAxis,
+            hist: Optional[Hist] = None, hists: Optional[Mapping[str, Hist]] = None) -> int:
         """ Remove outliers from the given histogram(s).
 
         Args:
@@ -326,7 +327,7 @@ class OutliersRemovalManager:
                 )
             )
 
-        outliers_start_index = np.max(outliers_indices)
+        outliers_start_index: int = np.max(outliers_indices)
         logger.debug(f"outliers_start_index: {outliers_start_index}")
 
         for hist_name, hist in hists.items():
