@@ -2,6 +2,13 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.9.3] - 16 May 2019
+
+### Changed
+
+- Refactor `histogram.find_bin(...)` so that it can be used externally. See:
+  `a2a9838a0e11d950ba5680656df9271e88c4c8b3`.
+
 ## [1.9.2] - 4 May 2019
 
 ### Added
