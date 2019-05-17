@@ -193,6 +193,8 @@ class Histogram1D:
     def find_bin(self, value: float) -> int:
         """ Find the bin corresponding to the specified value.
 
+        For further information, see ``find_bin(...)`` in this module.
+
         Note:
             Bins are 0-indexed here, while in ROOT they are 1-indexed.
 
@@ -201,15 +203,7 @@ class Histogram1D:
         Returns:
             Bin corresponding to the value.
         """
-        # This will return the index position where the value should be inserted.
-        # This means that if we have the bin edges [0, 1, 2], and we pass value 1.5, it will return
-        # index 2, but we want to return bin 1, so we subtract one from the result.
-        # NOTE: By specifying that ``side = "right"``, it find values as arr[i] <= value < arr[i - 1],
-        #       which matches the ROOT convention.
-        return cast(
-            int,
-            np.searchsorted(self.bin_edges, value, side = "right") - 1
-        )
+        return find_bin(self.bin_edges, value)
 
     def copy(self: _T) -> _T:
         """ Copies the object.
@@ -629,3 +623,26 @@ def get_bin_edges_from_axis(axis: Axis) -> np.ndarray:
 
     return bin_edges
 
+def find_bin(bin_edges: np.ndarray, value: float) -> int:
+    """ Determine the index position where the value should be inserted.
+
+    This is basically ``ROOT.TH1.FindBin(value)``, but it can used for any set of bin_edges.
+
+    Note:
+        Bins are 0-indexed here, while in ROOT they are 1-indexed.
+
+    Args:
+        bin_edges: Bin edges of the histogram.
+        value: Value to find within those bin edges.
+    Returns:
+        Index of the bin where that value would reside in the histogram.
+    """
+    # This will return the index position where the value should be inserted.
+    # This means that if we have the bin edges [0, 1, 2], and we pass value 1.5, it will return
+    # index 2, but we want to return bin 1, so we subtract one from the result.
+    # NOTE: By specifying that ``side = "right"``, it find values as arr[i] <= value < arr[i - 1],
+    #       which matches the ROOT convention.
+    return cast(
+        int,
+        np.searchsorted(bin_edges, value, side = "right") - 1
+    )
