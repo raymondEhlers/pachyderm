@@ -277,7 +277,9 @@ class OutliersRemovalManager:
     moving_average_threshold: float = field(default = 1.0)
 
     def run(self, outliers_removal_axis: OutliersRemovalAxis,
-            hist: Optional[Hist] = None, hists: Optional[Mapping[str, Hist]] = None) -> int:
+            hist: Optional[Hist] = None, hists: Optional[Mapping[str, Hist]] = None,
+            mean_fractional_difference_limit: float = 0.01,
+            median_fractional_difference_limit: float = 0.01,) -> int:
         """ Remove outliers from the given histogram(s).
 
         Args:
@@ -285,6 +287,10 @@ class OutliersRemovalManager:
                 the particle level aixs.
             hist: Histogram to check for outliers. Either this or ``hists`` must be specified.
             hists: Histograms to check for outliers. Either this or ``hist`` must be specified.
+            mean_fractional_difference_limit: Max fractional difference of mean after outliers
+                removal. Default: 0.01.
+            median_fractional_difference_limit: Max fractional difference of median after outliers
+                removal. Default: 0.01.
         Return:
             Bin index value from which the outliers were removed. The histogram(s) is modified in place.
         """
@@ -348,10 +354,16 @@ class OutliersRemovalManager:
                 f" {mean_fractional_difference}, median fractional difference: {median_fractional_difference}"
             )
             # Provide some very broad checks. We should be very surprised if the post outliers values vary by more than 5%
-            if mean_fractional_difference > 0.01:
-                raise RuntimeError(f"Mean fractional difference is greater than 1%! {mean_fractional_difference}")
-            if median_fractional_difference > 0.01:
-                raise RuntimeError(f"Median fractional difference is greater than 1%! {median_fractional_difference}")
+            if mean_fractional_difference > mean_fractional_difference_limit:
+                raise RuntimeError(
+                    f"Mean fractional difference is greater than {mean_fractional_difference_limit * 100}%!"
+                    f" {mean_fractional_difference * 100}%"
+                )
+            if median_fractional_difference > median_fractional_difference_limit:
+                raise RuntimeError(
+                    f"Median fractional difference is greater than {median_fractional_difference_limit * 100}%!"
+                    f" {median_fractional_difference * 100}%"
+                )
 
         logger.debug(f"Outliers removal complete! Found outliers_start_index: {outliers_start_index}")
         return outliers_start_index
