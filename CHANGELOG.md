@@ -2,6 +2,14 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.9.4] - 31 May 2019
+
+### Changed
+
+- Allow configuration of max fractional difference limits of mean and median in outliers removal. See:
+  `f94d9d691a0e7e74426a38bc6cba8c35e1e2a820`.
+- Fix for latex preamble changes in MPL 3.1. See: `168f548d32ae7fd8f7c39db09ee0864ac1b1a158`.
+
 ## [1.9.3] - 16 May 2019
 
 ### Changed
