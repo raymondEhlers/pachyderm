@@ -104,10 +104,14 @@ def configure() -> None:
     #       why that might be preferable here.
 
     # Setup the LaTeX preamble
-    # Enable AMS math package (for among other things, "\text")
-    matplotlib.rcParams["text.latex.preamble"].append(r"\usepackage{amsmath}")
-    # Add fonts that will be used below. See the `mathtext` fonts set below for further info.
-    matplotlib.rcParams["text.latex.preamble"].append(r"\usepackage{sfmath}")
+    matplotlib.rcParams["text.latex.preamble"] = [
+        # Enable AMS math package (for among other things, "\text")
+        r"\usepackage{amsmath}",
+        # Add fonts that will be used below. See the `mathtext` fonts set below for further info.
+        r"\usepackage{sfmath}",
+        # Ensure that existing values are included.
+        matplotlib.rcParams["text.latex.preamble"],
+    ]
     params = {
         # Enable latex
         "text.usetex": True,
