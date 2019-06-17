@@ -41,7 +41,7 @@ def test_plot_configuration(reset_matplotlib_options) -> None:
     # Check that they've changed.
     # Of course, these are just proxies for the rest of the values
     assert matplotlib.rcParams["text.usetex"] is True
-    assert matplotlib.rcParams["legend.fontsize"] == 11.0
+    assert matplotlib.rcParams["legend.fontsize"] == 18.0
 
     # NOTE: Unfortunately, we cannot actually plot with the current settings because:
     #        - Plotting requires LaTeX, which is not available in testing envrionments (travis, etc).

@@ -137,11 +137,11 @@ def configure() -> None:
         # Plot axis underneath points
         "axes.axisbelow": True,
         # Modify label sizes.
-        "axes.labelsize": 12.0,
+        "axes.labelsize": 20.0,
         "axes.linewidth": 1.25,
         "axes.titlesize": 12.0,
-        "font.size": 12.0,
-        "legend.fontsize": 11.0,
+        "font.size": 18.0,
+        "legend.fontsize": 18.0,
         # Set the possible sans serif fonts. These are the ones made available in seaborn.
         "font.sans-serif": ["Arial", "DejaVu Sans", "Liberation " "Sans",
                             "Bitstream Vera Sans", "sans-serif"],
@@ -160,8 +160,8 @@ def configure() -> None:
         # Apparently this has to be enabled just for setting the edge color to be possible.
         "patch.force_edgecolor": True,
         # Tick label size.
-        "xtick.labelsize": 11.0,
-        "ytick.labelsize": 11.0,
+        "xtick.labelsize": 20.0,
+        "ytick.labelsize": 20.0,
         # Major tick settings
         "xtick.major.size": 6.0,
         "ytick.major.size": 6.0,
