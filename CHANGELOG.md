@@ -2,6 +2,13 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.9.5] - 17 June 2019
+
+### Changed
+
+- Increased default plot font size. This generally makes things much more readable (but of course can be
+  adjusted for each plot later if necessary). See: `56a6bef789b1329bb810139918cbabdf74336709`.
+
 ## [1.9.4] - 31 May 2019
 
 ### Changed
