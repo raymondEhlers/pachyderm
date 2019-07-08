@@ -5,7 +5,7 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 import numpy as np
 from types import TracebackType
@@ -152,10 +152,13 @@ class Histogram1D:
         bin_edges (np.ndarray): The bin edges.
         errors (np.ndarray): The bin errors.
         errors_squared (np.ndarray): The bin sum weight squared errors.
+        metadata (dict): Any additional metadata that should be stored with the histogram. Keys are expected to be
+            strings, while the values can be anything. For example, could contain systematic errors, etc.
     """
     bin_edges: np.ndarray
     y: np.ndarray
     errors_squared: np.ndarray
+    metadata: Dict[str, Any] = field(default_factory = dict)
 
     @property
     def errors(self) -> np.ndarray:
@@ -443,9 +446,13 @@ class Histogram1D:
             return False
 
         # All attributes are np arrays, so we compare the arrays using ``np.allclose``
-        agreement = [np.allclose(getattr(self, a), getattr(other, a)) for a in attributes]
-        # All arrays must agree.
-        return all(agreement)
+        # NOTE: allclose can't handle the metadata dict, so we skip it here and check
+        #       it explicitly below.
+        agreement = [np.allclose(getattr(self, a), getattr(other, a)) for a in attributes if a != "metadata"]
+        # Check metadata
+        metadata_agree = (self.metadata == other.metadata)
+        # All arrays and the metadata must agree.
+        return all(agreement) and metadata_agree
 
     @staticmethod
     def _from_uproot(hist: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
