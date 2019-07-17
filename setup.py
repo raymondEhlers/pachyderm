@@ -13,12 +13,13 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 import os
+from typing import Any, cast, Dict
 
-def get_version():
-    versionModule = {}
+def get_version() -> str:
+    version_module: Dict[str, Any] = {}
     with open(os.path.join("pachyderm", "version.py")) as f:
-        exec(f.read(), versionModule)
-    return versionModule["__version__"]
+        exec(f.read(), version_module)
+    return cast(str, version_module["__version__"])
 
 # Get the long description from the README file
 here = os.path.abspath(os.path.dirname(__file__))
@@ -71,7 +72,9 @@ setup(
     # This is usually the minimal set of the required packages.
     install_requires = [
         "dataclasses;python_version<'3.7'",
-        "ruamel.yaml",
+        # Pinned version because the typing information doesn't seem right,
+        # at least with how I understand it.
+        "ruamel.yaml<0.15.99",
         "numpy",
         "uproot",
         # Depends on ROOT, but that can't be installed through pip.

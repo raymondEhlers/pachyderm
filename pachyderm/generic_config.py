@@ -34,7 +34,7 @@ def load_configuration(yaml: yaml.ruamel.yaml.YAML, filename: str) -> DictLike:
 
     return config
 
-def override_options(config: DictLike, selected_options: Tuple[Any, ...], set_of_possible_options: Tuple[enum.Enum, ...], config_containing_override: DictLike = None) -> DictLike:
+def override_options(config: DictLike, selected_options: Tuple[Any, ...], set_of_possible_options: Tuple[enum.Enum, ...], config_containing_override: Optional[DictLike] = None) -> DictLike:
     """ Determine override options for a particular configuration.
 
     The options are determined by searching following the order specified in selected_options.
