@@ -2,6 +2,18 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [1.9.6] - 19 July 2019
+
+### Added
+
+- `metadata` field to `Histogram1D` for storing additional information, such as additional error arrays (for
+  example, systematics). See: `58d35b341f3b4890c59c9cb9ec70b72836793fc2`.
+
+### Changed
+
+- Fixed some typing and pinned `ruamel.yaml` to the pre `py.typed` version until the typing information
+  stabilizes. See: `933a1fb85f3ab7bf1daadeb2d260dacd37732a1a`.
+
 ## [1.9.5] - 17 June 2019
 
 ### Changed
