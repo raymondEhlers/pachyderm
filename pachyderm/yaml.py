@@ -34,10 +34,12 @@ Note:
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+import base64
 import enum
 import inspect
 import logging
-from typing import Any, Iterable, List, Optional, Sequence, Type, TypeVar, cast
+from io import BytesIO
+from typing import Any, Iterable, Optional, Type, TypeVar, cast
 
 import numpy as np
 import ruamel.yaml
@@ -110,7 +112,7 @@ def register_module_classes(yaml: ruamel.yaml.YAML, modules: Optional[Iterable[A
 # Representers and constructors for individual classes.
 #
 
-def numpy_to_yaml(representer: Representer, data: np.ndarray) -> Sequence[Any]:
+def numpy_to_yaml(representer: Representer, data: np.ndarray) -> str:
     """ Write a numpy array to YAML.
 
     It registers the array under the tag ``!numpy_array``.
@@ -127,13 +129,17 @@ def numpy_to_yaml(representer: Representer, data: np.ndarray) -> Sequence[Any]:
         (It would register the type of the class, rather than of `numpy.ndarray`). Instead,
         we use the above approach to register this method explicitly with the representer.
     """
-    # The representer is seen by mypy as Any, so we need to explicitly note that it's a sequence.
+    # Create a bytes object, dump to it, encode the bytes to a str, and then write them.
+    # It's less transparent when physically reading it, but it should avoid encoding issues.
+    b = BytesIO()
+    np.save(b, data)
+    b.seek(0)
+    # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
     return cast(
-        List[Any],
-        representer.represent_sequence(
-            "!numpy_array",
-            data.tolist()
-        ),
+        str,
+        representer.represent_scalar(
+            "!numpy_array", base64.encodebytes(b.read()).decode("utf-8"),
+        )
     )
 
 def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNode) -> np.ndarray:
@@ -153,11 +159,8 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
         (It would register the type of the class, rather than of `numpy.ndarray`). Instead,
         we use the above approach to register this method explicitly with the representer.
     """
-    # Construct the contained values so that we properly construct int, float, etc.
-    # We just leave this to YAML because it already stores this information.
-    values = [constructor.construct_object(n) for n in data.value]
-    logger.debug(f"{data}, {values}")
-    return np.array(values)
+    b = data.value.encode("utf-8")
+    return np.load(BytesIO(base64.decodebytes(b)))
 
 def enum_to_yaml(cls: Type[T_EnumToYAML],
                  representer: Representer, data: T_EnumToYAML) -> ruamel.yaml.nodes.ScalarNode:
