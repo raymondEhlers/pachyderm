@@ -1,6 +1,30 @@
 pachyderm package
 =================
 
+pachyderm.fit.base module
+-------------------------
+
+.. automodule:: pachyderm.fit.base
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pachyderm.fit.cost_function module
+----------------------------------
+
+.. automodule:: pachyderm.fit.cost_function
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pachyderm.fit.function module
+-----------------------------
+
+.. automodule:: pachyderm.fit.function
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pachyderm.generic\_class module
 -------------------------------
 
@@ -21,6 +45,14 @@ pachyderm.histogram module
 --------------------------
 
 .. automodule:: pachyderm.histogram
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+pachyderm.plot module
+---------------------
+
+.. automodule:: pachyderm.plot
     :members:
     :undoc-members:
     :show-inheritance:
