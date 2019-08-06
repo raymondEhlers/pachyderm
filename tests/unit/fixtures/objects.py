@@ -8,9 +8,10 @@
 from dataclasses import dataclass
 import numpy as np
 import pytest
+from typing import Any, Callable, Tuple
 
-@pytest.fixture
-def test_root_hists():
+@pytest.fixture  # type: ignore
+def test_root_hists() -> Any:
     """ Create minimal TH*F hists in 1D, 2D, and 3D. Each has been filled once.
 
     Args:
@@ -40,8 +41,8 @@ def test_root_hists():
 
     return RootHists(hist1D = hist, hist2D = hist2D, hist3D = hist3D)
 
-@pytest.fixture
-def setup_non_uniform_binning():
+@pytest.fixture  # type: ignore
+def setup_non_uniform_binning() -> Any:
     """ Test a ROOT histogram with non-uniform binning.
 
     Args:
@@ -57,8 +58,8 @@ def setup_non_uniform_binning():
 
     return hist
 
-@pytest.fixture
-def test_sparse():
+@pytest.fixture  # type: ignore
+def test_sparse() -> Any:
     """ Create a THnSparseF for testing.
 
     Fills in a set of values for testing.
@@ -97,7 +98,7 @@ def test_sparse():
 
     # Fill in some strategic values.
     # Wrapper function is for convenience.
-    def fill_sparse(one, two, three):
+    def fill_sparse(one: float, two: float, three: float) -> None:
         # NOTE: For whatever reason, this _has_ to be float64 even though this is a
         #       SparseF. Apparently switching to a SparseD also works with float64,
         #       so something strange seems to be happening internally. But since
@@ -111,4 +112,23 @@ def test_sparse():
         fill_sparse(*values)
 
     return (sparse, fill_values)
+
+@pytest.fixture  # type: ignore
+def simple_test_functions() -> Tuple[Callable[[float, float, float], float],
+                                     Callable[[float, float, float], float]]:
+    """ Define simple test functions for use in tests.
+
+    Args:
+        None.
+    Returns:
+        func 1 (args: x, a, b), func 2 (args: x, c, d)
+    """
+    def func_1(x: float, a: float, b: float) -> float:
+        """ Test function. """
+        return x + a + b
+
+    def func_2(x: float, c: float, d: float) -> float:
+        """ Test function 2. """
+        return x + c + d
+    return func_1, func_2
 

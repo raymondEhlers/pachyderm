@@ -1,0 +1,305 @@
+#1/usr/bin/env python3
+
+""" Base module for performing fits with Minuit.
+
+.. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+"""
+
+from dataclasses import dataclass
+import iminuit
+import itertools
+import logging
+import numdifftools as nd
+import numpy as np
+import time
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union
+
+from pachyderm import generic_class
+
+logger = logging.getLogger(__name__)
+
+# Typing
+T_FuncCode = TypeVar("T_FuncCode", bound = "FuncCode")
+T_ArgumentPositions = List[List[int]]
+
+class FitFailed(Exception):
+    """ Raised if the fit failed. The message will include further details. """
+    pass
+
+@dataclass
+class FitResult:
+    """ Fit result base class.
+
+    Note:
+        free_parameters + fixed_parameters = parameters
+
+    Attributes:
+        parameters: Names of the parameters used in the fit.
+        free_parameters: Names of the free parameters used in the fit.
+        fixed_parameters: Names of the fixed parameters used in the fit.
+        values_at_minimum: Contains the values of the full RP fit function at the minimum. Keys are the
+            names of parameters, while values are the numerical values at convergence.
+        errors_on_parameters: Contains the values of the errors associated with the parameters
+            determined via the fit.
+        covariance_matrix: Contains the values of the covariance matrix. Keys are tuples
+            with (param_name_a, param_name_b), and the values are covariance between the specified parameters.
+            Note that fixed parameters are _not_ included in this matrix.
+        x: x values where the fit result should be evaluated.
+        n_fit_data_points: Number of data points used in the fit.
+        minimum_val: Minimum value of the fit when it coverages. This is the chi squared value for a
+            chi squared minimization fit.
+        errors: Store the errors associated with the component fit function.
+    """
+    parameters: List[str]
+    free_parameters: List[str]
+    fixed_parameters: List[str]
+    values_at_minimum: Dict[str, float]
+    errors_on_parameters: Dict[str, float]
+    covariance_matrix: Dict[Tuple[str, str], float]
+    x: np.array
+    n_fit_data_points: int
+    minimum_val: float
+    errors: np.ndarray
+
+    @property
+    def nDOF(self) -> int:
+        """ Number of degrees of freedom. """
+        return self.n_fit_data_points - len(self.free_parameters)
+
+    @property
+    def correlation_matrix(self) -> Dict[Tuple[str, str], float]:
+        """ The correlation matrix of the free parameters.
+
+        These values are derived from the covariance matrix values stored in the fit.
+
+        Note:
+            This property caches the correlation matrix value so we don't have to calculate it every time.
+
+        Args:
+            None
+        Returns:
+            The correlation matrix of the fit result.
+        """
+        try:
+            # We attempt to cache the covaraince matrix, so first try to return that.
+            return self._correlation_matrix
+        except AttributeError:
+            def corr(i_name: str, j_name: str) -> float:
+                """ Calculate the correlation matrix (definition from iminuit) from the covariance matrix. """
+                # The + 1e-100 is just to ensure that we don't divide by 0.
+                value = (self.covariance_matrix[(i_name, j_name)]
+                         / (np.sqrt(self.covariance_matrix[(i_name, i_name)]
+                            * self.covariance_matrix[(j_name, j_name)]) + 1e-100)
+                         )
+                # Need to explicitly cast to float. Otherwise, it will return a np.float64, which will cause problems
+                # for YAML...
+                return float(value)
+
+            matrix: Dict[Tuple[str, str], float] = {}
+            for i_name in self.free_parameters:
+                for j_name in self.free_parameters:
+                    matrix[(i_name, j_name)] = corr(i_name, j_name)
+
+            self._correlation_matrix = matrix
+
+        return self._correlation_matrix
+
+def calculate_function_errors(func: Callable[..., float], fit_result: FitResult, x: np.ndarray) -> np.array:
+    """ Calculate the errors of the given function based on values from the fit.
+
+    Note:
+        We don't take the x values for the fit_result as it may be desirable to calculate the errors for
+        only a subset of x values. Plus, the component fit result doesn't store the x values, so it would
+        complicate the validation. It's much easier to just require the user to pass the x values (and it takes
+        little effort to do so).
+
+    Args:
+        func: Function to use in calculating the errors.
+        fit_result: Fit result for which the errors will be calculated.
+        x: x values where the errors will be evaluated.
+    Returns:
+        The calculated error values.
+    """
+    # Determine relevant parameters for the given function
+    func_parameters = iminuit.util.describe(func)
+
+    # We need a function wrapper to call our fit function because ``numdifftools`` requires that each variable
+    # which will be differentiated against must in a list in the first argument. The wrapper just expands
+    # that list for us.
+    def func_wrap(x: List[float]) -> float:
+        # Need to expand the arguments
+        return func(*x)
+    # Setup to compute the derivative
+    partial_derivative_func = nd.Gradient(func_wrap)
+
+    # Determine the arguments for the fit function
+    # NOTE: The fit result may have more arguments at minimum and free parameters than the fit function that we've
+    #       passed (for example, if we've calculating the background parameters for the inclusive signal fit), so
+    #       we need to determine the free parameters here.
+    # We cannot use just values_at_minimum because the arguments are ordered and therefore x must be the first argument.
+    # So instead, we create the dict with "x" as the first key, and then update with the rest. We set it here to a very
+    # large float to be clear that it will be set later.
+    args_at_minimum = {"x": -1000000.0}
+    args_at_minimum.update({k: v for k, v in fit_result.values_at_minimum.items() if k in func_parameters})
+    # Retrieve the parameters to use in calculating the fit errors.
+    free_parameters = [p for p in fit_result.free_parameters if p in func_parameters]
+    # To calculate the error, we need to match up the parameter names to their index in the arguments list
+    args_at_minimum_keys = list(args_at_minimum)
+    name_to_index = {name: args_at_minimum_keys.index(name) for name in free_parameters}
+    logger.debug(f"args_at_minimum: {args_at_minimum}")
+    logger.debug(f"free_parameters: {free_parameters}")
+    logger.debug(f"name_to_index: {name_to_index}")
+
+    # To store the errors for each point
+    error_vals = np.zeros(len(x))
+
+    for i, val in enumerate(x):
+        # Specify x for the function call
+        args_at_minimum["x"] = val
+
+        # Evaluate the partial derivative at a given x value with respect to all of the variables in the given function.
+        # In principle, we've doing some unnecessary work because we also calculate the gradient with
+        # respect to fixed parameters. But due to the argument requirements of ``numdifftools``, it would be
+        # quite difficult to tell it to only take the gradient with respect to a non-continuous selection of
+        # parameters. So we just accept the inefficiency.
+        logger.debug(f"Calculating the gradient for point {i}.")
+        # We time it to keep track of how long it takes to evaluate. Sometimes it can be a bit slow.
+        start = time.time()
+        # Actually evaluate the gradient. The args must be called as a list.
+        partial_derivative_result = partial_derivative_func(list(args_at_minimum.values()))
+        end = time.time()
+        logger.debug(f"Finished calculating the gradient in {end-start} seconds.")
+
+        # Finally, calculate the error by multiplying the matrix of gradient by the covariance matrix values.
+        error_val = 0
+        for i_name in free_parameters:
+            for j_name in free_parameters:
+                # Determine the error value
+                #logger.debug(f"Calculating error for i_name: {i_name}, j_name: {j_name}")
+                # Add error to overall error value
+                error_val += (
+                    partial_derivative_result[name_to_index[i_name]]
+                    * partial_derivative_result[name_to_index[j_name]]
+                    * fit_result.covariance_matrix[(i_name, j_name)]
+                )
+
+        # Store the value at the specified point. Note that we store the error, rather than the error squared.
+        # Modify from error squared to error
+        #logger.debug(f"i: {i}, error_val: {error_val}")
+        error_vals[i] = np.sqrt(error_val)
+
+    return error_vals
+
+class FuncCode(generic_class.EqualityMixin):
+    """ Minimal class to describe function arguments.
+
+    Same approach as is taken in ``iminuit``. Note that the precise name of the parameters is
+    extremely important.
+
+    Args:
+        args: List of function arguments.
+    Attributes:
+        co_varnames: Name of the function arguments.
+        co_argcount: Number of function arguments.
+    """
+    __slots__ = ("co_varnames", "co_argcount")
+
+    def __init__(self, args: List[str]):
+        self.co_varnames = args
+        self.co_argcount = len(args)
+
+    def __repr__(self) -> str:
+        return f"FuncCode({self.co_varnames})"
+
+    @classmethod
+    def from_function(cls: Type[T_FuncCode], func: Callable[..., float],
+                      leading_parameters_to_remove: int = 1) -> T_FuncCode:
+        """ Create a func code from a function.
+
+        Args:
+            func: Function for which we want a func code.
+            leading_parameters_to_remove: Number of leading parameters to remove in the func code. Default: 1,
+                which corresponds to ``x`` as the first argument.
+        """
+        return cls(iminuit.util.describe(func)[leading_parameters_to_remove:])
+
+def merge_func_codes(functions: Iterable[Callable[..., float]], prefixes: Optional[Sequence[str]] = None,
+                     skip_prefixes: Optional[Sequence[str]] = None) -> Tuple[List[str], List[List[int]]]:
+    """ Merge the arguments of the given functions into one func code.
+
+    Note:
+        This has very similar functionality and is heavily inspired by ``Probfit.merge_func_code...)``.
+
+    Args:
+        functions: Functions whose arguments are to be merged.
+        prefixes: Prefix for arguments of each function. Default: None. If specified, there must
+            be one prefix for each function.
+        skip_prefixes: Prefixes to skip when assigning prefixes. As noted in probfit, this can be
+            useful to mix prefixed and non-prefixed arguments. Default: None.
+    Returns:
+        Merged list of arguments, map from merged arguments to arguments for each individual function.
+    """
+    # Validation
+    # Ensure that we don't exhaust the iterator during validation.
+    funcs = list(functions)
+    # Ensure that we have the proper number of prefixes.
+    if prefixes:
+        if len(funcs) != len(prefixes):
+            raise ValueError("Number of prefixes ({len(prefixes)} doesn't match the number of functions: {len(funcs)}")
+    else:
+        # Create an empty prefix array so we can zip with it.
+        prefixes = ["" for _ in funcs]
+    skip_prefix = set(skip_prefixes if skip_prefixes else [])
+
+    # Retrieve all of the args.
+    args = []
+    for f, pre in zip(funcs, prefixes):
+        temp = []
+        for arg in iminuit.util.describe(f):
+            value = f"{pre}_{arg}" if pre and arg not in skip_prefix else arg
+            temp.append(value)
+        args.append(temp)
+
+    # Determine the unique arugments.
+    # We want to ensure that we maintain the oder, so we use dict.fromkeys to do so.
+    merged_args = list(dict.fromkeys(itertools.chain.from_iterable(args)))
+
+    # Determine the map from merged arguments to arguments for each individual function.
+    argument_positions = []
+    for func_args in args:
+        positions = []
+        for arg in func_args:
+            positions.append(merged_args.index(arg))
+        argument_positions.append(positions)
+
+    logger.debug(f"funcs: {funcs}, args: {args}")
+    logger.debug(f"merged args: {merged_args}")
+    logger.debug(f"argument_positions: {argument_positions}")
+
+    return merged_args, argument_positions
+
+#@jit(nopython = True, )  # type: ignore
+def call_list_of_callables(functions: Iterable[Callable[..., float]], argument_positions: T_ArgumentPositions,
+                           *args: Union[float, np.ndarray]) -> float:
+    """ Call a list of callables with the given args.
+
+    Args:
+        functions: Functions to be evaluated.
+        argument_positions: Map from merged arguments to arguments for each function.
+        args: Arguments for the functions. Must include the x argument!
+    Returns:
+        Sum of the values of the functions.
+    """
+    value = 0.
+    for func, arg_positions in zip(functions, argument_positions):
+        # Determine the arguments for the given function using the arg positions map.
+        function_args = []
+        for v in arg_positions:
+            # We don't skip over the x argument because it's supplied in the args.
+            function_args.append(args[v])
+        #logger.debug(f"full args: {args}")
+        #logger.debug(f"arg_positions: {arg_positions}, function_args: {function_args}")
+        #logger.debug(f"describe args: {iminuit.util.describe(func)}")
+        value += func(*function_args)
+    return value
+

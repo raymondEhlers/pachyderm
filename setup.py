@@ -78,10 +78,13 @@ setup(
         "numpy",
         "uproot",
         # Depends on ROOT, but that can't be installed through pip.
-        # The dependence is only implicit, so it can actually be installed without it,
+        # The dependence is only imported on demand, so it can actually be installed without it,
         # but some functionality depends on it being available.
         #"ROOT",
         "matplotlib",
+        # For the fitting module
+        "iminuit",
+        "numdifftools",
     ],
 
     # Include additional files
@@ -99,6 +102,8 @@ setup(
             "pytest-cov",
             "pytest-mock",
             "codecov",
+            # For comparison with existing methods
+            "probfit",
         ],
         "docs": [
             "sphinx",
