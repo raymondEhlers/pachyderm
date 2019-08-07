@@ -138,7 +138,7 @@ def parabola(x: float, scale: float) -> float:
     Returns:
         Value of parabola for given parameters.
     """
-    return scale * np.power(x, 2)  # type: ignore
+    return scale * np.square(x)  # type: ignore
 
 @pytest.fixture  # type: ignore
 def setup_parabola(logging_mixin: Any) -> Tuple[histogram.Histogram1D, Hist]:

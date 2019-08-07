@@ -71,5 +71,5 @@ def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np
     Returns:
         Calculated gaussian value(s).
     """
-    return 1.0 / np.sqrt(2 * np.pi * np.power(sigma, 2)) * np.exp(-1.0 / 2.0 * np.power((x - mean) / sigma, 2))
+    return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))
 

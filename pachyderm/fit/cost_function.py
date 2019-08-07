@@ -295,7 +295,7 @@ def _chi_squared(x: np.ndarray, y: np.ndarray,
     Returns:
         (Unbinned) chi squared for the given arguments.
     """
-    return np.sum(np.power((y - f(x, *args)) / errors, 2))
+    return np.sum(np.square((y - f(x, *args)) / errors))
 
 class ChiSquared(DataComparisonCostFunction):
     """ chi^2 cost function.
@@ -351,10 +351,10 @@ def _binned_chi_squared(x: np.ndarray, y: np.ndarray,
     #logger.debug(f"standard_values: {standard_values}")
     np.testing.assert_allclose(expected_values, standard_values, rtol = 0.05, atol = 0.05)
     # This is what ROOT uses, despite working with binned data (it appears)
-    #return np.sum(np.power((y - f(x, *args)) / errors, 2))
+    #return np.sum(np.square((y - f(x, *args)) / errors))
     # This seems like the appropriate way to calculate the chi squared given the binned data.
     # It evaluates the value over the entire bin.
-    return np.sum(np.power((y - expected_values) / errors, 2))
+    return np.sum(np.square((y - expected_values) / errors))
 
 class BinnedChiSquared(DataComparisonCostFunction):
     """ Binned chi^2 cost function.
@@ -449,7 +449,7 @@ def _extended_binned_log_likelihood(x: np.ndarray, y: np.ndarray,
         Binned log likelihood.
     """
     # Need to normalize the contributions.
-    total_error = np.sum(np.power(errors, 2))
+    total_error = np.sum(np.square(errors))
     expected_values = _integrate_1D(f, bin_edges, *args)
     # We don't use log rules to combine the log1p expressions (ie. log(expected_values / y)) because it appears
     # to create numerical issues (throwing NaN).
