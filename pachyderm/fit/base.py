@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 # Typing
 T_FuncCode = TypeVar("T_FuncCode", bound = "FuncCode")
 T_ArgumentPositions = List[List[int]]
+_T_FitResult = TypeVar("_T_FitResult", bound = "FitResult")
 
 class FitFailed(Exception):
     """ Raised if the fit failed. The message will include further details. """
@@ -56,7 +57,7 @@ class FitResult:
     values_at_minimum: Dict[str, float]
     errors_on_parameters: Dict[str, float]
     covariance_matrix: Dict[Tuple[str, str], float]
-    x: np.array
+    x: np.ndarray
     n_fit_data_points: int
     minimum_val: float
     errors: np.ndarray
@@ -103,6 +104,76 @@ class FitResult:
             self._correlation_matrix = matrix
 
         return self._correlation_matrix
+
+    @classmethod
+    def from_minuit(cls: Type[_T_FitResult], minuit: iminuit.Minuit,
+                    cost_func: Callable[..., float], x: np.ndarray) -> _T_FitResult:
+        """ Create a fit result form the Minuit fit object.
+
+        Args:
+            minuit: Minuit fit object after performing the fit.
+            cost_func: Cost function used to perform the fit.
+        """
+        # Validation
+        if not minuit.migrad_ok():
+            raise RuntimeError("The fit is invalid - unable to extract result!")
+
+        # Determine the relevant fit parameters.
+        fixed_parameters: List[str] = [k for k, v in minuit.fixed.items() if v is True]
+        # We use the cost function because we want intentionally want to skip "x"
+        parameters: List[str] = iminuit.util.describe(cost_func)
+        # Can't just use set(parameters) - set(fixed_parameters) because set() is unordered!
+        free_parameters = [p for p in parameters if p not in set(fixed_parameters)]
+        # Store the result
+        return cls(
+            parameters = parameters, free_parameters = free_parameters, fixed_parameters = fixed_parameters,
+            values_at_minimum = dict(minuit.values), errors_on_parameters = dict(minuit.errors),
+            covariance_matrix = minuit.covariance,
+            x = x,
+            n_fit_data_points = len(x), minimum_val = minuit.fval,
+            errors = [],
+        )
+
+def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, float],
+                    log_likelihood: bool, x: np.ndarray) -> Tuple[FitResult, iminuit.Minuit]:
+    """ Perform a fit using the given cost function with Minuit.
+
+    Args:
+        cost_func: Cost function to be used with Minuit.
+        minuit_args: Arguments for minuit. Need to set the initial value, limits, and error (step)
+            of each parameter.
+        log_likelihood: True if the cost function is a log likelihood (such that we need to modify
+            the errordef of Minuit).
+        x: x value(s) where the fit is evaluated, which will be stored in the fit result.
+    Returns:
+        (fit_result, Minuit object): The fit result extracts values from the Minuit object, but
+            the Minuit object is also returned for good measure.
+    """
+    # Perform the fit
+    minuit = iminuit.Minuit(cost_func, **minuit_args, errordef = 0.5 if log_likelihood else 1)
+    minuit.migrad()
+    # Just in case (doesn't hurt anything, but may help in a few cases).
+    minuit.hesse()
+
+    # Check that the fit is actually good
+    if not minuit.migrad_ok():
+        raise FitFailed("Minimization failed! The fit is invalid!")
+
+    # Create the fit result and caluclate the errors.
+    fit_result = FitResult.from_minuit(minuit, cost_func, x)
+    # We can calculate the fit errors if the cost function has a single function.
+    # If it's a simultaneous fit, it's unclear how best this should be handled. Perhaps it could
+    # be unraveled and summed, but it's not obvious that that's the best approach. More likely,
+    # one only wants the errors for an individual cost function.
+    # We use getattr instead of hasattr to help out mypy
+    f = getattr(cost_func, "f", None)
+    if f:
+        errors = calculate_function_errors(f, fit_result, x)
+    else:
+        errors = []
+    fit_result.errors = errors
+
+    return fit_result, minuit
 
 def calculate_function_errors(func: Callable[..., float], fit_result: FitResult, x: np.ndarray) -> np.array:
     """ Calculate the errors of the given function based on values from the fit.

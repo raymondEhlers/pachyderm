@@ -5,7 +5,7 @@
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-from .base import FitFailed, FitResult, calculate_function_errors, FuncCode  # noqa: F401
+from .base import FitFailed, FitResult, fit_with_minuit, calculate_function_errors, FuncCode  # noqa: F401
 from .function import AddPDF, gaussian  # noqa: F401
 from .cost_function import SimultaneousFit, CostFunctionBase, ChiSquared, BinnedChiSquared, LogLikelihood, BinnedLogLikelihood  # noqa: F401
 

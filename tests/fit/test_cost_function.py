@@ -5,12 +5,11 @@
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-import iminuit
 import logging
 import numpy as np
 import pytest
 import scipy.integrate
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Tuple
 
 from pachyderm.typing_helpers import Hist
 
@@ -83,49 +82,6 @@ def test_chi_squared(logging_mixin: Any) -> None:
 #####################################
 # Testing cost functions against ROOT
 #####################################
-def perform_fit(cost: Callable[..., float], minuit_args: Dict[str, float],
-                log_likelihood: bool, x: np.ndarray) -> fit_base.FitResult:
-    """ Perform the fit given the cost function.
-
-    Args:
-        cost: Cost function.
-        minuit_args: Args to pass to minuit the constrain the parameters. Need the value and the ``error_``
-            for each parameter in the fit.
-        log_likelihood: True if using a log likelihood (to set the errordef in minuit).
-        x: X values where the fit is evaluated (for the fit result).
-    Returns:
-        Fit result.
-    """
-    minuit = iminuit.Minuit(cost, **minuit_args, errordef = 0.5 if log_likelihood else 1)
-    # Perform the fit
-    minuit.migrad()
-    # Just in case (doesn't hurt anything, but may help in a few cases).
-    minuit.hesse()
-    # Check that the fit is actually good
-    if not minuit.migrad_ok():
-        raise RuntimeError("Minimization failed! The fit is invalid!")
-    # Create the fit result
-    fixed_parameters: List[str] = [k for k, v in minuit.fixed.items() if v is True]
-    # We use the cost function because we want intentionally want to skip "x"
-    parameters: List[str] = iminuit.util.describe(cost)
-    # Can't just use set(parameters) - set(fixed_parameters) because set() is unordered!
-    free_parameters: List[str] = [p for p in parameters if p not in set(fixed_parameters)]
-    # Store the result
-    fit_result = fit_base.FitResult(
-        parameters = parameters,
-        free_parameters = free_parameters,
-        fixed_parameters = fixed_parameters,
-        values_at_minimum = dict(minuit.values),
-        errors_on_parameters = dict(minuit.errors),
-        covariance_matrix = minuit.covariance,
-        x = x,
-        n_fit_data_points = len(x),
-        minimum_val = minuit.fval,
-        errors = [],
-    )
-
-    return fit_result
-
 def parabola(x: float, scale: float) -> float:
     """ Parabolic function.
 
@@ -207,7 +163,7 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
     else:
         args.update({"x": h.x, "y": h.y, "error": h.errors})
     cost = cost_func(**args)
-    fit_result = perform_fit(cost, minuit_args, log_likelihood, h.x)
+    fit_result, _ = fit_base.fit_with_minuit(cost, minuit_args, log_likelihood, h.x)
 
     # Check the minimized value.
     # It doesn't appear that it will agree for log likelihood
@@ -327,11 +283,11 @@ def test_simultaneous_fit(logging_mixin: Any, setup_simultaneous_fit_data: Any) 
     assert s.func_code.co_varnames == list(s_probfit.func_code.co_varnames)
 
     # Now perform the fits
-    fit_result = perform_fit(
-        cost = s, minuit_args = minuit_args, log_likelihood = False, x = h.x
+    fit_result, _ = fit_base.fit_with_minuit(
+        cost_func = s, minuit_args = minuit_args, log_likelihood = False, x = h.x
     )
-    fit_result_probfit = perform_fit(
-        cost = s_probfit, minuit_args = minuit_args, log_likelihood = False, x = h.x
+    fit_result_probfit, _ = fit_base.fit_with_minuit(
+        cost_func = s_probfit, minuit_args = minuit_args, log_likelihood = False, x = h.x
     )
     # And check that the fit results agree
     logger.debug(f"scale: {fit_result.values_at_minimum['scale']} +/- {fit_result.errors_on_parameters['scale']}")
