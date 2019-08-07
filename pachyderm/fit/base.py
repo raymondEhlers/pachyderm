@@ -120,27 +120,14 @@ def calculate_function_errors(func: Callable[..., float], fit_result: FitResult,
     Returns:
         The calculated error values.
     """
+    # Setup the paramaters needed to execute the function.
     # Determine relevant parameters for the given function
     func_parameters = iminuit.util.describe(func)
-
-    # We need a function wrapper to call our fit function because ``numdifftools`` requires that each variable
-    # which will be differentiated against must in a list in the first argument. The wrapper just expands
-    # that list for us.
-    def func_wrap(x: List[float]) -> float:
-        # Need to expand the arguments
-        return func(*x)
-    # Setup to compute the derivative
-    partial_derivative_func = nd.Gradient(func_wrap)
-
     # Determine the arguments for the fit function
     # NOTE: The fit result may have more arguments at minimum and free parameters than the fit function that we've
     #       passed (for example, if we've calculating the background parameters for the inclusive signal fit), so
     #       we need to determine the free parameters here.
-    # We cannot use just values_at_minimum because the arguments are ordered and therefore x must be the first argument.
-    # So instead, we create the dict with "x" as the first key, and then update with the rest. We set it here to a very
-    # large float to be clear that it will be set later.
-    args_at_minimum = {"x": -1000000.0}
-    args_at_minimum.update({k: v for k, v in fit_result.values_at_minimum.items() if k in func_parameters})
+    args_at_minimum = {k: v for k, v in fit_result.values_at_minimum.items() if k in func_parameters}
     # Retrieve the parameters to use in calculating the fit errors.
     free_parameters = [p for p in fit_result.free_parameters if p in func_parameters]
     # To calculate the error, we need to match up the parameter names to their index in the arguments list
@@ -150,45 +137,70 @@ def calculate_function_errors(func: Callable[..., float], fit_result: FitResult,
     logger.debug(f"free_parameters: {free_parameters}")
     logger.debug(f"name_to_index: {name_to_index}")
 
-    # To store the errors for each point
+    # To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
+    # must contain a list of values that it will vary when taking the gradient. The the rest of the args are
+    # passed on to the function via *args and **kwargs, but they won't be varied.
+    # To ensure the proper signature, we wrap the function and route the arguments.
+    def func_wrap(args_to_vary: Sequence[float], x: np.array) -> float:
+        """ Wrap the given function to ensure that the arguments are routed properly for ``numdifftools``.
+
+        To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
+        must contain a list of values that it will vary when taking the gradient. The the rest of the args are
+        passed on to the function via *args and **kwargs, but they won't be varied (we don't event use those
+        generic arguments here). To ensure the proper signature given any function, we wrap the function and
+        route the arguments.
+
+        Args:
+            args_to_vary: List of arguments to vary when taking the gradient. This should correspond
+                to the value of the free parameters.
+            x: x value(s) where the function will be evaluated.
+        Returns:
+            Function evaluated at the given values.
+        """
+        # Need to expand the arguments
+        return func(x, *args_to_vary)
+    # Setup to compute the derivative
+    partial_derivative_func = nd.Gradient(func_wrap)
+
+    logger.debug("Calculating the gradient")
+    # We time it to keep track of how long it takes to evaluate. Sometimes it can be a bit slow.
+    start = time.time()
+    # Actually evaluate the gradient.
+    # It returns an array with dimensions (len(x), len(args_to_vary)) containing the derivatives with
+    # respect to each parameter at each point.
+    #
+    # NOTE: In principle, we've doing some unnecessary work because we also calculate the gradient with
+    #       respect to fixed parameters. But due to the argument requirements of ``numdifftools``, it would be
+    #       quite difficult to tell it to only take the gradient with respect to a non-continuous selection of
+    #       parameters. So we just accept the inefficiency.
+    partial_derivative_result = partial_derivative_func(list(args_at_minimum.values()), x)
+    end = time.time()
+    logger.debug(f"Finished calculating the gradient in {end-start} seconds.")
+
+    # If we are only in 1D, we need to promote to a 2D (shape of 1D, 1) to get the indexing correct below.
+    # This only occurs if we only have one parameter that is varied.
+    if partial_derivative_result.ndim == 1:
+        logger.debug(f"shape before adding axis: {partial_derivative_result.shape}")
+        partial_derivative_result = partial_derivative_result[:, np.newaxis]
+        logger.debug(f"shape after adding axis : {partial_derivative_result.shape}")
+
+    # Finally, calculate the error by multiplying the matrix of gradient values by the covariance matrix values.
     error_vals = np.zeros(len(x))
+    for i_name in free_parameters:
+        for j_name in free_parameters:
+            # Determine the error value
+            #logger.debug(f"Calculating error for i_name: {i_name}, j_name: {j_name}")
+            # Add error to overall error value
+            # NOTE: This is a vector operation for the partial_derivative_result values.
+            error_vals += (
+                partial_derivative_result[:, name_to_index[i_name]]
+                * partial_derivative_result[:, name_to_index[j_name]]
+                * fit_result.covariance_matrix[(i_name, j_name)]
+            )
+    #logger.debug("error_val: shape: {error_val.shape}, error_val: {error_val}")
 
-    for i, val in enumerate(x):
-        # Specify x for the function call
-        args_at_minimum["x"] = val
-
-        # Evaluate the partial derivative at a given x value with respect to all of the variables in the given function.
-        # In principle, we've doing some unnecessary work because we also calculate the gradient with
-        # respect to fixed parameters. But due to the argument requirements of ``numdifftools``, it would be
-        # quite difficult to tell it to only take the gradient with respect to a non-continuous selection of
-        # parameters. So we just accept the inefficiency.
-        logger.debug(f"Calculating the gradient for point {i}.")
-        # We time it to keep track of how long it takes to evaluate. Sometimes it can be a bit slow.
-        start = time.time()
-        # Actually evaluate the gradient. The args must be called as a list.
-        partial_derivative_result = partial_derivative_func(list(args_at_minimum.values()))
-        end = time.time()
-        logger.debug(f"Finished calculating the gradient in {end-start} seconds.")
-
-        # Finally, calculate the error by multiplying the matrix of gradient by the covariance matrix values.
-        error_val = 0
-        for i_name in free_parameters:
-            for j_name in free_parameters:
-                # Determine the error value
-                #logger.debug(f"Calculating error for i_name: {i_name}, j_name: {j_name}")
-                # Add error to overall error value
-                error_val += (
-                    partial_derivative_result[name_to_index[i_name]]
-                    * partial_derivative_result[name_to_index[j_name]]
-                    * fit_result.covariance_matrix[(i_name, j_name)]
-                )
-
-        # Store the value at the specified point. Note that we store the error, rather than the error squared.
-        # Modify from error squared to error
-        #logger.debug(f"i: {i}, error_val: {error_val}")
-        error_vals[i] = np.sqrt(error_val)
-
-    return error_vals
+    # We want the error itself, so we take the square root.
+    return np.sqrt(error_vals)
 
 class FuncCode(generic_class.EqualityMixin):
     """ Minimal class to describe function arguments.
