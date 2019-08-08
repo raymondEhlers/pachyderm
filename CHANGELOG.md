@@ -2,6 +2,25 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.0] - 7 August 2019
+
+## Added
+
+- Fit package utilizing `iminuit`. Includes base fitting functionality (function to direct fitting, fit result
+  class, etc), cost functions, useful functions (AddPDF, gaussian, etc). All of this functionality is based on
+  `numpy` and therefore can execute in a vectorized manner (including the error calculation). Some
+  functionality of the `reaction_plane_fit` package was ported into Pachyderm. Much of the development itself
+  was done privately in the `reaction_plane_fit` package. These developments include all of the features of
+  `probfit` that I've used, such that dependence on that package isn't necessary. See:
+  `b0620e0dc610566565dacc5b2ab899707d275b76`, `2626c20fc0864619d10c10ca3f5bf24a218e76dc`,
+  `ebb1dd19ab28d0db25723488e847e1bcee59be3a`, and `3e5441f514a104cd1696add779d192c8c2b3a862`.
+- Effective chi squared calculation for fit results. See: `4ad189cbc6add79538dce0274f6dda76a0675e7d`.
+
+## Fixed
+
+- Typing improvements, fixed tests and import issues, etc. See: `ebac51f782d35cc1ee1b87b66d2409121dc9569e` and
+  `3994877c8addcc005ddcd610d3b794d7d1d9078e`, amongst others.
+
 ## [1.9.6] - 19 July 2019
 
 ### Added
