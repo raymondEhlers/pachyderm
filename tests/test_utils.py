@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import logging
 import numpy as np
 import pytest
-from typing import Any
+from typing import Any, Dict, List, Tuple
 
 from pachyderm import utils
 
@@ -17,7 +17,7 @@ from pachyderm import utils
 logger = logging.getLogger(__name__)
 
 @pytest.mark.parametrize("inputs, expected", [
-    ((3, np.array([1, 2, 3, 4, 5, 4, 3, 2, 1])),
+    ((3, np.array([1, 2, 3, 4, 5, 4, 3, 2, 1])),  # type: ignore
         np.array([6, 9, 12, 13, 12, 9, 6])),
     ((4, np.array([1, 2, 3, 4, 5, 4, 3, 2, 1])),
         np.array([10, 14, 16, 16, 14, 10])),
@@ -33,7 +33,7 @@ def test_moving_average(logging_mixin, inputs, expected):
     assert np.array_equal(utils.moving_average(arr = arr, n = n), expected)
 
 @pytest.mark.parametrize("path, expected", [
-    ("standard_attr", "standard_attr_value"),
+    ("standard_attr", "standard_attr_value"),  # type: ignore
     ("attr1.attr3.my_attr", "recursive_attr_value"),
 ], ids = ["Standard attribute", "Recursive attribute"])
 def test_recursive_getattr(logging_mixin, mocker, path, expected):
@@ -52,12 +52,12 @@ def test_recursive_getattr(logging_mixin, mocker, path, expected):
     # Check the returned value
     assert expected == utils.recursive_getattr(obj, path)
 
-def test_recursive_getattr_defualt_value(logging_mixin, mocker):
+def test_recursive_getattr_defualt_value(logging_mixin: Any, mocker: Any) -> None:
     """ Test for retrieving a default value with getattr. """
     obj = mocker.MagicMock(spec = ["sole_attr"])
     assert "default_value" == utils.recursive_getattr(obj, "nonexistent_attr", "default_value")
 
-def test_recursive_getattr_fail(logging_mixin, mocker):
+def test_recursive_getattr_fail(logging_mixin: Any, mocker: Any) -> None:
     """ Test for failure of recursive getattr.
 
     It will fail the same was as the standard getattr.
@@ -68,8 +68,8 @@ def test_recursive_getattr_fail(logging_mixin, mocker):
         utils.recursive_getattr(obj, "nonexistent_attr")
     assert "nonexistent_attr" in exception_info.value.args[0]
 
-@pytest.fixture
-def setup_recursive_setattr(logging_mixin):
+@pytest.fixture  # type: ignore
+def setup_recursive_setattr(logging_mixin: Any) -> Tuple[Any, str]:
     """ Setup an object for testing the recursive setattr. """
     # We don't mock the objects because I'm not entirely sure how mock wll interact with setattr.
     @dataclass
@@ -86,7 +86,7 @@ def setup_recursive_setattr(logging_mixin):
 
     return obj, path
 
-def test_recursive_setattr(setup_recursive_setattr):
+def test_recursive_setattr(setup_recursive_setattr: Any) -> None:
     """ Test setting an attribute with recursive setattr. """
     # Setup
     obj, path = setup_recursive_setattr
@@ -96,7 +96,7 @@ def test_recursive_setattr(setup_recursive_setattr):
     utils.recursive_setattr(obj, path, new_value)
     assert utils.recursive_getattr(obj, path) == new_value
 
-def test_recursive_setattr_fail(setup_recursive_setattr):
+def test_recursive_setattr_fail(setup_recursive_setattr: Any) -> None:
     """ Test failing to set an attribute with recursive setattr. """
     # Setup
     obj, path = setup_recursive_setattr
@@ -107,8 +107,8 @@ def test_recursive_setattr_fail(setup_recursive_setattr):
     # It will only return that "random" was not found, as it can't look further into the path.
     assert "random" in exception_info.value.args[0]
 
-@pytest.fixture
-def setup_recursive_getitem(logging_mixin):
+@pytest.fixture  # type: ignore
+def setup_recursive_getitem(logging_mixin: Any) -> Tuple[Dict[str, Dict[str, str]], List[str], str]:
     """ Setup a test dict for use with recursive_getitem. """
     expected = "hello"
     keys = ["a", "b"]
@@ -116,19 +116,19 @@ def setup_recursive_getitem(logging_mixin):
 
     return d, keys, expected
 
-def test_recursive_getitem(setup_recursive_getitem):
+def test_recursive_getitem(setup_recursive_getitem: Any) -> None:
     """ Tests for recursive getitem. """
     d, keys, expected = setup_recursive_getitem
 
     assert utils.recursive_getitem(d, keys) == expected
 
-def test_recursive_getitem_single_key(setup_recursive_getitem):
+def test_recursive_getitem_single_key(setup_recursive_getitem: Any) -> None:
     """ Tests for recursive getitem with a single key. """
     d, keys, expected = setup_recursive_getitem
 
     assert utils.recursive_getitem(d["a"], "b") == expected
 
-def test_recursive_getitem_fail(setup_recursive_getitem):
+def test_recursive_getitem_fail(setup_recursive_getitem: Any) -> None:
     """ Tests failing for recursive getitem. """
     d, keys, expected = setup_recursive_getitem
 

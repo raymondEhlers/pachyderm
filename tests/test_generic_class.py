@@ -8,17 +8,18 @@
 import dataclasses
 import logging
 import pytest
+from typing import Any, Dict, List, Tuple
 
 from pachyderm import generic_class
 
 logger = logging.getLogger(__name__)
 
-@pytest.fixture
-def setup_equality_mixin():
+@pytest.fixture  # type: ignore
+def setup_equality_mixin() -> Tuple[Any, Any]:
     """ Create a basic class for tests of the equality mixin. """
 
     class EqualityMixinTestClass(generic_class.EqualityMixin):
-        def __init__(self, aNumber, aString, aList, aDict):
+        def __init__(self, aNumber: float, aString: str, aList: List[Any], aDict: Dict[str, Any]):
             self.aNumber = aNumber
             self.aString = aString
             self.aList = aList
@@ -28,7 +29,7 @@ def setup_equality_mixin():
     # that we can test comparion of all of the relevant types.
     aNumber = 10.3
     aString = "hello world"
-    aList = [1, 2, 3, {"hello": "world"}],
+    aList = [1, 2, 3, {"hello": "world"}]
     aDict = {"string": "string", "list": [1, 2, 3], "dict": {"hello": "world"}}
 
     test_class = EqualityMixinTestClass(aNumber, aString, aList, aDict)
@@ -36,7 +37,7 @@ def setup_equality_mixin():
 
     return (test_class, expected_class)
 
-def test_equality_mixin(logging_mixin, setup_equality_mixin):
+def test_equality_mixin(logging_mixin: Any, setup_equality_mixin: Any) -> None:
     """ Test the equality mixin with the same classes. """
     test_class, expected_class = setup_equality_mixin
 
@@ -73,7 +74,7 @@ def test_equality_mixin(logging_mixin, setup_equality_mixin):
     test_class.aList = expected_class.aList
     test_class.aDict = expected_class.aDict
 
-def test_equality_mixin_against_other_classes(logging_mixin, setup_equality_mixin):
+def test_equality_mixin_against_other_classes(logging_mixin: Any, setup_equality_mixin: Any) -> None:
     """ Test the quality mixin against other classes, for which comparions are not implemented. """
     test_class, expected_class = setup_equality_mixin
 

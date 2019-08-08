@@ -10,10 +10,11 @@ import enum
 import numpy as np
 import pytest  # noqa: F401
 import tempfile
+from typing import Any, List
 
 from pachyderm import yaml
 
-def dump_and_load_yaml(yml, input_value):
+def dump_and_load_yaml(yml: yaml.ruamel.yaml.YAML, input_value: List[Any]) -> Any:
     """ Perform a dump and load YAML loop. """
     # Read and write to a temp file for convenience.
     with tempfile.TemporaryFile() as f:
@@ -25,14 +26,14 @@ def dump_and_load_yaml(yml, input_value):
 
     return result
 
-def test_enum_with_yaml(logging_mixin):
+def test_enum_with_yaml(logging_mixin: Any) -> None:
     """ Test closure of reading and writing enum values to YAML. """
     # Setup
     class TestEnum(enum.Enum):
         a = 1
         b = 2
 
-        def __str__(self):
+        def __str__(self) -> str:
             return str(self.name)
 
         to_yaml = classmethod(yaml.enum_to_yaml)
@@ -46,7 +47,7 @@ def test_enum_with_yaml(logging_mixin):
 
     assert result == [input_value]
 
-def test_numpy(logging_mixin):
+def test_numpy(logging_mixin: Any) -> None:
     """ Test reading and writing numpy to YAML. """
     # Setup
     yml = yaml.yaml()
@@ -58,7 +59,7 @@ def test_numpy(logging_mixin):
 
     assert np.allclose(test_array, result)
 
-def test_module_registration(logging_mixin, mocker):
+def test_module_registration(logging_mixin: Any, mocker: Any) -> None:
     """ Test registering the classes in a module. """
     # Setup
     @dataclass

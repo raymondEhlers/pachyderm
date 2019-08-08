@@ -37,7 +37,7 @@ def dump_to_string_and_retrieve(input_object: Any, y: yaml.ruamel.yaml.YAML = No
 
     return output_object
 
-def test_Histogram1D_with_yaml(logging_mixin) -> None:
+def test_Histogram1D_with_yaml(logging_mixin: Any) -> None:
     """ Test writing and then reading a Histogram1D via YAML.
 
     This ensures that writing a histogram1D can be done successfully.

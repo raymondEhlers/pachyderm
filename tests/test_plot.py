@@ -7,15 +7,16 @@
 
 import matplotlib
 import pytest
+from typing import Any
 
 import pachyderm.plot as pplot
 
-@pytest.fixture
-def reset_matplotlib_options(logging_mixin):
+@pytest.fixture  # type: ignore
+def reset_matplotlib_options(logging_mixin: Any) -> None:
     """ Setup for matplotlib options testing by resetting the options. """
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
-def test_restore_default_configuration(reset_matplotlib_options) -> None:
+def test_restore_default_configuration(reset_matplotlib_options: Any) -> None:
     """ Test for reseting the plotting configuration. """
     # Modify the parameters
     matplotlib.rcParams["text.usetex"] = True
@@ -29,7 +30,7 @@ def test_restore_default_configuration(reset_matplotlib_options) -> None:
     # Of course, this is just a proxy for the rest of the values
     assert matplotlib.rcParams["text.usetex"] is False
 
-def test_plot_configuration(reset_matplotlib_options) -> None:
+def test_plot_configuration(reset_matplotlib_options: Any) -> None:
     """ Test for updating the plot configuration. """
     # Check that we're starting from default settings.
     # Of course, this is just a proxy for the rest of the values

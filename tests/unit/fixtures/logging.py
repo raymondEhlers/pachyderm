@@ -7,13 +7,14 @@
 
 import logging
 import pytest
+from typing import Any
 
 # Set logging level as a global variable to simplify configuration.
 # This is not ideal, but fine for simple tests.
 logging_level = logging.DEBUG
 
-@pytest.fixture
-def logging_mixin(caplog):
+@pytest.fixture  # type: ignore
+def logging_mixin(caplog: Any) -> None:
     """ Logging mixin to capture logging messages from modules.
 
     It logs at the debug level, which is probably most useful for when a test fails.
