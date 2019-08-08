@@ -6,12 +6,14 @@
 """
 
 __all__ = [
+    "fit",
     "generic_class",
     "generic_config",
     "histogram",
     "plot",
     "projectors",
     "utils",
+    "yaml",
 ]
 
 # Provide easy access to the version

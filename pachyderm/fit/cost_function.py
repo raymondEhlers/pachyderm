@@ -13,7 +13,7 @@ import numpy as np
 import scipy.integrate
 from typing import Any, Callable, Iterable, Iterator, TypeVar, Tuple, Union
 
-import pachyderm.fit.base as fit_base
+from pachyderm.fit import base as fit_base
 from pachyderm import generic_class
 from pachyderm import histogram
 

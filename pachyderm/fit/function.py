@@ -10,7 +10,7 @@ import numpy as np
 from typing import Callable, Optional, Sequence, Union
 
 from pachyderm import generic_class
-import pachyderm.fit.base as fit_base
+from pachyderm.fit import base as fit_base
 
 logger = logging.getLogger(__name__)
 
