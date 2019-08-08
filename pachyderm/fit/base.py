@@ -411,7 +411,6 @@ def merge_func_codes(functions: Iterable[Callable[..., float]], prefixes: Option
 
     return merged_args, argument_positions
 
-#@jit(nopython = True, )  # type: ignore
 def call_list_of_callables(functions: Iterable[Callable[..., float]], argument_positions: T_ArgumentPositions,
                            *args: Union[float, np.ndarray]) -> float:
     """ Call a list of callables with the given args.

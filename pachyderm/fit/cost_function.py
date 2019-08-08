@@ -8,7 +8,6 @@
 import abc
 import iminuit
 import logging
-#from numba import njit
 import numpy as np
 import scipy.integrate
 from typing import Any, Callable, Iterable, Iterator, TypeVar, Tuple, Union
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 T_CostFunction = TypeVar("T_CostFunction", bound = "CostFunctionBase")
 
-#@jit(nopython = True)  # type: ignore
 def _quad(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
     """ Integrate over the given function using QUADPACK.
 
@@ -41,7 +39,6 @@ def _quad(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np
         values.append(res)
     return np.array(values)
 
-#@jit(nopython = True)  # type: ignore
 def _simpson_38(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
     """ Integrate over each histogram bin with the Simpson 3/8 rule.
 
@@ -161,8 +158,7 @@ class CostFunctionBase(abc.ABC):
     _cost_function: Callable[..., float]
 
     def __init__(self, f: Callable[..., float], data: Tuple[np.ndarray, histogram.Histogram1D]):
-        # We need to JIT the function to be able to pass it to the cost function.
-        #self.f = njit(f)
+        # If using numba, we would need to JIT the function to be able to pass it to the cost function.
         self.f = f
         # We need to drop the leading x argument
         self.func_code = fit_base.FuncCode(iminuit.util.describe(self.f)[1:])
@@ -270,7 +266,6 @@ class DataComparisonCostFunction(CostFunctionBase):
         """
         return cls._cost_function(data.x, data.y, data.errors, data.bin_edges, f, *args)
 
-#@jit(nopython = True)  # type: ignore
 def _chi_squared(x: np.ndarray, y: np.ndarray,
                  errors: np.ndarray, _: np.ndarray,
                  f: Callable[..., float], *args: float) -> Any:
@@ -309,7 +304,6 @@ class ChiSquared(DataComparisonCostFunction):
     """
     _cost_function = _chi_squared
 
-#@jit(nopython = True)  # type: ignore
 def _binned_chi_squared(x: np.ndarray, y: np.ndarray,
                         errors: np.ndarray, bin_edges: np.ndarray,
                         f: Callable[..., float], *args: float) -> Any:
@@ -336,24 +330,10 @@ def _binned_chi_squared(x: np.ndarray, y: np.ndarray,
     Returns:
         Binned chi squared calculated for each x value.
     """
-    #logger.debug("binned chi squared")
-    #logger.debug(f"f: {f}, describe: {iminuit.util.describe(f)}")
-    #logger.debug(f"args: {args}")
-    # Check binning
-    #bin_w = bin_edges[-1] - bin_edges[-2]
-    #logger.debug(f"bin width: {bin_w}, 1 / bw: {1 / bin_w}")
-    #logger.debug(f"y[-1]: {y[-1]}")
-    np.testing.assert_allclose(bin_edges[:-1] + (bin_edges[1:] - bin_edges[:-1]) / 2, x)
-    expected_values = _integrate_1D(f, bin_edges, *args)
-    #expected_values = _integrate_1D(f, bin_edges, *args) * 5.73
-    standard_values = f(x, *args)
-    #logger.debug(f"expected_values: {expected_values}")
-    #logger.debug(f"standard_values: {standard_values}")
-    np.testing.assert_allclose(expected_values, standard_values, rtol = 0.05, atol = 0.05)
-    # This is what ROOT uses, despite working with binned data (it appears)
+    # ROOT appears to use the unbinned chi squared, despite working with binned data
     #return np.sum(np.square((y - f(x, *args)) / errors))
-    # This seems like the appropriate way to calculate the chi squared given the binned data.
-    # It evaluates the value over the entire bin.
+    # Evaluate the function value over the entire bin.
+    expected_values = _integrate_1D(f, bin_edges, *args)
     return np.sum(np.square((y - expected_values) / errors))
 
 class BinnedChiSquared(DataComparisonCostFunction):
@@ -370,7 +350,6 @@ class BinnedChiSquared(DataComparisonCostFunction):
     """
     _cost_function = _binned_chi_squared
 
-#@jit(nopython = True)  # type: ignore
 def _log_likelihood(data: np.ndarray, f: Callable[..., float], *args: float) -> Any:
     r""" Actual implementation of the log likelihood cost function.
 
@@ -406,7 +385,6 @@ class LogLikelihood(StandaloneCostFunction):
     """
     _cost_function = _log_likelihood
 
-#@jit(nopython = True)  # type: ignore
 def _extended_binned_log_likelihood(x: np.ndarray, y: np.ndarray,
                                     errors: np.ndarray, bin_edges: np.ndarray,
                                     f: Callable[..., float], *args: float) -> Any:
