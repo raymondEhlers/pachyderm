@@ -131,7 +131,6 @@ class FitResult:
             # Setup
             from pachyderm.fit import cost_function
             from pachyderm import histogram
-            logger.debug(f"type(cost_func): {type(cost_func)}")
 
             # Calculate the chi_squared
             self._chi_squared: float
