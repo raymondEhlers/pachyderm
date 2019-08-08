@@ -203,10 +203,14 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
         fit_result.values_at_minimum["scale"], fit_result_ROOT.Parameter(0), rtol = 0.05,
     )
     # Error
-    # For some reason, there error is substantially larger in the log likelihood cost function comapred to ROOT
+    # TODO: For some reason, there error is substantially larger in the log likelihood cost function comapred to ROOT
     # This requires more investigation, but shouldn't totally derail progress at the moment.
     if not log_likelihood:
         assert np.isclose(fit_result.errors_on_parameters["scale"], fit_result_ROOT.ParError(0), rtol = 0.005)
+    # Check the effective chi squared
+    fit_result.effective_chi_squared(cost) == cost_function._binned_chi_squared(
+        cost.data.x, cost.data.y, cost.data.errors, cost.data.bin_edges, cost.f, *fit_result.values_at_minimum.values()
+    ) if log_likelihood else fit_result.minimum_val
 
 ##################
 # Simultaneous Fit

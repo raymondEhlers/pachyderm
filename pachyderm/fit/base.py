@@ -12,9 +12,12 @@ import logging
 import numdifftools as nd
 import numpy as np
 import time
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING, TypeVar, Union
 
 from pachyderm import generic_class
+
+if TYPE_CHECKING:
+    from pachyderm.fit import cost_function
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +107,54 @@ class FitResult:
             self._correlation_matrix = matrix
 
         return self._correlation_matrix
+
+    def effective_chi_squared(self, cost_func: "cost_function.DataComparisonCostFunction") -> float:
+        """ Calculate the effective chi squared value.
+
+        If the fit was performed using a chi squared cost function, it's just equal to
+        the ``minimal_val``. If it's log likelihood, one must calculate the effective
+        chi squared.
+
+        Note:
+            We attempt to cache this value so we don't have to calculate it every time.
+
+        Args:
+            cost_function: Cost function used to create the fit function.
+            data: Data to be used to calculate the chi squared.
+        Returns:
+            The effective chi squared value.
+        """
+        try:
+            # We attempt to cache the chi squared, so first try to return that.
+            return self._chi_squared
+        except AttributeError:
+            # Setup
+            from pachyderm.fit import cost_function
+            from pachyderm import histogram
+            logger.debug(f"type(cost_func): {type(cost_func)}")
+
+            # Calculate the chi_squared
+            self._chi_squared: float
+            if isinstance(cost_func, (cost_function.ChiSquared, cost_function.BinnedChiSquared)):
+                self._chi_squared = self.minimum_val
+            elif isinstance(cost_func, cost_function.BinnedLogLikelihood):
+                data = cost_func.data
+                # Help out mypy...
+                assert isinstance(data, histogram.Histogram1D)
+                # Calculate using the binned chi squared
+                self._chi_squared = cost_function._binned_chi_squared(
+                    data.x, data.y, data.errors, data.bin_edges, cost_func.f, *self.values_at_minimum.values()
+                )
+            else:
+                raise NotImplementedError("Needs to be implement for unbinned data.")
+                #data = cost_func.data
+                ## Help out mypy...
+                #assert isinstance(data, histogram.Histogram1D)
+                #self._chi_squared = cost_function._chi_squared(
+                #    data.x, data.y, data.errors, data.bin_edges, cost_func.f, *self.values_at_minimum.values()
+                #)
+
+        return self._chi_squared
 
     @classmethod
     def from_minuit(cls: Type[_T_FitResult], minuit: iminuit.Minuit,
