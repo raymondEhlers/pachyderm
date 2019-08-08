@@ -76,6 +76,7 @@ setup(
         # at least with how I understand it.
         "ruamel.yaml<0.15.99",
         "numpy",
+        "scipy",
         "uproot",
         # Depends on ROOT, but that can't be installed through pip.
         # The dependence is only imported on demand, so it can actually be installed without it,

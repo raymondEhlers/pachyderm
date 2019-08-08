@@ -23,5 +23,7 @@ WORKDIR ${PACHYDERM_ROOT}
 # Copy pachyderm into the image.
 COPY --chown=overwatch:overwatch . ${PACHYDERM_ROOT}
 
-# Install pachyderm.
-RUN pip install --user --upgrade --no-cache-dir -e .[tests,dev,docs]
+# Install pachyderm. We need to install numpy first so that
+# probfit (which is only needed for tests!) will install properly.
+RUN pip install --user --upgrade --no-cache-dir numpy \
+        && pip install --user --upgrade --no-cache-dir -e .[tests,dev,docs]
