@@ -31,11 +31,10 @@ class FitFailed(Exception):
     pass
 
 @dataclass
-class FitResult:
-    """ Fit result base class.
+class BaseFitResult:
+    """ Base fit result.
 
-    Note:
-        free_parameters + fixed_parameters = parameters
+    This represents the most basic fit result.
 
     Attributes:
         parameters: Names of the parameters used in the fit.
@@ -48,10 +47,6 @@ class FitResult:
         covariance_matrix: Contains the values of the covariance matrix. Keys are tuples
             with (param_name_a, param_name_b), and the values are covariance between the specified parameters.
             Note that fixed parameters are _not_ included in this matrix.
-        x: x values where the fit result should be evaluated.
-        n_fit_data_points: Number of data points used in the fit.
-        minimum_val: Minimum value of the fit when it coverages. This is the chi squared value for a
-            chi squared minimization fit.
         errors: Store the errors associated with the component fit function.
     """
     parameters: List[str]
@@ -60,15 +55,7 @@ class FitResult:
     values_at_minimum: Dict[str, float]
     errors_on_parameters: Dict[str, float]
     covariance_matrix: Dict[Tuple[str, str], float]
-    x: np.ndarray
-    n_fit_data_points: int
-    minimum_val: float
     errors: np.ndarray
-
-    @property
-    def nDOF(self) -> int:
-        """ Number of degrees of freedom. """
-        return self.n_fit_data_points - len(self.free_parameters)
 
     @property
     def correlation_matrix(self) -> Dict[Tuple[str, str], float]:
@@ -107,6 +94,39 @@ class FitResult:
             self._correlation_matrix = matrix
 
         return self._correlation_matrix
+
+@dataclass
+class FitResult(BaseFitResult):
+    """ Main fit result class.
+
+    Note:
+        free_parameters + fixed_parameters == parameters
+
+    Attributes:
+        parameters: Names of the parameters used in the fit.
+        free_parameters: Names of the free parameters used in the fit.
+        fixed_parameters: Names of the fixed parameters used in the fit.
+        values_at_minimum: Contains the values of the full RP fit function at the minimum. Keys are the
+            names of parameters, while values are the numerical values at convergence.
+        errors_on_parameters: Contains the values of the errors associated with the parameters
+            determined via the fit.
+        covariance_matrix: Contains the values of the covariance matrix. Keys are tuples
+            with (param_name_a, param_name_b), and the values are covariance between the specified parameters.
+            Note that fixed parameters are _not_ included in this matrix.
+        errors: Store the errors associated with the component fit function.
+        x: x values where the fit result should be evaluated.
+        n_fit_data_points: Number of data points used in the fit.
+        minimum_val: Minimum value of the fit when it coverages. This is the chi squared value for a
+            chi squared minimization fit.
+    """
+    x: np.ndarray
+    n_fit_data_points: int
+    minimum_val: float
+
+    @property
+    def nDOF(self) -> int:
+        """ Number of degrees of freedom. """
+        return self.n_fit_data_points - len(self.free_parameters)
 
     def effective_chi_squared(self, cost_func: "cost_function.DataComparisonCostFunction") -> float:
         """ Calculate the effective chi squared value.
@@ -225,7 +245,7 @@ def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, floa
 
     return fit_result, minuit
 
-def calculate_function_errors(func: Callable[..., float], fit_result: FitResult, x: np.ndarray) -> np.array:
+def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
     """ Calculate the errors of the given function based on values from the fit.
 
     Note:
