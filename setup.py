@@ -120,6 +120,9 @@ setup(
             "flake8-colors",
             # Type checking
             "mypy",
+            # Sort imports
+            "isort",
+            "seed-isort-config",
         ]
     }
 )

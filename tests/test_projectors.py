@@ -6,14 +6,14 @@
 """
 
 import copy
-import enum
 import dataclasses
+import enum
 import logging
-import pytest
 from typing import Any, Dict, List, Tuple
 
-from pachyderm import projectors
-from pachyderm import utils
+import pytest
+
+from pachyderm import projectors, utils
 
 logger = logging.getLogger(__name__)
 
@@ -934,4 +934,3 @@ class TestsForTHnSparseProjection():
             # I determined the expected value empirically by looking at the projection.
             assert non_zero_bin_location == 9
             assert proj.GetBinContent(non_zero_bin_location) == expected_count
-

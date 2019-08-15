@@ -6,9 +6,10 @@
 """
 
 from dataclasses import dataclass
+from typing import Any, Callable, Tuple
+
 import numpy as np
 import pytest
-from typing import Any, Callable, Tuple
 
 @pytest.fixture  # type: ignore
 def test_root_hists() -> Any:
@@ -131,4 +132,3 @@ def simple_test_functions() -> Tuple[Callable[[float, float, float], float],
         """ Test function 2. """
         return x + c + d
     return func_1, func_2
-

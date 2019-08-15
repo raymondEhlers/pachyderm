@@ -5,11 +5,12 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple
+
 import numpy as np
 import pytest
-from typing import Any, Dict, List, Tuple
 
 from pachyderm import utils
 
@@ -137,4 +138,3 @@ def test_recursive_getitem_fail(setup_recursive_getitem: Any) -> None:
         utils.recursive_getitem(d, ["fake", "keys"])
     # It will only return that "random" was not found, as it can't look further into the path.
     assert "fake" in exception_info.value.args[0]
-

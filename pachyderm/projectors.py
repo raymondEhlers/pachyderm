@@ -11,7 +11,7 @@ import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, Union
 
 from pachyderm import generic_class
-from pachyderm.typing_helpers import Hist, Axis
+from pachyderm.typing_helpers import Axis, Hist
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -744,4 +744,3 @@ class HistProjector:
                 output hist.
         """
         return output_hist
-

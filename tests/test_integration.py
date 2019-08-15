@@ -4,14 +4,14 @@
 
 """
 
-from io import StringIO
 import logging
-import numpy as np
-import pytest  # noqa: F401
+from io import StringIO
 from typing import Any
 
-from pachyderm import histogram
-from pachyderm import yaml
+import numpy as np
+import pytest  # noqa: F401
+
+from pachyderm import histogram, yaml
 
 logger = logging.getLogger(__name__)
 
@@ -59,4 +59,3 @@ def test_Histogram1D_with_yaml(logging_mixin: Any) -> None:
 
     # Check the result
     assert input_hist == output_hist
-

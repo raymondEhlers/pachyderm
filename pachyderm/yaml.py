@@ -37,9 +37,10 @@ Note:
 import enum
 import inspect
 import logging
+from typing import Any, Iterable, List, Optional, Sequence, Type, TypeVar, cast
+
 import numpy as np
 import ruamel.yaml
-from typing import Any, cast, Iterable, List, Optional, Sequence, Type, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -204,4 +205,3 @@ def enum_from_yaml(cls: Type[T_EnumFromYAML],
         The constructed YAML value from the name of the enumerated value.
     """
     return cls[node.value]
-

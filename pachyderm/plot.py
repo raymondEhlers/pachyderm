@@ -176,4 +176,3 @@ def configure() -> None:
 
     # Apply the updated settings.
     matplotlib.rcParams.update(params)
-

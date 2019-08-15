@@ -5,7 +5,7 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-from typing import Any, cast, TypeVar
+from typing import Any, TypeVar, cast
 
 _T = TypeVar("_T", bound = "EqualityMixin")
 
@@ -28,4 +28,3 @@ class EqualityMixin:
         if type(other) is type(self):
             return cast(bool, self.__dict__ == other.__dict__)
         return NotImplemented
-

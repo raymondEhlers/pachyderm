@@ -5,10 +5,11 @@
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+from typing import Any, List
+
 import iminuit
 import numpy as np
 import pytest
-from typing import Any, List
 
 import pachyderm.fit.base as fit_base
 
@@ -56,4 +57,3 @@ def test_merge_func_code_against_probfit(logging_mixin: Any, simple_test_functio
     probfit_result, probfit_argument_positions = probfit.merge_func_code(*function_list)
     assert result == list(probfit_result.co_varnames)
     np.testing.assert_allclose(argument_positions, probfit_argument_positions)
-

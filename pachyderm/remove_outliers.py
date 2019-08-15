@@ -6,16 +6,15 @@
 """
 
 import ctypes
-from dataclasses import dataclass, field
 import enum
 import logging
-import numpy as np
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
-from pachyderm import histogram
-from pachyderm import projectors
+import numpy as np
+
+from pachyderm import histogram, projectors, utils
 from pachyderm.typing_helpers import Hist
-from pachyderm import utils
 
 logger = logging.getLogger(__name__)
 
@@ -367,4 +366,3 @@ class OutliersRemovalManager:
 
         logger.debug(f"Outliers removal complete! Found outliers_start_index: {outliers_start_index}")
         return outliers_start_index
-

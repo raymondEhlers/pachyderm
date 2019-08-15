@@ -7,8 +7,9 @@
 
 import dataclasses
 import logging
-import pytest
 from typing import Any, Dict, List, Tuple
+
+import pytest
 
 from pachyderm import generic_class
 
@@ -87,4 +88,3 @@ def test_equality_mixin_against_other_classes(logging_mixin: Any, setup_equality
     # Instead, we just perform the assertions to cover tests against different objects.
     assert not test_class == another_object
     assert test_class != another_object
-

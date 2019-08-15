@@ -5,17 +5,17 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-import dataclasses
 import copy
+import dataclasses
 import enum
 import itertools
 import logging
-import pytest
 from io import StringIO
+
+import pytest
 import ruamel.yaml
 
-from pachyderm import generic_config
-from pachyderm import yaml
+from pachyderm import generic_config, yaml
 
 logger = logging.getLogger(__name__)
 

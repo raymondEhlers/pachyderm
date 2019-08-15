@@ -6,9 +6,10 @@
 """
 
 import logging
+from typing import Any, List
+
 import numpy as np
 import pytest
-from typing import Any, List
 
 from pachyderm.fit import function
 
@@ -92,4 +93,3 @@ def test_AddPDF(logging_mixin: Any, simple_test_functions: Any, skip_prefixes: L
     # Check properties
     assert added.func_code.co_varnames == expected_co_varnames
     np.testing.assert_allclose(added(np.array([1, 2]), *[1., 3, 3, 4]), [5 + 8, 6 + 9])
-

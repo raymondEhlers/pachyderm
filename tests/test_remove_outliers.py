@@ -8,11 +8,11 @@
 import ctypes
 import logging
 import math
+
 import numpy as np
 import pytest
 
-from pachyderm import projectors
-from pachyderm import remove_outliers
+from pachyderm import projectors, remove_outliers
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -191,4 +191,3 @@ class TestOutliersRemovalIntegration:
                 # These should just be the standard filled values.
                 assert input_hist.GetBinContent(index) == initial_hist.GetBinContent(index)
                 assert input_hist.GetBinError(index) == initial_hist.GetBinError(index)
-

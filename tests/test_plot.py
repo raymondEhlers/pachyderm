@@ -5,9 +5,10 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+from typing import Any
+
 import matplotlib
 import pytest
-from typing import Any
 
 import pachyderm.plot as pplot
 
@@ -49,4 +50,3 @@ def test_plot_configuration(reset_matplotlib_options: Any) -> None:
     #        - pytest-mpl will reset the style to the default before the comparison, and we don't set
     #          the style in a way that plays nice with their method for setting the style.
     #       So skip plotting and rely on our assertions above.
-

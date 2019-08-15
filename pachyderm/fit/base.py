@@ -5,14 +5,15 @@
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-from dataclasses import dataclass
-import iminuit
 import itertools
 import logging
+import time
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union
+
+import iminuit
 import numdifftools as nd
 import numpy as np
-import time
-from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TYPE_CHECKING, TypeVar, Union
 
 from pachyderm import generic_class
 
@@ -454,4 +455,3 @@ def call_list_of_callables(functions: Iterable[Callable[..., float]], argument_p
         #logger.debug(f"describe args: {iminuit.util.describe(func)}")
         value += func(*function_args)
     return value
-

@@ -5,10 +5,11 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-from dataclasses import dataclass
 import logging
-import numpy as np
 import os
+from dataclasses import dataclass
+
+import numpy as np
 import pytest
 import uproot
 

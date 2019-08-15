@@ -5,11 +5,12 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-from dataclasses import dataclass, field
 import logging
-import numpy as np
+from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Any, cast, ContextManager, Dict, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, ContextManager, Dict, Optional, Tuple, Type, TypeVar, Union, cast
+
+import numpy as np
 
 from pachyderm.typing_helpers import Axis, Hist, TFile
 

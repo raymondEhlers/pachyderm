@@ -5,12 +5,13 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-from dataclasses import dataclass
 import enum
+import tempfile
+from dataclasses import dataclass
+from typing import Any, List
+
 import numpy as np
 import pytest  # noqa: F401
-import tempfile
-from typing import Any, List
 
 from pachyderm import yaml
 

@@ -6,17 +6,16 @@
 """
 
 import logging
+from typing import Any, Tuple
+
 import numpy as np
 import pytest
 import scipy.integrate
-from typing import Any, Tuple
-
-from pachyderm.typing_helpers import Hist
 
 import pachyderm.fit.base as fit_base
-from pachyderm.fit import cost_function
-
 from pachyderm import histogram
+from pachyderm.fit import cost_function
+from pachyderm.typing_helpers import Hist
 
 logger = logging.getLogger(__name__)
 
@@ -301,4 +300,3 @@ def test_simultaneous_fit(logging_mixin: Any, setup_simultaneous_fit_data: Any) 
     # And check that the fit results agree
     logger.debug(f"scale: {fit_result.values_at_minimum['scale']} +/- {fit_result.errors_on_parameters['scale']}")
     assert fit_result == fit_result_probfit
-

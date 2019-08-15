@@ -7,9 +7,10 @@
 
 import functools
 import logging
-import numpy as np
 import operator
 from typing import Any, Mapping, Sequence, Union
+
+import numpy as np
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -91,4 +92,3 @@ def recursive_getitem(d: Mapping[str, Any], keys: Union[str, Sequence[str]]) -> 
         return d[keys]
     else:
         return functools.reduce(operator.getitem, keys, d)
-

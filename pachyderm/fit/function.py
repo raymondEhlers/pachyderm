@@ -6,8 +6,9 @@
 """
 
 import logging
-import numpy as np
 from typing import Callable, Optional, Sequence, Union
+
+import numpy as np
 
 from pachyderm import generic_class
 from pachyderm.fit import base as fit_base
@@ -72,4 +73,3 @@ def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np
         Calculated gaussian value(s).
     """
     return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))
-

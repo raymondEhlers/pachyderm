@@ -6,15 +6,15 @@
 """
 
 import abc
-import iminuit
 import logging
+from typing import Any, Callable, Iterable, Iterator, Tuple, TypeVar, Union
+
+import iminuit
 import numpy as np
 import scipy.integrate
-from typing import Any, Callable, Iterable, Iterator, TypeVar, Tuple, Union
 
+from pachyderm import generic_class, histogram
 from pachyderm.fit import base as fit_base
-from pachyderm import generic_class
-from pachyderm import histogram
 
 logger = logging.getLogger(__name__)
 
@@ -448,4 +448,3 @@ class BinnedLogLikelihood(DataComparisonCostFunction):
         _cost_function: Function to be used to calculate the actual cost function.
     """
     _cost_function = _extended_binned_log_likelihood
-

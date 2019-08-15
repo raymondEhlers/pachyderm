@@ -564,4 +564,3 @@ def iterate_with_selected_objects_in_order(analysis_objects: Mapping[Any, Any],
 
         logger.debug(f"Yielding: {selected_analysis_objects}")
         yield selected_analysis_objects
-
