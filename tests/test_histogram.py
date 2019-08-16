@@ -8,6 +8,7 @@
 import logging
 import os
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pytest
@@ -682,6 +683,48 @@ class TestHistogramOperators:
 
         # Check result
         assert check_hist(h2_root, h3)
+
+    @pytest.fixture(params = [
+        (_filled_two_times, 3,
+            HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 18, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_twice_with_weight_of_2, 3,
+            HistInfo(np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 72, 0, 0, 0, 0, 0, 0, 0]))),
+    ], ids = ["Standard filled", "Weighing filled"])
+    def setup_scalar_multiplication(self, logging_mixin: Any, request: Any) -> Any:
+        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+
+        However, each test performs rather different steps, so there is little else to do here.
+        """
+        # Setup
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        return (*request.param, h1)
+
+    def test_scalar_multiplication(self, setup_scalar_multiplication: Any) -> None:
+        """ Test scalar multiplication. """
+        # Setup
+        h1_info, scalar, expected, h1 = setup_scalar_multiplication
+
+        # Operation
+        h3 = h1 * scalar
+
+        # Check result
+        assert np.allclose(h3.bin_edges, self._bin_edges)
+        assert np.allclose(h3.y, expected.y)
+        assert np.allclose(h3.errors_squared, expected.errors_squared)
+
+    @pytest.mark.ROOT
+    def test_compare_scalar_multiplication_to_ROOT(self, setup_scalar_multiplication: Any) -> None:
+        """ Compare the results of ``Histogram1D`` multiplication vs ROOT. """
+        # Setup
+        h1_info, scalar, expected, h1 = setup_scalar_multiplication
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h1 * scalar
+        h1_root.Scale(scalar)
+
+        # Check result
+        assert check_hist(h1_root, h3)
 
     @pytest.fixture(params = [
         (_filled_two_times, _filled_four_times,

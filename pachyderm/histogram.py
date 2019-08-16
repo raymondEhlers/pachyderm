@@ -386,25 +386,34 @@ class Histogram1D:
         self.errors_squared += other.errors_squared
         return self
 
-    def __mul__(self: _T, other: _T) -> _T:
+    def __mul__(self: _T, other: Union[_T, float]) -> _T:
         """ Handles ``a = b * c``. """
         new = self.copy()
         new *= other
         return new
 
-    def __imul__(self: _T, other: _T) -> _T:
+    def __imul__(self: _T, other: Union[_T, float]) -> _T:
         """ Handles ``a *= b``. """
-        if not np.allclose(self.bin_edges, other.bin_edges):
-            raise TypeError(
-                f"Binning is different for given histograms."
-                f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
-                f"Cannot multiply!"
-            )
-        # NOTE: We need to calculate the errors_squared first because the depend on the existing y values
-        # Errors are from ROOT::TH1::Multiply(const TH1 *h1)
-        # NOTE: This is just error propagation, simplified with a = b * c!
-        self.errors_squared = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
-        self.y *= other.y
+        if np.isscalar(other):
+            # Help out mypy...
+            assert isinstance(other, (float, int, np.number))
+            # Scale histogram by a scalar
+            self.y *= other
+            self.errors_squared *= (other ** 2)
+        else:
+            # Help out mypy...
+            assert isinstance(other, Histogram1D)
+            if not np.allclose(self.bin_edges, other.bin_edges):
+                raise TypeError(
+                    f"Binning is different for given histograms."
+                    f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
+                    f"Cannot multiply!"
+                )
+            # NOTE: We need to calculate the errors_squared first because the depend on the existing y values
+            # Errors are from ROOT::TH1::Multiply(const TH1 *h1)
+            # NOTE: This is just error propagation, simplified with a = b * c!
+            self.errors_squared = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
+            self.y *= other.y
         return self
 
     def __truediv__(self: _T, other: _T) -> _T:
