@@ -403,6 +403,7 @@ class Histogram1D:
         else:
             # Help out mypy...
             assert isinstance(other, Histogram1D)
+            # Validation
             if not np.allclose(self.bin_edges, other.bin_edges):
                 raise TypeError(
                     f"Binning is different for given histograms."
