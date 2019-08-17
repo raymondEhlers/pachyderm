@@ -546,9 +546,17 @@ class Histogram1D:
         # Exclude the under/overflow bins
         errors = errors[1:-1]
 
-        # Sanity check
-        if not np.isclose(errors[0], hist.GetBinError(1) ** 2):
-            raise ValueError("Sumw2 errors don't seem to represent bin errors!")
+        # Check for a TProfile.
+        # In that case we need to retrieve the errors manually because the Sumw2() errors are
+        # not the anticipated errors.
+        if hasattr(hist, "BuildOptions"):
+            errors = np.array([hist.GetBinError(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
+            # We expected errors squared
+            errors = errors ** 2
+        else:
+            # Sanity check. If they don't match, something odd has almost certainly occurred.
+            if not np.isclose(errors[0], hist.GetBinError(1) ** 2):
+                raise ValueError("Sumw2 errors don't seem to represent bin errors!")
 
         return (bin_edges, y, errors)
 

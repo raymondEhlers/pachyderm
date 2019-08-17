@@ -393,6 +393,29 @@ class TestWithRootHists:
         logger.info(f"uniform_bins: {uniform_bins}")
         assert not np.allclose(expected_hist.bin_edges, uniform_bins)
 
+    def test_Histogram1D_from_profile(self, logging_mixin: Any) -> None:
+        """ Test creating a Histogram1D from a TProfile.
+
+        The errors are retrieved differently than for a TH1.
+        """
+        # Setup
+        import ROOT
+        profile = ROOT.TProfile("test", "test", 10, 0, 100)
+        for x in range(1000):
+            profile.Fill(x % 100, 3)
+        bin_edges = histogram.get_bin_edges_from_axis(profile.GetXaxis())
+        y = np.array([profile.GetBinContent(i) for i in range(1, profile.GetXaxis().GetNbins() + 1)])
+        errors = np.array([profile.GetBinError(i) for i in range(1, profile.GetXaxis().GetNbins() + 1)])
+        sumw2 = np.array(profile.GetSumw2())
+
+        # Check the histogram.
+        h = histogram.Histogram1D.from_existing_hist(profile)
+        np.testing.assert_allclose(bin_edges, h.bin_edges)
+        np.testing.assert_allclose(y, h.y)
+        np.testing.assert_allclose(errors, h.errors)
+        # Check that the errors aren't equal to the Sumw2 errors. They should not be for the TProfile
+        assert not np.allclose(h.errors, sumw2[1:-1])
+
     @pytest.mark.parametrize("use_bin_edges", [
         False, True
     ], ids = ["Use bin centers", "Use bin edges"])  # type: ignore
