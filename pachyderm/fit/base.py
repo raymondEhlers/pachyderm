@@ -205,7 +205,7 @@ class FitResult(BaseFitResult):
             errors = [],
         )
 
-def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, float],
+def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, Union[float, Tuple[float, float]]],
                     log_likelihood: bool, x: np.ndarray) -> Tuple[FitResult, iminuit.Minuit]:
     """ Perform a fit using the given cost function with Minuit.
 
