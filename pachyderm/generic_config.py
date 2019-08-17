@@ -458,7 +458,7 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
     return new_obj
 
 def iterate_with_selected_objects(analysis_objects: Mapping[Any, Any],
-                                  **selections: Mapping[str, Any]) -> Iterator[Tuple[Any, Any]]:
+                                  **selections: Any) -> Iterator[Tuple[Any, Any]]:
     """ Iterate over an analysis dictionary with selected attributes.
 
     Args:
