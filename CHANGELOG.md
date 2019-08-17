@@ -2,7 +2,7 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
-## [2.1] - Unreleased
+## [2.1] - 17 August 2019
 
 ### Added
 
