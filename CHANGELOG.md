@@ -2,6 +2,37 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.1] - Unreleased
+
+### Added
+
+- `isort` to the pre-commit checks. See: `9930ca1ef9dc13b603e21dea40bae832d377d6d9`.
+- Scalar multiplication for histograms. See: `522cd73c5d08225edd7f1f4785ba243dc7e4a079`.
+- `Histogram1D` validation and sanity checks. The class should be much more robust. See:
+  `b69ad4ba8481ec89813bef5fc20f671c25ac5552`.
+- Support for converting a `TProfile` to `Histogram1D`. A `TProfile` doesn't strictly conceptually convert
+  quite so nicely, but `Histogram1D` is very useful as a data container, so it's better to support it. See:
+  `d3395f8ced9d4642d28a18c23daf81e63a51b571`.
+
+### Changed
+
+- We're not going to use `numba` for now, so possible code related to it was removed. See:
+  `a0b65374b20ad08192132e7f7e7c3b61b7a78d32`.
+- Split out a `BaseFitResult` class. It's really convenient to have such a class for individual fit
+  components. See: `6d638b9020e2334feff0bff64357aa94b4caa40f`.
+- Imports are now sorted by `isort`. This ensures consistency. See: `0a8c771f8785bc620e6ec5240fba005fdad77254`.
+- Improve numpy encoding when writing to YAML files. It will write in the binary format, which won't be as
+  convenient to edit by hand, but I believe it will avoid a bunch of floating point issues where later digits
+  fluctuate each time they are calculated, thereby changing the YAML file. See:
+  `8bf22118d8fb953a5ff1691e12d95edcdf8f8f6a`.
+
+## Fixed
+
+- Prevent ROOT from intercepting args when importing type helpers. See:
+  `9894c3f526712f6eb72df1c0d454444992d58dcb`.
+- Improve typing. See: `20d7a06f7879c9d4df869ecb33c5f5e952834824`, `47199d86a1b468cfa2881b4130947872fe92d623`,
+  and `8bedd17fbc5e5c9481b7bdadfd525e6d96accae4`.
+
 ## [2.0] - 7 August 2019
 
 ## Added
