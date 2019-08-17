@@ -298,6 +298,46 @@ def test_uproot_hist_to_histogram(setup_histogram_conversion: Any) -> None:
     # Cleanup
     del uproot_file
 
+@pytest.mark.parametrize("bin_edges, y, errors_squared", [  # type: ignore
+    (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2, 3])),
+    (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2])),
+    (np.array([1, 2, 3]), np.array([1, 2]), np.array([1, 2, 3])),
+], ids = ["Too short bin edges", "Too long y", "Too long errors squared"])
+def test_hist_input_length_validation(logging_mixin: Any, bin_edges: np.ndarray, y: np.ndarray, errors_squared: np.ndarray) -> None:
+    """ Check histogram input length validation. """
+    with pytest.raises(ValueError) as exception_info:
+        histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+    assert "Length of input arrays doesn't match!" in exception_info.value.args[0]
+
+@pytest.mark.parametrize("bin_edges, y, errors_squared, expect_corrected_types", [  # type: ignore
+    (np.array([1, 2, 3]), np.array([1, 2]), np.array([1, 2]), True),
+    ([1, 2, 3], np.array([1, 2]), np.array([1, 2]), True),
+    ([1, 2, 3], [1, 2], [1, 2], True),
+    # Apparently ``np.array`` can take pretty much anything I can throw at it. So we skip
+    # the nonconvertible test.
+    #(((12, 23), 12), ("something totally wrong", "wrong"), "for sure", False),
+], ids = ["All correct", "Mixed inputs", "All wrong (convertible)"])
+def test_hist_input_type_validation(logging_mixin: Any, bin_edges: np.ndarray, y: np.ndarray,
+                                    errors_squared: np.ndarray, expect_corrected_types: str) -> None:
+    """ Check histogram input type validation. """
+    if expect_corrected_types:
+        h = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+        for arr in [h.bin_edges, h.y, h.errors_squared]:
+            assert isinstance(arr, np.ndarray)
+    else:
+        with pytest.raises(ValueError) as exception_info:
+            h = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+        assert "Arrays must be numpy arrays" in exception_info.value.args[0]
+
+def test_hist_identical_arrays(logging_mixin: Any) -> None:
+    """ Test handling receiving identical numpy arrays. """
+    bin_edges = np.array([1, 2, 3])
+    y = np.array([1, 2])
+
+    h = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = y)
+    # Even through we passed the same array, they should be copied by the validation.
+    assert np.may_share_memory(h.y, h.errors_squared) is False
+
 @pytest.mark.ROOT
 class TestWithRootHists:
     def test_get_array_from_hist(self, logging_mixin: Any, test_root_hists: Any) -> None:

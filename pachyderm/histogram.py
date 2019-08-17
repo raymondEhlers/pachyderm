@@ -5,6 +5,7 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+import itertools
 import logging
 from dataclasses import dataclass, field
 from types import TracebackType
@@ -160,6 +161,38 @@ class Histogram1D:
     y: np.ndarray
     errors_squared: np.ndarray
     metadata: Dict[str, Any] = field(default_factory = dict)
+
+    def __post_init__(self) -> None:
+        """ Perform validation on the inputs. """
+        # Define this array for convenience in accessing the members.
+        arrays = {k: v for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"}
+
+        # Ensure that they're numpy arrays.
+        for name, arr in arrays.items():
+            if not isinstance(arr, np.ndarray):
+                try:
+                    setattr(self, name, np.array(arr))
+                except TypeError as e:
+                    raise ValueError(
+                        f"Arrays must be numpy arrays, but could not convert object {name} of"
+                        f" type {type(arr)} to numpy array."
+                    ) from e
+
+        # Ensure that they're the appropriate length
+        if not (len(self.bin_edges) - 1 == len(self.y) == len(self.errors_squared)):
+            logger.debug("mis matched")
+            raise ValueError(
+                f"Length of input arrays doesn't match! Bin edges should be one longer than"
+                f" y and errors_squared. Lengths: bin_edges: {len(self.bin_edges)},"
+                f" y: {len(self.y)}, errors_squared: {len(self.errors_squared)}"
+            )
+
+        # Ensure they don't point to one another (which can cause issues when performing
+        # operations in place).
+        for (a_name, a), (b_name, b) in itertools.combinations(arrays.items(), 2):
+            if np.may_share_memory(a, b):
+                logger.warning(f"Object {b_name} shares memory with object {a_name}. Copying object {b_name}!")
+                setattr(self, b_name, b.copy())
 
     @property
     def errors(self) -> np.ndarray:
@@ -512,6 +545,10 @@ class Histogram1D:
         errors = np.array(hist.GetSumw2())
         # Exclude the under/overflow bins
         errors = errors[1:-1]
+
+        # Sanity check
+        if not np.isclose(errors[0], hist.GetBinError(1) ** 2):
+            raise ValueError("Sumw2 errors don't seem to represent bin errors!")
 
         return (bin_edges, y, errors)
 
