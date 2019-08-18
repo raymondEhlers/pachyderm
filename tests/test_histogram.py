@@ -298,6 +298,19 @@ def test_uproot_hist_to_histogram(setup_histogram_conversion: Any) -> None:
     # Cleanup
     del uproot_file
 
+@pytest.mark.ROOT  # type: ignore
+def test_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
+    """ Test derived histogram properties (mean, std. dev, variance, etc). """
+    h_root = test_root_hists.hist1D
+    h = histogram.Histogram1D.from_existing_hist(h_root)
+
+    # Mean
+    assert np.isclose(h.mean, h_root.GetMean())
+    # Standard deviation
+    assert np.isclose(h.std_dev, h_root.GetStdDev())
+    # Variance
+    assert np.isclose(h.variance, h_root.GetStdDev() ** 2)
+
 @pytest.mark.parametrize("bin_edges, y, errors_squared", [  # type: ignore
     (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2, 3])),
     (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2])),

@@ -236,6 +236,67 @@ class Histogram1D:
 
         return self._x
 
+    @property
+    def mean(self) -> float:
+        """ Mean of values filled into the histogram.
+
+        Calculated in the same way as ROOT and physt.
+
+        Args:
+            None.
+        Returns:
+            Mean of the histogram.
+        """
+        # Validation
+        if "total_sum_wx" not in self.metadata:
+            raise ValueError("Sum of weights * x is not available, so we cannot calculate the mean.")
+        # Calculate the mean.
+        total_sum_w = np.sum(self.y)
+        if total_sum_w > 0:
+            return cast(float, self.metadata["total_sum_wx"] / total_sum_w)
+        # Can't divide, so return NaN
+        return np.nan  # type: ignore
+
+    @property
+    def std_dev(self) -> float:
+        """ Standard deviation of the values filled into the histogram.
+
+        Calculated in the same way as ROOT and physt.
+
+        Args:
+            None.
+        Returns:
+            Standard deviation of the histogram.
+        """
+        return cast(float, np.sqrt(self.variance))
+
+    @property
+    def variance(self) -> float:
+        """ Variance of the values filled into the histogram.
+
+        Calculated in the same way as ROOT and physt.
+
+        Args:
+            None.
+        Returns:
+            Variance of the histogram.
+        """
+        # Validation
+        if "total_sum_wx" not in self.metadata:
+            raise ValueError("Sum of weights * x is not available, so we cannot calculate the variance.")
+        # Validation
+        if "total_sum_wx2" not in self.metadata:
+            raise ValueError("Sum of weights * x * x is not available, so we cannot calculate the variance.")
+        # Calculate the variance.
+        total_sum_w = np.sum(self.y)
+        if total_sum_w > 0:
+            return cast(
+                float,
+                (self.metadata["total_sum_wx2"] - (self.metadata["total_sum_wx"] ** 2 / total_sum_w)) / total_sum_w
+            )
+        # Can't divide, so return NaN
+        return np.nan  # type: ignore
+
     def find_bin(self, value: float) -> int:
         """ Find the bin corresponding to the specified value.
 
