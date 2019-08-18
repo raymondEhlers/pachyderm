@@ -8,6 +8,7 @@
 import enum
 import tempfile
 from dataclasses import dataclass
+from io import StringIO
 from typing import Any, List
 
 import numpy as np
@@ -59,6 +60,30 @@ def test_numpy(logging_mixin: Any) -> None:
     result = dump_and_load_yaml(yml = yml, input_value = [test_array])
 
     assert np.allclose(test_array, result)
+
+def test_hand_written_numpy(logging_mixin: Any) -> None:
+    """ Test constructing a numpy array from a hand written array.
+
+    This is in contrast to machine written arrays, which will be encoded
+    in the numpy binary format.
+    """
+    # Setup
+    yml = yaml.yaml()
+    test_array = np.array([1, 2, 3, 4, 5])
+
+    # Create the YAML and load it.
+    input_yaml = f"""---
+x: !numpy_array {test_array.tolist()}
+"""
+    s = StringIO()
+    s.write(input_yaml)
+    s.seek(0)
+    result = yml.load(s)
+
+    print(f"result['x']: {result['x']}")
+
+    # Check that it was loaded properly.
+    assert np.allclose(result["x"], test_array)
 
 def test_module_registration(logging_mixin: Any, mocker: Any) -> None:
     """ Test registering the classes in a module. """

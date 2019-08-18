@@ -158,9 +158,31 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
         We cannot use ``yaml.register_class`` because it won't register the proper type.
         (It would register the type of the class, rather than of `numpy.ndarray`). Instead,
         we use the above approach to register this method explicitly with the representer.
+
+    Note:
+        In order to allow users to write an array by hand, we check the data given. If it's
+        a list, we convert the values and put them into an array. If it's binary encoded,
+        we decode and load it.
+
+    Args:
+        constructor: YAML constructor being used to read and create the objects specified
+            in the YAML.
+        data: Data stored in the YAML node currently being processed.
+    Returns:
+        Numpy array containing the data in the current YAML node.
     """
-    b = data.value.encode("utf-8")
-    return np.load(BytesIO(base64.decodebytes(b)))
+    return_value: np.ndarray
+    if isinstance(data.value, list):
+        # These are probably from a hand encoded file. We will convert them into an array.
+        # Construct the contained values so that we properly construct int, float, etc.
+        # We just leave this to YAML because it already stores this information.
+        values = [constructor.construct_object(n) for n in data.value]
+        return_value = np.array(values)
+    else:
+        # Binary encoded numpy. Decode and load it.
+        b = data.value.encode("utf-8")
+        return_value = np.load(BytesIO(base64.decodebytes(b)))
+    return return_value
 
 def enum_to_yaml(cls: Type[T_EnumToYAML],
                  representer: Representer, data: T_EnumToYAML) -> ruamel.yaml.nodes.ScalarNode:
