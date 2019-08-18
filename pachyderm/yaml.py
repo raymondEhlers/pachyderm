@@ -181,7 +181,9 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
     else:
         # Binary encoded numpy. Decode and load it.
         b = data.value.encode("utf-8")
-        return_value = np.load(BytesIO(base64.decodebytes(b)))
+        # Requires explicitly allowing pickle to load arrays. This used to be default
+        # True, so our risk hasn't changed.
+        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle = True)
     return return_value
 
 def enum_to_yaml(cls: Type[T_EnumToYAML],
