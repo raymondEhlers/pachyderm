@@ -247,15 +247,7 @@ class Histogram1D:
         Returns:
             Mean of the histogram.
         """
-        # Validation
-        if "total_sum_wx" not in self.metadata:
-            raise ValueError("Sum of weights * x is not available, so we cannot calculate the mean.")
-        # Calculate the mean.
-        total_sum_w = np.sum(self.y)
-        if total_sum_w > 0:
-            return cast(float, self.metadata["total_sum_wx"] / total_sum_w)
-        # Can't divide, so return NaN
-        return np.nan  # type: ignore
+        return binned_mean(self.metadata)
 
     @property
     def std_dev(self) -> float:
@@ -268,7 +260,7 @@ class Histogram1D:
         Returns:
             Standard deviation of the histogram.
         """
-        return cast(float, np.sqrt(self.variance))
+        return binned_standard_deviation(self.metadata)
 
     @property
     def variance(self) -> float:
@@ -281,21 +273,7 @@ class Histogram1D:
         Returns:
             Variance of the histogram.
         """
-        # Validation
-        if "total_sum_wx" not in self.metadata:
-            raise ValueError("Sum of weights * x is not available, so we cannot calculate the variance.")
-        # Validation
-        if "total_sum_wx2" not in self.metadata:
-            raise ValueError("Sum of weights * x * x is not available, so we cannot calculate the variance.")
-        # Calculate the variance.
-        total_sum_w = np.sum(self.y)
-        if total_sum_w > 0:
-            return cast(
-                float,
-                (self.metadata["total_sum_wx2"] - (self.metadata["total_sum_wx"] ** 2 / total_sum_w)) / total_sum_w
-            )
-        # Can't divide, so return NaN
-        return np.nan  # type: ignore
+        return binned_variance(self.metadata)
 
     def find_bin(self, value: float) -> int:
         """ Find the bin corresponding to the specified value.
@@ -591,15 +569,10 @@ class Histogram1D:
 
         # Extract stats information. It will be stored in the metadata.
         metadata = {}
-        # We extract the values directly from the members.
-        total_sum_w = hist._fTsumw
-        total_sum_w2 = hist._fTsumw2
-        total_sum_wx = hist._fTsumwx
-        total_sum_wx2 = hist._fTsumwx2
-        # Cross check.
-        assert np.isclose(total_sum_w, np.sum(y))
-        assert np.isclose(total_sum_w2, np.sum(errors))
-        metadata.update({"total_sum_wx": total_sum_wx, "total_sum_wx2": total_sum_wx2})
+        ## We extract the values directly from the members.
+        metadata.update(_create_stats_dict_from_values(
+            hist._fTsumw, hist._fTsumw2, hist._fTsumwx, hist._fTsumwx2
+        ))
 
         return (bin_edges, y, errors, metadata)
 
@@ -645,18 +618,13 @@ class Histogram1D:
             # They are useful for calculating histogram properties (mean, variance, etc).
             stats = np.array([0, 0, 0, 0], dtype = np.float64)
             hist.GetStats(np.ctypeslib.as_ctypes(stats))
-            # Return values are (each one a single value):
+            # Return values are (each one is a single float):
             # [1], [2], [3], [4]
-            # [1]: Sum of weights (equal to np.sum(y))
-            # [2]: Sum of weights squared (equal to np.sum(errors_squared))
-            # [3]: Sum of w*x
-            # [4}: Sum of w*x*x
-            total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2 = stats
-            # Cross checks.
-            assert np.isclose(np.sum(y), total_sum_w)
-            assert np.isclose(np.sum(errors), total_sum_w2)
-
-            metadata.update({"total_sum_wx": total_sum_wx, "total_sum_wx2": total_sum_wx2})
+            # [1]: total_sum_w: Sum of weights (equal to np.sum(y) if unscaled)
+            # [2]: total_sum_w2: Sum of weights squared (equal to np.sum(errors_squared) if unscaled)
+            # [3]: total_sum_wx: Sum of w*x
+            # [4}: total_sum_wx2: Sum of w*x*x
+            metadata.update(_create_stats_dict_from_values(*stats))
 
         return (bin_edges, y, errors, metadata)
 
@@ -809,3 +777,115 @@ def find_bin(bin_edges: np.ndarray, value: float) -> int:
         int,
         np.searchsorted(bin_edges, value, side = "right") - 1
     )
+
+def _create_stats_dict_from_values(total_sum_w: float, total_sum_w2: float,
+                                   total_sum_wx: float, total_sum_wx2: float) -> Dict[str, float]:
+    """ Create a statistics dictionary from the provided set of values.
+
+    This is particularly useful for ensuring that the dictionary values are created uniformly.
+
+    Args:
+        total_sum_w: Total sum of the weights (ie. the frequencies).
+        total_sum_w2: Total sum of the weights squared (ie. sum of Sumw2 array).
+        total_sum_wx: Total sum of weights * x.
+        total_sum_wx2: Total sum of weights * x * x.
+    Returns:
+        Statistics dict suitable for storing in the metadata.
+    """
+    return {
+        "_total_sum_w": total_sum_w, "_total_sum_w2": total_sum_w2,
+        "_total_sum_wx": total_sum_wx, "_total_sum_wx2": total_sum_wx2,
+    }
+
+def calculate_binned_stats(bin_edges: np.array, y: np.array, weights_squared: np.array) -> Dict[str, float]:
+    """ Calculate the stats needed to fully determine histogram properties.
+
+    The values are calculated the same way as in ``ROOT.TH1.GetStats(...)``. Recalculating the statistics
+    is not ideal because information is lost compared to the information available when filling the histogram.
+    In particular, we actual passed x value is used to calculate these values when filling, but we can
+    only approximate this with the bin center when calculating these values later. Calculating them here is
+    equivalent to calling ``hist.ResetStats()`` before retrieving the stats.
+
+    These results are accessible from the ROOT hist using ``ctypes`` via:
+
+        >>> stats = np.array([0, 0, 0, 0], dtype = np.float64)
+        >>> hist.GetStats(np.ctypeslib.as_ctypes(stats))
+
+    Note:
+        ``sum_w`` and ``sum_w2`` calculated here are _not_ equal to the ROOT values if the histogram
+        has been scaled. This is because the weights don't change even if the histogram has been scaled.
+        If the hist stats are reset, it loses this piece of information and has to reconstruct the
+        stats from the current frequencies, such that it will then agree with this function.
+
+    Args:
+        bin_edges: Histogram bin edges.
+        y: Histogram bin frequencies.
+        weights_squared: Filling weights squared (ie. this is the Sumw2 array).
+    Returns:
+        Stats dict containing the newly calculated statistics.
+    """
+    x = bin_edges[:-1] + (bin_edges[1:] - bin_edges[:-1]) / 2
+    total_sum_w = np.sum(y)
+    total_sum_w2 = np.sum(weights_squared)
+    total_sum_wx = np.sum(y * x)
+    total_sum_wx2 = np.sum(y * x ** 2)
+    return _create_stats_dict_from_values(total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2)
+
+def binned_mean(stats: Dict[str, float]) -> float:
+    """ Mean of values stored in the histogram.
+
+    Calculated in the same way as ROOT and physt.
+
+    Args:
+        stats: The histogram statistical properties.
+    Returns:
+        Mean of the histogram.
+    """
+    # Validation
+    if "_total_sum_wx" not in stats:
+        raise ValueError("Sum of weights * x is not available, so we cannot calculate the mean.")
+    if "_total_sum_w" not in stats:
+        raise ValueError("Sum of weights is not available, so we cannot calculate the mean.")
+    # Calculate the mean.
+    total_sum_w = stats["_total_sum_w"]
+    if total_sum_w > 0:
+        return stats["_total_sum_wx"] / total_sum_w
+    # Can't divide, so return NaN
+    return np.nan  # type: ignore
+
+def binned_standard_deviation(stats: Dict[str, float]) -> float:
+    """ Standard deviation of the values filled into the histogram.
+
+    Calculated in the same way as ROOT and physt.
+
+    Args:
+        stats: The histogram statistical properties.
+    Returns:
+        Standard deviation of the histogram.
+    """
+    return cast(float, np.sqrt(binned_variance(stats)))
+
+def binned_variance(stats: Dict[str, float]) -> float:
+    """ Variance of the values filled into the histogram.
+
+    Calculated in the same way as ROOT and physt.
+
+    Args:
+        stats: The histogram statistical properties.
+    Returns:
+        Variance of the histogram.
+    """
+    # Validation
+    if "_total_sum_wx" not in stats:
+        raise ValueError("Sum of weights * x is not available, so we cannot calculate the variance.")
+    if "_total_sum_wx2" not in stats:
+        raise ValueError("Sum of weights * x * x is not available, so we cannot calculate the variance.")
+    if "_total_sum_w" not in stats:
+        raise ValueError("Sum of weights is not available, so we cannot calculate the mean.")
+
+    # Calculate the variance.
+    total_sum_w = stats["_total_sum_w"]
+    if total_sum_w > 0:
+        return (stats["_total_sum_wx2"] - (stats["_total_sum_wx"] ** 2 / total_sum_w)) / total_sum_w
+    # Can't divide, so return NaN
+    return np.nan  # type: ignore

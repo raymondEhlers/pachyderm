@@ -301,6 +301,7 @@ def test_uproot_hist_to_histogram(setup_histogram_conversion: Any) -> None:
 @pytest.mark.ROOT  # type: ignore
 def test_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
     """ Test derived histogram properties (mean, std. dev, variance, etc). """
+    # Setup
     h_root = test_root_hists.hist1D
     h = histogram.Histogram1D.from_existing_hist(h_root)
 
@@ -310,6 +311,26 @@ def test_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
     assert np.isclose(h.std_dev, h_root.GetStdDev())
     # Variance
     assert np.isclose(h.variance, h_root.GetStdDev() ** 2)
+
+@pytest.mark.ROOT  # type: ignore
+def test_recalculated_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
+    """ Test derived histogram properties (mean, std. dev, variance, etc). """
+    # Setup
+    h_root = test_root_hists.hist1D
+    h = histogram.Histogram1D.from_existing_hist(h_root)
+    stats = histogram.calculate_binned_stats(h.bin_edges, h.y, h.errors_squared)
+
+    # Need to reset the stats to force ROOT to recalculate them.
+    # We do it after converting just to be clear that we're not taking advantage of the ROOT
+    # calculation (although we couldn't anyway given the current way that histogram is built).
+    h_root.ResetStats()
+    # Now check the results.
+    # Mean
+    assert np.isclose(histogram.binned_mean(stats), h_root.GetMean())
+    # Standard deviation
+    assert np.isclose(histogram.binned_standard_deviation(stats), h_root.GetStdDev())
+    # Variance
+    assert np.isclose(histogram.binned_variance(stats), h_root.GetStdDev() ** 2)
 
 @pytest.mark.parametrize("bin_edges, y, errors_squared", [  # type: ignore
     (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2, 3])),
