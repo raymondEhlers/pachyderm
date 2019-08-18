@@ -143,6 +143,16 @@ class Histogram1D:
     Note:
         Underflow and overflow bins are excluded!
 
+    When converting from a TH1 (either from ROOT or uproot), additional statistical information will be extracted
+    from the hist to enable the calculation of additional properties. The information available is:
+
+    - Total sum of weights (equal to np.sum(self.y), which we store)
+    - Total sum of weights squared (equal to np.sum(self.errors_squared), which we store)
+    - Total sum of weights * x
+    - Total sum of weights * x * x
+
+    Each is a single float value. Since the later two values are unique, they are stored in the metadata.
+
     Args:
         bin_edges (np.ndarray): The histogram bin edges.
         y (np.ndarray): The histogram bin values.
@@ -169,14 +179,13 @@ class Histogram1D:
 
         # Ensure that they're numpy arrays.
         for name, arr in arrays.items():
-            if not isinstance(arr, np.ndarray):
-                try:
-                    setattr(self, name, np.array(arr))
-                except TypeError as e:
-                    raise ValueError(
-                        f"Arrays must be numpy arrays, but could not convert object {name} of"
-                        f" type {type(arr)} to numpy array."
-                    ) from e
+            try:
+                setattr(self, name, np.array(arr))
+            except TypeError as e:
+                raise ValueError(
+                    f"Arrays must be numpy arrays, but could not convert object {name} of"
+                    f" type {type(arr)} to numpy array."
+                ) from e
 
         # Ensure that they're the appropriate length
         if not (len(self.bin_edges) - 1 == len(self.y) == len(self.errors_squared)):
@@ -191,7 +200,7 @@ class Histogram1D:
         # operations in place).
         for (a_name, a), (b_name, b) in itertools.combinations(arrays.items(), 2):
             if np.may_share_memory(a, b):
-                logger.warning(f"Object {b_name} shares memory with object {a_name}. Copying object {b_name}!")
+                logger.warning(f"Object '{b_name}' shares memory with object '{a_name}'. Copying object '{b_name}'!")
                 setattr(self, b_name, b.copy())
 
     @property
@@ -499,7 +508,7 @@ class Histogram1D:
         return all(agreement) and metadata_agree
 
     @staticmethod
-    def _from_uproot(hist: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _from_uproot(hist: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
         """ Convert a uproot histogram to a set of array for creating a Histogram.
 
         Note:
@@ -519,10 +528,22 @@ class Histogram1D:
         # calculating bin errors from TH1::GetBinError()
         errors = hist.variances
 
-        return (bin_edges, y, errors)
+        # Extract stats information. It will be stored in the metadata.
+        metadata = {}
+        # We extract the values directly from the members.
+        total_sum_w = hist._fTsumw
+        total_sum_w2 = hist._fTsumw2
+        total_sum_wx = hist._fTsumwx
+        total_sum_wx2 = hist._fTsumwx2
+        # Cross check.
+        assert np.isclose(total_sum_w, np.sum(y))
+        assert np.isclose(total_sum_w2, np.sum(errors))
+        metadata.update({"total_sum_wx": total_sum_wx, "total_sum_wx2": total_sum_wx2})
+
+        return (bin_edges, y, errors, metadata)
 
     @staticmethod
-    def _from_th1(hist: Hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _from_th1(hist: Hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
         """ Convert a TH1 histogram to a Histogram.
 
         Note:
@@ -545,6 +566,7 @@ class Histogram1D:
         errors = np.array(hist.GetSumw2())
         # Exclude the under/overflow bins
         errors = errors[1:-1]
+        metadata = {}
 
         # Check for a TProfile.
         # In that case we need to retrieve the errors manually because the Sumw2() errors are
@@ -558,7 +580,24 @@ class Histogram1D:
             if not np.isclose(errors[0], hist.GetBinError(1) ** 2):
                 raise ValueError("Sumw2 errors don't seem to represent bin errors!")
 
-        return (bin_edges, y, errors)
+            # Retrieve the stats and store them in the metadata.
+            # They are useful for calculating histogram properties (mean, variance, etc).
+            stats = np.array([0, 0, 0, 0], dtype = np.float64)
+            hist.GetStats(np.ctypeslib.as_ctypes(stats))
+            # Return values are (each one a single value):
+            # [1], [2], [3], [4]
+            # [1]: Sum of weights (equal to np.sum(y))
+            # [2]: Sum of weights squared (equal to np.sum(errors_squared))
+            # [3]: Sum of w*x
+            # [4}: Sum of w*x*x
+            total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2 = stats
+            # Cross checks.
+            assert np.isclose(np.sum(y), total_sum_w)
+            assert np.isclose(np.sum(errors), total_sum_w2)
+
+            metadata.update({"total_sum_wx": total_sum_wx, "total_sum_wx2": total_sum_wx2})
+
+        return (bin_edges, y, errors, metadata)
 
     @classmethod
     def from_existing_hist(cls: Type[_T], hist: Union[Hist, Any]) -> _T:
@@ -584,12 +623,12 @@ class Histogram1D:
         # "values" is a proxy for if we have an uproot hist.
         logger.debug(f"{hist}, {type(hist)}")
         if hasattr(hist, "values"):
-            (bin_edges, y, errors_squared) = cls._from_uproot(hist)
+            (bin_edges, y, errors_squared, metadata) = cls._from_uproot(hist)
         else:
             # Handle traditional ROOT hists
-            (bin_edges, y, errors_squared) = cls._from_th1(hist)
+            (bin_edges, y, errors_squared, metadata) = cls._from_th1(hist)
 
-        return cls(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+        return cls(bin_edges = bin_edges, y = y, errors_squared = errors_squared, metadata = metadata)
 
 def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_edges: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """ Extract x, y, and bin values from a 2D ROOT histogram.
