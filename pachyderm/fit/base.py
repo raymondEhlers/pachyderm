@@ -9,7 +9,7 @@ import itertools
 import logging
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import iminuit
 import numdifftools as nd
@@ -455,3 +455,17 @@ def call_list_of_callables(functions: Iterable[Callable[..., float]], argument_p
         #logger.debug(f"describe args: {iminuit.util.describe(func)}")
         value += func(*function_args)
     return value
+
+def chi_squared_probability(chi_2: float, ndf: float) -> float:
+    """ Calculate the probability that the
+
+    This is just a thin wrapped around ``scipy.stats``, but it's convenient.
+
+    Args:
+        chi_2: Chi squared value.
+        ndf: Number of degrees of freedom.
+    Returns:
+        Probability that the fit is consistent with the data.
+    """
+    import scipy.stats
+    return cast(float, 1 - scipy.stats.chi2.cdf(chi_2, ndf))

@@ -12,7 +12,7 @@ __all__ = [
 ]
 
 from .base import (  # noqa: F401
-    BaseFitResult, FitFailed, FitResult, FuncCode, calculate_function_errors, fit_with_minuit
+    BaseFitResult, FitFailed, FitResult, FuncCode, calculate_function_errors, chi_squared_probability, fit_with_minuit
 )
 from .cost_function import (  # noqa: F401
     BinnedChiSquared, BinnedLogLikelihood, ChiSquared, CostFunctionBase, LogLikelihood, SimultaneousFit
