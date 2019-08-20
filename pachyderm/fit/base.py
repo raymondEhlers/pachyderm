@@ -206,7 +206,8 @@ class FitResult(BaseFitResult):
         )
 
 def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, Union[float, Tuple[float, float]]],
-                    log_likelihood: bool, x: np.ndarray) -> Tuple[FitResult, iminuit.Minuit]:
+                    log_likelihood: bool, x: np.ndarray,
+                    minos: Optional[bool] = False) -> Tuple[FitResult, iminuit.Minuit]:
     """ Perform a fit using the given cost function with Minuit.
 
     Args:
@@ -216,6 +217,7 @@ def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, Unio
         log_likelihood: True if the cost function is a log likelihood (such that we need to modify
             the errordef of Minuit).
         x: x value(s) where the fit is evaluated, which will be stored in the fit result.
+        minos: Calculate MINOS errors. They have to be accessed through the Minuit object. Default: False.
     Returns:
         (fit_result, Minuit object): The fit result extracts values from the Minuit object, but
             the Minuit object is also returned for good measure.
@@ -223,7 +225,7 @@ def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, Unio
     # Validation
     # Check the arguments
     parameters = iminuit.describe(cost_func)
-    # Loop over the available paramters because each one needs to be specified in the Minuit args.
+    # Loop over the available parameters because each one needs to be specified in the Minuit args.
     for p in parameters:
         logger.debug(f"minuit_args: {minuit_args}")
         if p in minuit_args:
@@ -249,12 +251,14 @@ def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, Unio
     minuit.migrad()
     # Just in case (doesn't hurt anything, but may help in a few cases).
     minuit.hesse()
+    if minos:
+        minuit.minos()
 
     # Check that the fit is actually good
     if not minuit.migrad_ok():
         raise FitFailed("Minimization failed! The fit is invalid!")
 
-    # Create the fit result and caluclate the errors.
+    # Create the fit result and calculate the errors.
     fit_result = FitResult.from_minuit(minuit, cost_func, x)
     # We can calculate the fit errors if the cost function has a single function.
     # If it's a simultaneous fit, it's unclear how best this should be handled. Perhaps it could
