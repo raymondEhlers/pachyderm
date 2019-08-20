@@ -73,3 +73,20 @@ def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np
         Calculated gaussian value(s).
     """
     return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))
+
+def extended_gaussian(x: Union[np.ndarray, float], mean: float, sigma: float, amplitude: float) -> Union[np.ndarray, float]:
+    r""" Extended gaussian.
+
+    .. math::
+
+        f = A / \sqrt{2 * \pi * \sigma^{2}} * \exp{-\frac{(x - \mu)^{2}}{(2 * \sigma^{2}}}
+
+    Args:
+        x: Value(s) where the gaussian should be evaluated.
+        mean: Mean of the gaussian distribution.
+        sigma: Width of the gaussian distribution.
+        amplitude: Amplitude of the gaussian.
+    Returns:
+        Calculated gaussian value(s).
+    """
+    return amplitude / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))
