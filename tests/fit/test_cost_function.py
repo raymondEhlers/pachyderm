@@ -6,7 +6,7 @@
 """
 
 import logging
-from typing import Any, Tuple
+from typing import Any, Dict, Tuple, Union
 
 import numpy as np
 import pytest
@@ -140,8 +140,8 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
     # Setup
     h, h_ROOT = setup_parabola
     ROOT = pytest.importorskip("ROOT")
-    minuit_args = {
-        "scale": 1, "error_scale": 0.1,
+    minuit_args: Dict[str, Union[float, Tuple[float, float]]] = {
+        "scale": 1, "error_scale": 0.1, "limit_scale": (-1000, 1000),
     }
     log_likelihood = "L" in fit_option
     if cost_func == "probfit":
@@ -274,8 +274,8 @@ def test_simultaneous_fit(logging_mixin: Any, setup_simultaneous_fit_data: Any) 
     h, h_shifted, _, _ = setup_simultaneous_fit_data
     cost_func1 = cost_function.ChiSquared(parabola, data = h)
     cost_func2 = cost_function.ChiSquared(parabola, data = h_shifted)
-    minuit_args = {
-        "scale": 1.5, "error_scale": 0.15,
+    minuit_args: Dict[str, Union[float, Tuple[float, float]]] = {
+        "scale": 1.5, "error_scale": 0.15, "limit_scale": (-1000, 1000),
     }
 
     # Setup the probfit version

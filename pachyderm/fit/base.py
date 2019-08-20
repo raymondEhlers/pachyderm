@@ -220,8 +220,32 @@ def fit_with_minuit(cost_func: Callable[..., float], minuit_args: Dict[str, Unio
         (fit_result, Minuit object): The fit result extracts values from the Minuit object, but
             the Minuit object is also returned for good measure.
     """
+    # Validation
+    # Check the arguments
+    parameters = iminuit.describe(cost_func)
+    # Loop over the available paramters because each one needs to be specified in the Minuit args.
+    for p in parameters:
+        logger.debug(f"minuit_args: {minuit_args}")
+        if p in minuit_args:
+            if f"limit_{p}" not in minuit_args:
+                raise ValueError(f"Limits on parameter '{p}' must be specified.")
+            if f"error_{p}" not in minuit_args:
+                raise ValueError(f"Initial error on parameter '{p}' must be specified.")
+            # If p and limit_p and error_p were specified, then the parameter is fully specified.
+        elif p.replace("fix", "") in minuit_args:
+            # The parameter is fixed and therefore needs no further specification.
+            pass
+        else:
+            # The parameter wasn't specified.
+            raise ValueError(f"Parameter '{p}' must be specified in the fit arguments.")
+    # Set the errordef.
+    # We check if ti's set to the allow the user to override if they are so inclined.
+    # (Overriding it should be pretty rare).
+    if "errordef" not in minuit_args:
+        minuit_args["errordef"] = 0.5 if log_likelihood else 1
+
     # Perform the fit
-    minuit = iminuit.Minuit(cost_func, **minuit_args, errordef = 0.5 if log_likelihood else 1)
+    minuit = iminuit.Minuit(cost_func, **minuit_args)
     minuit.migrad()
     # Just in case (doesn't hurt anything, but may help in a few cases).
     minuit.hesse()
