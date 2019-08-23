@@ -2,6 +2,31 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.2] - 23 August 2019
+
+### Added
+
+- Generic fit base class. It can direct fits with minimal work for the user. It's generalized and ported over
+  from the jet-hadron analysis. See: `83f1a93350c988d3d7267e2f99d3b2c63464d3ec`.
+- Histogram statistics calculation for mean, standard deviation, and variance. Can be extracted from ROOT
+  hists as well as recalculated manually. See: `c5b23a7b079dc0cbf75962b5bfd6e29ee6679bcb`,
+  `6ee9f7b4fdb5b71016296c18ade0472816777949`, and `aa4cb32252418035adbb6968783f1258da325410`.
+- Extended gaussian fit function. See: `af69d29ee931c50b6398a3f536e54bc9341646da`.
+- Wrapper for calculating chi squared probability. See: `2277444a4c37e995143459841f1e386a3512462a`.
+
+### Changed
+
+- Improved Minuit wrapper fit function argument validation. See: `f09ace01b19e285d1b229a3f0bcde819c59fce34`.
+- Refactor Minuit wrapper fit function into the new module with the generic fit class. The interface of the
+  `pacyhderm.fit` package defined in `__init__.py` did not change. See:
+  `83f1a93350c988d3d7267e2f99d3b2c63464d3ec`
+- Allow for numpy arrays to be written by hand in YAML inputs. See: `235f41f900f40713663fe999718aea35a4201dc8`.
+
+### Fixed
+
+- Fix numpy writing to YAML with newer versions of numpy. See: `1fedadc9f3365fd292ba168c47ce4e1d72179a16`.
+- Fix typos in docs and comments.
+
 ## [2.1] - 17 August 2019
 
 ### Added
