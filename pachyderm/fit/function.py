@@ -74,7 +74,8 @@ def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np
     """
     return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))
 
-def extended_gaussian(x: Union[np.ndarray, float], mean: float, sigma: float, amplitude: float) -> Union[np.ndarray, float]:
+def extended_gaussian(x: Union[np.ndarray, float], mean: float, sigma: float,
+                      amplitude: float) -> Union[np.ndarray, float]:
     r""" Extended gaussian.
 
     .. math::

@@ -23,7 +23,7 @@ T_CostFunction = TypeVar("T_CostFunction", bound = "CostFunctionBase")
 def _quad(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
     """ Integrate over the given function using QUADPACK.
 
-    Unforutnately, this option is fairly slow because we can't take advantage of vectorized numpy operations.
+    Unfortunately, this option is fairly slow because we can't take advantage of vectorized numpy operations.
     Something like numba could speed this up if all functions and classes could be supported.
 
     Args:
@@ -85,7 +85,7 @@ def _integrate_1D(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[f
     return _simpson_38(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])
 
 def _unravel_simultaneous_fits(functions: Iterable[Union["CostFunctionBase", "SimultaneousFit"]]) -> Iterator["CostFunctionBase"]:
-    """ Unravel the cost functions from possible simulatenous fit objects.
+    """ Unravel the cost functions from possible simultaneous fit objects.
 
     The functions are unravel by recursively retrieving the functions from existing ``SimultaneousFit`` objects
     that may be in the list of passed functions. The cost functions store their fit data, so they are fully
@@ -192,14 +192,14 @@ class CostFunctionBase(abc.ABC):
             f: Fit function.
             args: Other arguments for the fit function (not including where it will be evaluated (ie. x)).
         Returns:
-            The cost function evaluted at all of the corresponding data points.
+            The cost function evaluated at all of the corresponding data points.
         """
         ...
 
 class StandaloneCostFunction(CostFunctionBase):
     """ Cost function which only needs a list of input data.
 
-    This is in constrast to those which need data to compare against at each point. One example of
+    This is in contrast to those which need data to compare against at each point. One example of
     a cost function which only needs the input data is the unbinned log likelihood.
 
     Attributes:
@@ -225,14 +225,14 @@ class StandaloneCostFunction(CostFunctionBase):
         Args:
             data: The input histogram. This should simply be an array of the values.
         Returns:
-            The cost function evaluted at all of the corresponding data points (ie. ``self.data``).
+            The cost function evaluated at all of the corresponding data points (ie. ``self.data``).
         """
         return cls._cost_function(data, f, *args)
 
 class DataComparisonCostFunction(CostFunctionBase):
     """ Cost function which needs comparison data, the points where it was evaluated, and the errors.
 
-    This is in constrast to those which only need the input data. Examples of cost functions needing
+    This is in contrast to those which only need the input data. Examples of cost functions needing
     input data included the chi squared (both unbinned and binned), as well as the binned log likelihood.
 
     Attributes:
@@ -262,7 +262,7 @@ class DataComparisonCostFunction(CostFunctionBase):
             f: Fit function.
             args: Arguments for the function.
         Returns:
-            The cost function evaluted at all the corresponding data points (ie. data.x).
+            The cost function evaluated at all the corresponding data points (ie. data.x).
         """
         return cls._cost_function(data.x, data.y, data.errors, data.bin_edges, f, *args)
 
