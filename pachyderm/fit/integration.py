@@ -44,7 +44,6 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         fit_function: Function to be fit.
         fit_result: Result of the fit. Only valid after the fit has been performed.
     """
-    # TODO: Update docs...
     def __init__(self, use_log_likelihood: bool, fit_options: Optional[Dict[str, Any]] = None,
                  user_arguments: Optional[T_FitArguments] = None):
         # Validation
