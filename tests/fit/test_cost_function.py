@@ -13,6 +13,7 @@ import pytest
 import scipy.integrate
 
 import pachyderm.fit.base as fit_base
+import pachyderm.fit.integration as fit_integration
 from pachyderm import histogram
 from pachyderm.fit import cost_function
 from pachyderm.typing_helpers import Hist
@@ -162,7 +163,7 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
     else:
         args.update({"x": h.x, "y": h.y, "error": h.errors})
     cost = cost_func(**args)
-    fit_result, _ = fit_base.fit_with_minuit(cost, minuit_args, log_likelihood, h.x)
+    fit_result, _ = fit_integration.fit_with_minuit(cost, minuit_args, h.x)
 
     # Check the minimized value.
     # It doesn't appear that it will agree for log likelihood
@@ -291,11 +292,11 @@ def test_simultaneous_fit(logging_mixin: Any, setup_simultaneous_fit_data: Any) 
     assert s.func_code.co_varnames == list(s_probfit.func_code.co_varnames)
 
     # Now perform the fits
-    fit_result, _ = fit_base.fit_with_minuit(
-        cost_func = s, minuit_args = minuit_args, log_likelihood = False, x = h.x
+    fit_result, _ = fit_integration.fit_with_minuit(
+        cost_func = s, minuit_args = minuit_args, x = h.x
     )
-    fit_result_probfit, _ = fit_base.fit_with_minuit(
-        cost_func = s_probfit, minuit_args = minuit_args, log_likelihood = False, x = h.x
+    fit_result_probfit, _ = fit_integration.fit_with_minuit(
+        cost_func = s_probfit, minuit_args = minuit_args, x = h.x
     )
     # And check that the fit results agree
     logger.debug(f"scale: {fit_result.values_at_minimum['scale']} +/- {fit_result.errors_on_parameters['scale']}")
