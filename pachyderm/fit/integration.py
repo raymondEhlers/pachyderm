@@ -152,14 +152,15 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         # Validation
         if user_arguments is None:
             user_arguments = {}
-        # Copy the user arguments so that we don't modify the arguments passed to the class if when we update them.
-        user_fit_arguments = dict(self.user_arguments)
-        # Update with any additional user provided arguments
-        user_fit_arguments.update(user_arguments)
 
         # Setup the fit and the cost function
-        hist_for_fit, arguments = self._setup(h = h)
-        # We elect to create the cost fu
+        hist_for_fit, user_fit_arguments = self._setup(h = h)
+        # Update the default user arguments provided in setup by...
+        # ... The stored user arguments when the object was created.
+        user_fit_arguments.update(self.user_arguments)
+        # ... The user arguments passed to the fit function.
+        user_fit_arguments.update(user_arguments)
+        # Then create the cost function according to the parameters and (potentially restricted) data.
         cost_func = self._create_cost_function(h = hist_for_fit)
 
         # Perform the fit by minimizing the chi squared
