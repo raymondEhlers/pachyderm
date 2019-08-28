@@ -300,7 +300,7 @@ class Histogram1D:
         # We want to copy bin_edges, y, and errors_squared, but not anything else. Namely, we skip _x here.
         # In principle, it wouldn't really be a problem to copy, but there may be other "_" fields that we
         # want to skip later, so we do the right thing now.
-        kwargs = {k: np.array(v, copy = True) for k, v in vars(self).items() if not k.startswith("_")}
+        kwargs = {k: np.array(v, copy = True) for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"}
         return type(self)(**kwargs)
 
     def counts_in_interval(self,
