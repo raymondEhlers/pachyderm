@@ -317,6 +317,8 @@ def fit_with_minuit(cost_func: Union[cost_function.CostFunctionBase, cost_functi
 
     # Perform the fit
     minuit = iminuit.Minuit(cost_func, **minuit_args)
+    # Improve minimization reliability.
+    minuit.set_strategy(2)
     minuit.migrad()
     # Just in case (doesn't hurt anything, but may help in a few cases).
     minuit.hesse()
@@ -326,6 +328,10 @@ def fit_with_minuit(cost_func: Union[cost_function.CostFunctionBase, cost_functi
     # Check that the fit is actually good
     if not minuit.migrad_ok():
         raise base.FitFailed("Minimization failed! The fit is invalid!")
+    # Check covariance matrix accuracy. We need to check it explicitly because It appears that it is not
+    # included in the migrad_ok status check.
+    if not minuit.matrix_accurate():
+        raise base.FitFailed("Covariance matrix is inaccurate! The fit is invalid!")
 
     # Create the fit result and calculate the errors.
     fit_result = base.FitResult.from_minuit(minuit, cost_func, x)
