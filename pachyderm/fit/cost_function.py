@@ -84,7 +84,8 @@ def _integrate_1D(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[f
     # Simpson's 3/8 rule is better than the simple case, but faster than QUADPACK.
     return _simpson_38(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])
 
-def _unravel_simultaneous_fits(functions: Iterable[Union["CostFunctionBase", "SimultaneousFit"]]) -> Iterator["CostFunctionBase"]:
+def unravel_simultaneous_fits(functions: Iterable[Union["CostFunctionBase", "SimultaneousFit"]]
+                              ) -> Iterator["CostFunctionBase"]:
     """ Unravel the cost functions from possible simultaneous fit objects.
 
     The functions are unravel by recursively retrieving the functions from existing ``SimultaneousFit`` objects
@@ -95,11 +96,11 @@ def _unravel_simultaneous_fits(functions: Iterable[Union["CostFunctionBase", "Si
     Args:
         functions: Functions to unravel.
     Returns:
-        Iterator of the base cost functions functions.
+        Iterator of the base cost functions.
     """
     for f in functions:
         if isinstance(f, SimultaneousFit):
-            yield from _unravel_simultaneous_fits(f.cost_functions)
+            yield from unravel_simultaneous_fits(f.cost_functions)
         else:
             yield f
 
@@ -118,7 +119,7 @@ class SimultaneousFit(generic_class.EqualityMixin):
     def __init__(self, *cost_functions: Union[T_CostFunction, "SimultaneousFit"]):
         # Validation
         # Ensure that we unravel any SimultaneousFit objects to their base cost functions.
-        funcs = list(_unravel_simultaneous_fits(list(cost_functions)))
+        funcs = list(unravel_simultaneous_fits(list(cost_functions)))
 
         self.cost_functions = funcs
         logger.debug("Simultaneous Fit")

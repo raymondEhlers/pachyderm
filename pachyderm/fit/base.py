@@ -165,6 +165,18 @@ class FitResult(BaseFitResult):
                 self._chi_squared = cost_function._binned_chi_squared(
                     data.x, data.y, data.errors, data.bin_edges, cost_func.f, *self.values_at_minimum.values()
                 )
+            elif isinstance(cost_func, cost_function.SimultaneousFit):
+                chi_squared = 0
+                for cf in cost_function.unravel_simultaneous_fits(cost_func.cost_functions):
+                    data = cf.data
+                    # Help out mypy...
+                    assert isinstance(data, histogram.Histogram1D)
+                    # Calculate using the binned chi squared. This assumes that we have binned data (which
+                    # is probably fairly reasonable for our purpose).
+                    chi_squared += cost_function._binned_chi_squared(
+                        data.x, data.y, data.errors, data.bin_edges, cf.f, *self.values_at_minimum.values()
+                    )
+                self._chi_squared = chi_squared
             else:
                 raise NotImplementedError("Needs to be implement for unbinned data.")
                 #data = cost_func.data
