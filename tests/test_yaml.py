@@ -6,6 +6,7 @@
 """
 
 import enum
+import logging
 import tempfile
 from dataclasses import dataclass
 from io import StringIO
@@ -15,6 +16,8 @@ import numpy as np
 import pytest  # noqa: F401
 
 from pachyderm import yaml
+
+logger = logging.getLogger(__name__)
 
 def dump_and_load_yaml(yml: yaml.ruamel.yaml.YAML, input_value: List[Any]) -> Any:
     """ Perform a dump and load YAML loop. """
@@ -80,10 +83,46 @@ x: !numpy_array {test_array.tolist()}
     s.seek(0)
     result = yml.load(s)
 
-    print(f"result['x']: {result['x']}")
+    logger.debug(f"result['x']: {result['x']}")
 
     # Check that it was loaded properly.
     assert np.allclose(result["x"], test_array)
+
+def test_numpy_float(logging_mixin: Any) -> None:
+    """ Test reading and writing numpy floats to YAML. """
+    # Setup
+    yml = yaml.yaml()
+
+    test_value = np.float64(123.456)
+
+    # Perform a round-trip of dumping and loading
+    result = dump_and_load_yaml(yml = yml, input_value = [test_value])
+
+    assert np.isclose(test_value, result)
+
+def test_hand_written_numpy_float(logging_mixin: Any) -> None:
+    """ Test constructing a numpy array from a hand written array.
+
+    This is in contrast to machine written arrays, which will be encoded
+    in the numpy binary format.
+    """
+    # Setup
+    yml = yaml.yaml()
+    test_value = np.float64(1234.567)
+
+    # Create the YAML and load it.
+    input_yaml = f"""---
+x: !numpy_float64 {test_value}
+"""
+    s = StringIO()
+    s.write(input_yaml)
+    s.seek(0)
+    result = yml.load(s)
+
+    logger.debug(f"result['x']: {result['x']}")
+
+    # Check that it was loaded properly.
+    assert np.isclose(result["x"], test_value)
 
 def test_module_registration(logging_mixin: Any, mocker: Any) -> None:
     """ Test registering the classes in a module. """

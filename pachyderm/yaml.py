@@ -68,9 +68,12 @@ def yaml(modules_to_register: Optional[Iterable[Any]] = None,
     yaml = ruamel.yaml.YAML(typ = "rt")
 
     # Register representers and constructors
-    # Numpy
-    yaml.representer.add_representer(np.ndarray, numpy_to_yaml)
-    yaml.constructor.add_constructor("!numpy_array", numpy_from_yaml)
+    # Numpy array
+    yaml.representer.add_representer(np.ndarray, numpy_array_to_yaml)
+    yaml.constructor.add_constructor("!numpy_array", numpy_array_from_yaml)
+    # Numpy float64
+    yaml.representer.add_representer(np.float64, numpy_float64_to_yaml)
+    yaml.constructor.add_constructor("!numpy_float64", numpy_float64_from_yaml)
     # Register external classes
     yaml = register_module_classes(yaml = yaml, modules = modules_to_register)
     yaml = register_classes(yaml = yaml, classes = classes_to_register)
@@ -112,7 +115,7 @@ def register_module_classes(yaml: ruamel.yaml.YAML, modules: Optional[Iterable[A
 # Representers and constructors for individual classes.
 #
 
-def numpy_to_yaml(representer: Representer, data: np.ndarray) -> str:
+def numpy_array_to_yaml(representer: Representer, data: np.ndarray) -> str:
     """ Write a numpy array to YAML.
 
     It registers the array under the tag ``!numpy_array``.
@@ -122,7 +125,7 @@ def numpy_to_yaml(representer: Representer, data: np.ndarray) -> str:
     .. code-block:: python
 
         >>> yaml = ruamel.yaml.YAML()
-        >>> yaml.representer.add_representer(np.ndarray, yaml.numpy_to_yaml)
+        >>> yaml.representer.add_representer(np.ndarray, yaml.numpy_array_to_yaml)
 
     Note:
         We cannot use ``yaml.register_class`` because it won't register the proper type.
@@ -142,7 +145,7 @@ def numpy_to_yaml(representer: Representer, data: np.ndarray) -> str:
         )
     )
 
-def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNode) -> np.ndarray:
+def numpy_array_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNode) -> np.ndarray:
     """ Read an array from YAML to numpy.
 
     It reads arrays registered under the tag ``!numpy_array``.
@@ -152,7 +155,7 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
     .. code-block:: python
 
         >>> yaml = ruamel.yaml.YAML()
-        >>> yaml.constructor.add_constructor("!numpy_array", yaml.numpy_from_yaml)
+        >>> yaml.constructor.add_constructor("!numpy_array", yaml.numpy_array_from_yaml)
 
     Note:
         We cannot use ``yaml.register_class`` because it won't register the proper type.
@@ -165,8 +168,7 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
         we decode and load it.
 
     Args:
-        constructor: YAML constructor being used to read and create the objects specified
-            in the YAML.
+        constructor: YAML constructor being used to read and create the objects specified in the YAML.
         data: Data stored in the YAML node currently being processed.
     Returns:
         Numpy array containing the data in the current YAML node.
@@ -181,8 +183,78 @@ def numpy_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNo
     else:
         # Binary encoded numpy. Decode and load it.
         b = data.value.encode("utf-8")
-        # Requires explicitly allowing pickle to load arrays. This used to be default
-        # True, so our risk hasn't changed.
+        # Requires explicitly allowing pickle to load arrays. This used to be default True,
+        # so our risk hasn't changed.
+        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle = True)
+    return return_value
+
+def numpy_float64_to_yaml(representer: Representer, data: np.float64) -> str:
+    """ Write a numpy float64 to YAML.
+
+    It registers the float under the tag ``!numpy_float64``.
+
+    Use with:
+
+    .. code-block:: python
+
+        >>> yaml = ruamel.yaml.YAML()
+        >>> yaml.representer.add_representer(np.float64, yaml.numpy_float64_to_yaml)
+
+    Note:
+        We cannot use ``yaml.register_class`` because it won't register the proper type.
+        (It would register the type of the class, rather than of `numpy.float64`). Instead,
+        we use the above approach to register this method explicitly with the representer.
+    """
+    # Create a bytes object, dump to it, encode the bytes to a str, and then write them.
+    # It's less transparent when physically reading it, but it should avoid encoding issues.
+    b = BytesIO()
+    np.save(b, data)
+    b.seek(0)
+    # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
+    return cast(
+        str,
+        representer.represent_scalar(
+            "!numpy_float64", base64.encodebytes(b.read()).decode("utf-8"),
+        )
+    )
+
+def numpy_float64_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.ScalarNode) -> np.float64:
+    """ Read an float64 from YAML to numpy.
+
+    It reads the float64 registered under the tag ``!numpy_float64``.
+
+    Use with:
+
+    .. code-block:: python
+
+        >>> yaml = ruamel.yaml.YAML()
+        >>> yaml.constructor.add_constructor("!numpy_float64", yaml.numpy_float64_from_yaml)
+
+    Note:
+        We cannot use ``yaml.register_class`` because it won't register the proper type.
+        (It would register the type of the class, rather than of `numpy.float64`). Instead,
+        we use the above approach to register this method explicitly with the representer.
+
+    Note:
+        In order to allow users to write an float by hand, we check the data given. If it's
+        a raw float, we put it into an float64. If it's binary encoded, we decode and load it.
+
+    Args:
+        constructor: YAML constructor being used to read and create the objects specified in the YAML.
+        data: Data stored in the YAML node currently being processed.
+    Returns:
+        Numpy float64 containing the data in the current YAML node.
+    """
+    return_value: np.float64
+    try:
+        # First guess that it's a hand encoded file. We can't detect the type because the value
+        # is just a str. We will convert it into a numpy float.
+        return_value = np.float64(data.value)
+    except ValueError:
+        # It can't convert to a float, so it's probably binary encoded. Decode and load it.
+        b = data.value.encode("utf-8")
+        # Requires explicitly allowing pickle to load arrays. This used to be default True,
+        # so our risk hasn't changed.
         return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle = True)
     return return_value
 
