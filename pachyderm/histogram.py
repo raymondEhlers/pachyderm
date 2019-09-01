@@ -458,7 +458,7 @@ class Histogram1D:
         return new
 
     def __isub__(self: _T, other: _T) -> _T:
-        """ Handles ``a += b``. """
+        """ Handles ``a -= b``. """
         if not np.allclose(self.bin_edges, other.bin_edges):
             raise TypeError(
                 f"Binning is different for given histograms."
@@ -666,7 +666,7 @@ def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_e
 
     Converts the histogram into a numpy array, and suitably processes it for a surface plot
     by removing 0s (which can cause problems when taking logs), and returning a set of (x, y) mesh
-    values utilziing either the bin edges or bin centers.
+    values utilizing either the bin edges or bin centers.
 
     Note:
         This is a different format than the 1D version!
@@ -681,7 +681,7 @@ def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_e
             grid (from np.meshgrid) using the selected bin values.
     """
     # Process the hist into a suitable state
-    # NOTE: The shape specific can be somewhat confusing (ie. I would naviely expected to specify the x first.)
+    # NOTE: The shape specific can be somewhat confusing (ie. I would naively expected to specify the x first.)
     # This says that the ``GetYaxis().GetNbins()`` number of rows and ``GetXaxis().GetNbins()`` number of columns.
     shape = (hist.GetYaxis().GetNbins(), hist.GetXaxis().GetNbins())
     # To keep consistency with the root_numpy 2D hist format, we transpose the final result
