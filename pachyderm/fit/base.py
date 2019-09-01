@@ -167,14 +167,17 @@ class FitResult(BaseFitResult):
                 )
             elif isinstance(cost_func, cost_function.SimultaneousFit):
                 chi_squared = 0
-                for cf in cost_function.unravel_simultaneous_fits(cost_func.cost_functions):
+                for cf, function_args in zip(cost_function.unravel_simultaneous_fits(cost_func.cost_functions),
+                                             _function_arguments_from_argument_positions(
+                                                 cost_func.argument_positions, *self.values_at_minimum.values())
+                                             ):
                     data = cf.data
                     # Help out mypy...
                     assert isinstance(data, histogram.Histogram1D)
                     # Calculate using the binned chi squared. This assumes that we have binned data (which
                     # is probably fairly reasonable for our purpose).
                     chi_squared += cost_function._binned_chi_squared(
-                        data.x, data.y, data.errors, data.bin_edges, cf.f, *self.values_at_minimum.values()
+                        data.x, data.y, data.errors, data.bin_edges, cf.f, *function_args
                     )
                 self._chi_squared = chi_squared
             else:
@@ -403,6 +406,38 @@ def merge_func_codes(functions: Iterable[Callable[..., float]], prefixes: Option
 
     return merged_args, argument_positions
 
+def _function_arguments_from_argument_positions(argument_positions: T_ArgumentPositions,
+                                                *args: Union[float, np.ndarray]
+                                                ) -> Iterable[List[Union[float, np.ndarray]]]:
+    """ Extract the function arguments from a larger set of arguments given the argument positions.
+
+    It determines the arguments for calling functions stored in ``SimultaneousFit`` or ``AddPDF`` classes. Use it
+    something like:
+
+    >>> pdf = AddPDF(f_1, f_2)
+    >>> for func, function_args in zip(pdf.functions,
+    ...                                _function_arguments_from_argument_positions(
+    ...                                    pdf.argument_positions, *full_set_of_args
+    ...                                )):
+    ...     # Call the function
+    ...     func(*function_args)
+
+    Args:
+        argument_positions: Map from merged arguments to arguments for each function.
+        args: Arguments for the functions. Must include the x argument!
+    Returns:
+        List of arguments for the function that is described by the maps in argument_positions.
+    """
+    for arg_positions in argument_positions:
+        #logger.debug(f"arg_positions: {arg_positions}, full args: {args}")
+        # Determine the arguments for the given function using the arg positions map.
+        function_args = []
+        for v in arg_positions:
+            # We don't skip over the x argument because it's expected to be supplied in the args.
+            function_args.append(args[v])
+        #logger.debug(f"arg_positions: {arg_positions}, function_args: {function_args}")
+        yield function_args
+
 def call_list_of_callables(functions: Iterable[Callable[..., float]], argument_positions: T_ArgumentPositions,
                            *args: Union[float, np.ndarray]) -> float:
     """ Call a list of callables with the given args.
@@ -415,15 +450,9 @@ def call_list_of_callables(functions: Iterable[Callable[..., float]], argument_p
         Sum of the values of the functions.
     """
     value = 0.
-    for func, arg_positions in zip(functions, argument_positions):
-        # Determine the arguments for the given function using the arg positions map.
-        function_args = []
-        for v in arg_positions:
-            # We don't skip over the x argument because it's supplied in the args.
-            function_args.append(args[v])
-        #logger.debug(f"full args: {args}")
-        #logger.debug(f"arg_positions: {arg_positions}, function_args: {function_args}")
-        #logger.debug(f"describe args: {iminuit.util.describe(func)}")
+    # We write it out explicitly instead of using a generator because it's long enough that it would be difficult
+    # to understand.
+    for func, function_args in zip(functions, _function_arguments_from_argument_positions(argument_positions, *args)):
         value += func(*function_args)
     return value
 
