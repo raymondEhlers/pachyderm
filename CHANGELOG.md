@@ -2,6 +2,24 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.2.1] - 7 September 2019
+
+### Added
+
+- Added effective chi squared for simultaneous fit. See: `90a98d916dc6c5fa29a48b98c9ccafec9e5b4769`. Bug fix:
+  `92ac7b01e77cec033f6bcf41a95b6a6bb53525ab`.
+- Write numpy floats to YAML. This helps to avoid a bunch of difficult to debug errors. See:
+  `474a24203f87dd09595df9144ead0793fc3647e0`.
+
+### Changed
+
+- Improve minimization settings. See: `8bb1602b0bd22fa1dd1eb6c49b3b3768522230bc`.
+
+### Fixed
+
+- Don't convert the histogram metadata into a numpy array. See: `2fafe779c2be2b254fbc7b957ffbb5f464940db2`.
+- Ensure that metadata is copied when copying a histogram. See: `f1d1fbf8a7de0e5a2d81b58b68d44d6447fd0749`.
+
 ## [2.2] - 23 August 2019
 
 ### Added
