@@ -298,6 +298,19 @@ def test_uproot_hist_to_histogram(setup_histogram_conversion: Any) -> None:
     # Cleanup
     del uproot_file
 
+def test_histogram1D_to_from_existing_histogram(logging_mixin: Any) -> None:
+    """ Test passing a Histogram1D to ``from_existing_histogram``. It should return the same object. """
+    h_input = histogram.Histogram1D(
+        bin_edges = np.array([0, 1, 2]),
+        y = np.array([2.3, 5.4]),
+        errors_squared = np.array([2.3, 5.4]),
+    )
+
+    h_output = histogram.Histogram1D.from_existing_hist(h_input)
+
+    # Use explict equality check because they really are the same histograms.
+    assert h_output is h_input
+
 @pytest.mark.ROOT  # type: ignore
 def test_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
     """ Test derived histogram properties (mean, std. dev, variance, etc). """

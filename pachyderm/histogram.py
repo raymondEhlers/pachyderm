@@ -651,8 +651,15 @@ class Histogram1D:
         except AttributeError:
             # Just use the existing histogram
             pass
-        # "values" is a proxy for if we have an uproot hist.
         logger.debug(f"{hist}, {type(hist)}")
+
+        # If it's already a histogram, just return a copy
+        if isinstance(hist, cls):
+            logger.warning(f"Passed hist is already a {cls.__name__}. Returning the existing object.")
+            return hist
+
+        # Now actually deal with conversion from other types.
+        # "values" is a proxy for if we have an uproot hist.
         if hasattr(hist, "values"):
             (bin_edges, y, errors_squared, metadata) = cls._from_uproot(hist)
         else:
