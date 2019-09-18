@@ -5,6 +5,7 @@
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+import functools
 import itertools
 import logging
 import time
@@ -438,9 +439,11 @@ def _function_arguments_from_argument_positions(argument_positions: T_ArgumentPo
         #logger.debug(f"arg_positions: {arg_positions}, function_args: {function_args}")
         yield function_args
 
-def call_list_of_callables(functions: Iterable[Callable[..., float]], argument_positions: T_ArgumentPositions,
-                           *args: Union[float, np.ndarray]) -> float:
-    """ Call a list of callables with the given args.
+def call_list_of_callables_with_operation(operation: Callable[[float, float], float],
+                                          functions: Iterable[Callable[..., float]],
+                                          argument_positions: T_ArgumentPositions,
+                                          *args: Union[float, np.ndarray]) -> float:
+    """ Call and add a list of callables with the given args.
 
     Args:
         functions: Functions to be evaluated.
@@ -449,12 +452,12 @@ def call_list_of_callables(functions: Iterable[Callable[..., float]], argument_p
     Returns:
         Sum of the values of the functions.
     """
-    value = 0.
+    values = []
     # We write it out explicitly instead of using a generator because it's long enough that it would be difficult
     # to understand.
     for func, function_args in zip(functions, _function_arguments_from_argument_positions(argument_positions, *args)):
-        value += func(*function_args)
-    return value
+        values.append(func(*function_args))
+    return functools.reduce(operation, values)
 
 def chi_squared_probability(chi_2: float, ndf: float) -> float:
     """ Calculate the probability that the

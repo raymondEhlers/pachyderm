@@ -18,5 +18,5 @@ from .base import (  # noqa: F401
 from .cost_function import (  # noqa: F401
     BinnedChiSquared, BinnedLogLikelihood, ChiSquared, CostFunctionBase, LogLikelihood, SimultaneousFit
 )
-from .function import AddPDF, extended_gaussian, gaussian  # noqa: F401
+from .function import AddPDF, DividePDF, MultiplyPDF, SubtractPDF, extended_gaussian, gaussian  # noqa: F401
 from .integration import Fit, T_FitArguments, fit_with_minuit  # noqa: F401

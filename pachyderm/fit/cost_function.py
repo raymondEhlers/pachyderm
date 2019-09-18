@@ -7,6 +7,7 @@
 
 import abc
 import logging
+import operator
 from typing import Any, Callable, Iterable, Iterator, Tuple, TypeVar, Union
 
 import iminuit
@@ -141,7 +142,9 @@ class SimultaneousFit(generic_class.EqualityMixin):
 
     def __call__(self, *args: float) -> float:
         """ Calculate the cost function for all x values in the data. """
-        return fit_base.call_list_of_callables(self.cost_functions, self.argument_positions, *args)
+        return fit_base.call_list_of_callables_with_operation(
+            operator.add, self.cost_functions, self.argument_positions, *args
+        )
 
 class CostFunctionBase(abc.ABC):
     """ Base cost function.

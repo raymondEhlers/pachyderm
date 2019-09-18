@@ -5,7 +5,9 @@
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+import abc
 import logging
+import operator
 from typing import Callable, Optional, Sequence, Union
 
 import numpy as np
@@ -15,8 +17,8 @@ from pachyderm.fit import base as fit_base
 
 logger = logging.getLogger(__name__)
 
-class AddPDF(generic_class.EqualityMixin):
-    """ Add two functions (PDFs) together.
+class CombinePDF(generic_class.EqualityMixin, abc.ABC):
+    """ Combine functions (PDFs) together.
 
     Args:
         functions: Functions to be added.
@@ -31,6 +33,11 @@ class AddPDF(generic_class.EqualityMixin):
             specified to allow iminuit to determine the proper arguments.
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
+    # Don't specify the function arguments to work aorund a mypy bug.
+    # For an unclear reason, it won't properly detect the number of arguments.
+    _operation: Callable[..., float]
+    _call_function: Callable[..., float]
+
     def __init__(self, *functions: Callable[..., float], prefixes: Optional[Sequence[str]] = None,
                  skip_prefixes: Optional[Sequence[str]] = None) -> None:
         # Store the functions
@@ -56,7 +63,82 @@ class AddPDF(generic_class.EqualityMixin):
         """
         # We add in the x values into the function arguments here so we don't have to play tricks later
         # to get the function argumment indices correct.
-        return fit_base.call_list_of_callables(self.functions, self.argument_positions, *[x, *merged_args])
+        return fit_base.call_list_of_callables_with_operation(
+            self._operation,
+            self.functions, self.argument_positions, *[x, *merged_args]
+        )
+
+class AddPDF(CombinePDF):
+    """ Add functions (PDFs) together.
+
+    Args:
+        functions: Functions to be added.
+        prefixes: Prefix for arguments of each function. Default: None. If specified, there must
+            be one prefix for each function.
+        skip_prefixes: Prefixes to skip when assigning prefixes. As noted in probfit, this can be
+            useful to mix prefixed and non-prefixed arguments. Default: None.
+
+    Attributes:
+        functions: List of functions that are combined in the PDF.
+        func_code: Function arguments derived from the fit functions. They need to be separately
+            specified to allow iminuit to determine the proper arguments.
+        argument_positions: Map of merged arguments to the arguments for each individual function.
+    """
+    _operation = operator.add
+
+class SubtractPDF(CombinePDF):
+    """ Subtract functions (PDFs) together.
+
+    Args:
+        functions: Functions to be added.
+        prefixes: Prefix for arguments of each function. Default: None. If specified, there must
+            be one prefix for each function.
+        skip_prefixes: Prefixes to skip when assigning prefixes. As noted in probfit, this can be
+            useful to mix prefixed and non-prefixed arguments. Default: None.
+
+    Attributes:
+        functions: List of functions that are combined in the PDF.
+        func_code: Function arguments derived from the fit functions. They need to be separately
+            specified to allow iminuit to determine the proper arguments.
+        argument_positions: Map of merged arguments to the arguments for each individual function.
+    """
+    _operation = operator.sub
+
+class MultiplyPDF(CombinePDF):
+    """ Multiply functions (PDFs) together.
+
+    Args:
+        functions: Functions to be added.
+        prefixes: Prefix for arguments of each function. Default: None. If specified, there must
+            be one prefix for each function.
+        skip_prefixes: Prefixes to skip when assigning prefixes. As noted in probfit, this can be
+            useful to mix prefixed and non-prefixed arguments. Default: None.
+
+    Attributes:
+        functions: List of functions that are combined in the PDF.
+        func_code: Function arguments derived from the fit functions. They need to be separately
+            specified to allow iminuit to determine the proper arguments.
+        argument_positions: Map of merged arguments to the arguments for each individual function.
+    """
+    _operation = operator.mul
+
+class DividePDF(CombinePDF):
+    """ Divide functions (PDFs) together.
+
+    Args:
+        functions: Functions to be added.
+        prefixes: Prefix for arguments of each function. Default: None. If specified, there must
+            be one prefix for each function.
+        skip_prefixes: Prefixes to skip when assigning prefixes. As noted in probfit, this can be
+            useful to mix prefixed and non-prefixed arguments. Default: None.
+
+    Attributes:
+        functions: List of functions that are combined in the PDF.
+        func_code: Function arguments derived from the fit functions. They need to be separately
+            specified to allow iminuit to determine the proper arguments.
+        argument_positions: Map of merged arguments to the arguments for each individual function.
+    """
+    _operation = operator.truediv
 
 def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np.ndarray, float]:
     r""" Normalized gaussian.
