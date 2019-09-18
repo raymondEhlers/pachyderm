@@ -508,26 +508,32 @@ class Histogram1D:
 
     def __itruediv__(self: _T, other: _T) -> _T:
         """ Handles ``a /= b``. """
-        if not np.allclose(self.bin_edges, other.bin_edges):
-            raise TypeError(
-                f"Binning is different for given histograms."
-                f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
-                f"Cannot divide!"
+        if np.isscalar(other):
+            # Help out mypy...
+            assert isinstance(other, (float, int, np.number))
+            # Scale histogram by a scalar
+            self *= 1. / other
+        else:
+            if not np.allclose(self.bin_edges, other.bin_edges):
+                raise TypeError(
+                    f"Binning is different for given histograms."
+                    f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
+                    f"Cannot divide!"
+                )
+            # Errors are from ROOT::TH1::Divide(const TH1 *h1)
+            # NOTE: This is just error propagation, simplified with the a = b / c!
+            # NOTE: We need to calculate the errors_squared first before setting y because the errors depend on
+            #       the existing y values
+            errors_squared_numerator = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
+            errors_squared_denominator = other.y ** 4
+            # NOTE: We have to be a bit clever when we divide to avoid dividing by bins with 0 entries. The
+            #       approach taken here basically replaces any divide by 0s with a 0 in the output hist.
+            #       For more info, see: https://stackoverflow.com/a/37977222
+            self.errors_squared = np.divide(
+                errors_squared_numerator, errors_squared_denominator,
+                out = np.zeros_like(errors_squared_numerator), where = errors_squared_denominator != 0,
             )
-        # Errors are from ROOT::TH1::Divide(const TH1 *h1)
-        # NOTE: This is just error propagation, simplified with the a = b / c!
-        # NOTE: We need to calculate the errors_squared first before setting y because the errors depend on
-        #       the existing y values
-        errors_squared_numerator = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
-        errors_squared_denominator = other.y ** 4
-        # NOTE: We have to be a bit clever when we divide to avoid dividing by bins with 0 entries. The
-        #       approach taken here basically replaces any divide by 0s with a 0 in the output hist.
-        #       For more info, see: https://stackoverflow.com/a/37977222
-        self.errors_squared = np.divide(
-            errors_squared_numerator, errors_squared_denominator,
-            out = np.zeros_like(errors_squared_numerator), where = errors_squared_denominator != 0,
-        )
-        self.y = np.divide(self.y, other.y, out = np.zeros_like(self.y), where = other.y != 0)
+            self.y = np.divide(self.y, other.y, out = np.zeros_like(self.y), where = other.y != 0)
         return self
 
     def __eq__(self, other: Any) -> bool:

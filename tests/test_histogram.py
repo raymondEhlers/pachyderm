@@ -888,6 +888,48 @@ class TestHistogramOperators:
         # Check result
         assert check_hist(h2_root, h3)
 
+    @pytest.fixture(params = [  # type: ignore
+        (_filled_two_times, 2,
+            HistInfo(np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 0.5, 0, 0, 0, 0, 0, 0, 0]))),
+        (_filled_twice_with_weight_of_2, 3,
+            HistInfo(np.array([0, 0, 4. / 3, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 8 / 9, 0, 0, 0, 0, 0, 0, 0]))),
+    ], ids = ["Standard filled", "Weighing filled"])
+    def setup_scalar_division(self, logging_mixin: Any, request: Any) -> Tuple[Any, ...]:
+        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+
+        However, each test performs rather different steps, so there is little else to do here.
+        """
+        # Setup
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        return (*request.param, h1)
+
+    def test_scalar_division(self, setup_scalar_division: Any) -> None:
+        """ Test scalar division. """
+        # Setup
+        h1_info, scalar, expected, h1 = setup_scalar_division
+
+        # Operation
+        h3 = h1 / scalar
+
+        # Check result
+        assert np.allclose(h3.bin_edges, self._bin_edges)
+        assert np.allclose(h3.y, expected.y)
+        assert np.allclose(h3.errors_squared, expected.errors_squared)
+
+    @pytest.mark.ROOT  # type: ignore
+    def test_compare_scalar_division_to_ROOT(self, setup_scalar_division: Any) -> None:
+        """ Compare the results of ``Histogram1D`` division vs ROOT. """
+        # Setup
+        h1_info, scalar, expected, h1 = setup_scalar_division
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+
+        # Operation
+        h3 = h1 / scalar
+        h1_root.Scale(1. / scalar)
+
+        # Check result
+        assert check_hist(h1_root, h3)
+
 @pytest.mark.ROOT
 class TestIntegrateHistogram1D:
     """ Test for counting and integrating bins stored in a ``Histogram1D``.
