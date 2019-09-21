@@ -74,7 +74,7 @@ class BaseFitResult:
             The correlation matrix of the fit result.
         """
         try:
-            # We attempt to cache the covaraince matrix, so first try to return that.
+            # We attempt to cache the covariance matrix, so first try to return that.
             return self._correlation_matrix
         except AttributeError:
             def corr(i_name: str, j_name: str) -> float:
@@ -237,7 +237,7 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
     Returns:
         The calculated error values.
     """
-    # Setup the paramaters needed to execute the function.
+    # Setup the parameters needed to execute the function.
     # Determine relevant parameters for the given function
     func_parameters = iminuit.util.describe(func)
     # Determine the arguments for the fit function
@@ -255,14 +255,14 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
     logger.debug(f"name_to_index: {name_to_index}")
 
     # To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
-    # must contain a list of values that it will vary when taking the gradient. The the rest of the args are
+    # must contain a list of values that it will vary when taking the gradient. The rest of the args are
     # passed on to the function via *args and **kwargs, but they won't be varied.
     # To ensure the proper signature, we wrap the function and route the arguments.
     def func_wrap(args_to_vary: Sequence[float], x: np.array) -> float:
         """ Wrap the given function to ensure that the arguments are routed properly for ``numdifftools``.
 
         To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
-        must contain a list of values that it will vary when taking the gradient. The the rest of the args are
+        must contain a list of values that it will vary when taking the gradient. The rest of the args are
         passed on to the function via *args and **kwargs, but they won't be varied (we don't event use those
         generic arguments here). To ensure the proper signature given any function, we wrap the function and
         route the arguments.
@@ -343,18 +343,18 @@ class FuncCode(generic_class.EqualityMixin):
     @classmethod
     def from_function(cls: Type[T_FuncCode], func: Callable[..., float],
                       leading_parameters_to_remove: int = 1) -> T_FuncCode:
-        """ Create a func code from a function.
+        """ Create a func_code from a function.
 
         Args:
-            func: Function for which we want a func code.
-            leading_parameters_to_remove: Number of leading parameters to remove in the func code. Default: 1,
+            func: Function for which we want a func_code.
+            leading_parameters_to_remove: Number of leading parameters to remove in the func_code. Default: 1,
                 which corresponds to ``x`` as the first argument.
         """
         return cls(iminuit.util.describe(func)[leading_parameters_to_remove:])
 
 def merge_func_codes(functions: Iterable[Callable[..., float]], prefixes: Optional[Sequence[str]] = None,
                      skip_prefixes: Optional[Sequence[str]] = None) -> Tuple[List[str], List[List[int]]]:
-    """ Merge the arguments of the given functions into one func code.
+    """ Merge the arguments of the given functions into one func_code.
 
     Note:
         This has very similar functionality and is heavily inspired by ``Probfit.merge_func_code...)``.
@@ -389,7 +389,7 @@ def merge_func_codes(functions: Iterable[Callable[..., float]], prefixes: Option
             temp.append(value)
         args.append(temp)
 
-    # Determine the unique arugments.
+    # Determine the unique arguments.
     # We want to ensure that we maintain the oder, so we use dict.fromkeys to do so.
     merged_args = list(dict.fromkeys(itertools.chain.from_iterable(args)))
 
