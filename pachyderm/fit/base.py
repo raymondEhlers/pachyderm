@@ -163,7 +163,7 @@ class FitResult(BaseFitResult):
                 # Help out mypy...
                 assert isinstance(data, histogram.Histogram1D)
                 # Calculate using the binned chi squared
-                self._chi_squared = cost_function._binned_chi_squared(
+                self._chi_squared = cost_function.binned_chi_squared_safe_for_zeros(
                     data.x, data.y, data.errors, data.bin_edges, cost_func.f, *self.values_at_minimum.values()
                 )
             elif isinstance(cost_func, cost_function.SimultaneousFit):
@@ -177,7 +177,7 @@ class FitResult(BaseFitResult):
                     assert isinstance(data, histogram.Histogram1D)
                     # Calculate using the binned chi squared. This assumes that we have binned data (which
                     # is probably fairly reasonable for our purpose).
-                    chi_squared += cost_function._binned_chi_squared(
+                    chi_squared += cost_function.binned_chi_squared_safe_for_zeros(
                         data.x, data.y, data.errors, data.bin_edges, cf.f, *function_args
                     )
                 self._chi_squared = chi_squared

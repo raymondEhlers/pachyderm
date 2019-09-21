@@ -345,6 +345,29 @@ def _binned_chi_squared(x: np.ndarray, y: np.ndarray,
     expected_values = _integrate_1D(f, bin_edges, *args)
     return np.sum(np.square((y - expected_values) / errors))
 
+def binned_chi_squared_safe_for_zeros(x: np.ndarray, y: np.ndarray,
+                                      errors: np.ndarray, bin_edges: np.ndarray,
+                                      f: Callable[..., float], *args: float) -> Any:
+    """ Actual implementation of the binned chi squared.
+
+    See `_binned_chi_squared` for further information. This function is just the standard binned chi squared,
+    but the division is protected from divide by 0. This allows safe use when calculating a binned chi squared.
+
+    Args:
+        x: x values where the function should be evaluated.
+        y: Histogram values at each x.
+        errors: Histogram errors at each x.
+        bin_edges: Histogram bin edges.
+        f: Fit function.
+        args: Arguments for the fit function.
+    Returns:
+        Binned chi squared calculated for each x value.
+    """
+    expected_values = _integrate_1D(f, bin_edges, *args)
+    return np.sum(np.square(
+        np.divide((y - expected_values), errors, out = np.zeros_like(errors), where = errors != 0)
+    ))
+
 class BinnedChiSquared(DataComparisonCostFunction):
     """ Binned chi^2 cost function.
 

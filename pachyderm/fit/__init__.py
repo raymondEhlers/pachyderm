@@ -16,7 +16,8 @@ from .base import (  # noqa: F401
     BaseFitResult, FitFailed, FitResult, FuncCode, calculate_function_errors, chi_squared_probability
 )
 from .cost_function import (  # noqa: F401
-    BinnedChiSquared, BinnedLogLikelihood, ChiSquared, CostFunctionBase, LogLikelihood, SimultaneousFit
+    BinnedChiSquared, BinnedLogLikelihood, ChiSquared, CostFunctionBase, LogLikelihood, SimultaneousFit,
+    binned_chi_squared_safe_for_zeros
 )
 from .function import AddPDF, DividePDF, MultiplyPDF, SubtractPDF, extended_gaussian, gaussian  # noqa: F401
 from .integration import Fit, T_FitArguments, fit_with_minuit  # noqa: F401
