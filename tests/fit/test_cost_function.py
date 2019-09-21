@@ -133,8 +133,9 @@ def setup_parabola(logging_mixin: Any) -> Tuple[histogram.Histogram1D, Hist]:
 @pytest.mark.parametrize("cost_func, fit_option", [  # type: ignore
     (cost_function.BinnedChiSquared, "SV"),
     (cost_function.BinnedLogLikelihood, "SLV"),
+    (cost_function.BinnedLogLikelihood, "SWLV"),
     ("probfit", "SV"),
-], ids = ["Binned chi squared", "Binned log likelihood", "Probfit Chi2"])
+], ids = ["Binned chi squared", "Binned log likelihood", "Binned log likelihood with weighting", "Probfit Chi2"])
 def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, fit_option: Any,
                                             setup_parabola: Any) -> None:
     """ Test the binned cost function implementations against ROOT. """
@@ -157,16 +158,20 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
     logger.debug(f"ROOT: chi_2: {fit_result_ROOT.Chi2()}, ndf: {fit_result_ROOT.Ndf()}")
 
     # Fit with the defined cost function
-    args = {"f": parabola}
+    args: Dict[str, Any] = {"f": parabola}
     if issubclass(cost_func, cost_function.CostFunctionBase):
         args.update({"data": h})
+        # Test for weighted likelihood
+        if "W" in fit_option:
+            args.update({"use_weights": True})
     else:
         args.update({"x": h.x, "y": h.y, "error": h.errors})
     cost = cost_func(**args)
-    fit_result, _ = fit_integration.fit_with_minuit(cost, minuit_args, h.x)
+    fit_result, minuit = fit_integration.fit_with_minuit(cost, minuit_args, h.x)
 
     # Check the minimized value.
-    # It doesn't appear that it will agree for log likelihood
+    # There is still something a bit different between ROOT's log likelihood calculation and mine.
+    # However, the other parameters appear to agree, so it seems okay.
     if not log_likelihood:
         assert np.isclose(fit_result.minimum_val, fit_result_ROOT.MinFcnValue(), rtol = 0.03)
 
@@ -179,7 +184,7 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
             h.x, h.y, h.errors, h.bin_edges, parabola, *list(fit_result.values_at_minimum.values())
         )
         logger.debug(
-            f"minimual_val before changing: {fit_result.minimum_val}, ROOT func min: {fit_result_ROOT.MinFcnValue()}"
+            f"minimal_val before changing: {fit_result.minimum_val}, ROOT func min: {fit_result_ROOT.MinFcnValue()}"
         )
         logger.debug(f"binned chi_squared: {binned_chi_squared}, unbinned chi_squared: {unbinned_chi_squared}")
         fit_result.minimum_val = binned_chi_squared
@@ -194,7 +199,7 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
     # Check the result
     logger.debug(f"Fit chi_2: {fit_result.minimum_val}, ndf: {fit_result.nDOF}")
     # It won't agree exactly because ROOT appears to use the unbinned chi squared to calculate this value.
-    # This can be seen because probfit agress with ROOT.
+    # This can be seen because probfit agrees with ROOT.
     assert np.isclose(fit_result.minimum_val, fit_result_ROOT.Chi2(), rtol = 0.035)
     assert np.isclose(fit_result.nDOF, fit_result_ROOT.Ndf())
     # Check the parameters
@@ -203,10 +208,22 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
         fit_result.values_at_minimum["scale"], fit_result_ROOT.Parameter(0), rtol = 0.05,
     )
     # Error
-    # TODO: For some reason, there error is substantially larger in the log likelihood cost function comapred to ROOT
-    # This requires more investigation, but shouldn't totally derail progress at the moment.
-    if not log_likelihood:
-        assert np.isclose(fit_result.errors_on_parameters["scale"], fit_result_ROOT.ParError(0), rtol = 0.005)
+    assert np.isclose(fit_result.errors_on_parameters["scale"], fit_result_ROOT.ParError(0), rtol = 0.005)
+    # Covariance matrix
+    if issubclass(cost_func, cost_function.CostFunctionBase):
+        covariance_ROOT = fit_result_ROOT.GetCovarianceMatrix()
+        # Print the fit result, alongside the covariance
+        fit_result_ROOT.Print("V")
+        logger.debug(f"Covariance: {fit_result.covariance_matrix}")
+        for i_name in fit_result.free_parameters:
+            for j_name in fit_result.free_parameters:
+                i_index = fit_result.free_parameters.index(i_name)
+                j_index = fit_result.free_parameters.index(j_name)
+                logger.debug(f"Checking covariance matrix parameters: ({i_name}:{i_index}, {j_name}:{j_index})")
+                assert np.isclose(fit_result.covariance_matrix[(i_name, j_name)], covariance_ROOT(i_index, j_index), rtol = 0.01)
+    # Estimated distance to minimum
+    assert np.isclose(minuit.edm, fit_result_ROOT.Edm(), atol = 1e-3)
+
     # Check the effective chi squared. This won't work in the probfit case because we don't recognize
     # the type properly (and it's not worth the effort).
     if issubclass(cost_func, cost_function.CostFunctionBase):
@@ -216,6 +233,7 @@ def test_binned_cost_functions_against_ROOT(logging_mixin: Any, cost_func: Any, 
                 cost.f, *fit_result.values_at_minimum.values()
             ) if log_likelihood else fit_result.minimum_val
         )
+
 
 ##################
 # Simultaneous Fit

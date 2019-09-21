@@ -8,7 +8,7 @@
 import abc
 import logging
 import operator
-from typing import Any, Callable, Iterable, Iterator, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, Tuple, TypeVar, Union
 
 import iminuit
 import numpy as np
@@ -152,21 +152,25 @@ class CostFunctionBase(abc.ABC):
     Args:
         f: The fit function.
         data: Data to be used for fitting.
+        additional_call_options: Additional keyword options to be passed when calling the cost function.
     Attributes:
         f: The fit function.
         func_code: Function arguments derived from the fit function. They need to be separately specified
             to allow iminuit to determine the proper arguments.
         data: Data to be used for fitting.
+        additional_call_options: Additional keyword options to be passed when calling the cost function.
         _cost_function: Function to be used to calculate the actual cost function.
     """
     _cost_function: Callable[..., float]
 
-    def __init__(self, f: Callable[..., float], data: Tuple[np.ndarray, histogram.Histogram1D]):
+    def __init__(self, f: Callable[..., float], data: Tuple[np.ndarray, histogram.Histogram1D],
+                 **additional_call_options: Any):
         # If using numba, we would need to JIT the function to be able to pass it to the cost function.
         self.f = f
         # We need to drop the leading x argument
         self.func_code = fit_base.FuncCode(iminuit.util.describe(self.f)[1:])
         self.data = data
+        self._additional_call_options: Dict[str, Any] = additional_call_options
 
     def __add__(self: T_CostFunction, other: T_CostFunction) -> SimultaneousFit:
         """ Creates a simultaneous fit when added with another cost function. """
@@ -181,12 +185,12 @@ class CostFunctionBase(abc.ABC):
 
     def __call__(self, *args: float) -> float:
         """ Calculate the cost function for all x values in the data. """
-        return self._call_cost_function(self.data, self.f, *args)
+        return self._call_cost_function(self.data, self.f, *args, **self._additional_call_options)
 
     @classmethod
     @abc.abstractmethod
     def _call_cost_function(cls, data: Tuple[np.ndarray, histogram.Histogram1D],
-                            f: Callable[..., float], *args: Union[float, np.ndarray]) -> float:
+                            f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any) -> float:
         """ Wrapper to allow access to the method as if it's unbound.
 
         This is needed for use with numba.
@@ -195,6 +199,7 @@ class CostFunctionBase(abc.ABC):
             data: The input data.
             f: Fit function.
             args: Other arguments for the fit function (not including where it will be evaluated (ie. x)).
+            kwargs: Additional arguments to pass to the cost function.
         Returns:
             The cost function evaluated at all of the corresponding data points.
         """
@@ -221,7 +226,7 @@ class StandaloneCostFunction(CostFunctionBase):
 
     @classmethod
     def _call_cost_function(cls, data: np.ndarray,
-                            f: Callable[..., float], *args: Union[float, np.ndarray]) -> float:
+                            f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any) -> float:
         """ Wrapper to allow access to the method as if it's unbound.
 
         This is needed for use with numba.
@@ -231,7 +236,7 @@ class StandaloneCostFunction(CostFunctionBase):
         Returns:
             The cost function evaluated at all of the corresponding data points (ie. ``self.data``).
         """
-        return cls._cost_function(data, f, *args)
+        return cls._cost_function(data, f, *args, **kwargs)
 
 class DataComparisonCostFunction(CostFunctionBase):
     """ Cost function which needs comparison data, the points where it was evaluated, and the errors.
@@ -254,7 +259,7 @@ class DataComparisonCostFunction(CostFunctionBase):
 
     @classmethod
     def _call_cost_function(cls, data: Any,
-                            f: Callable[..., float], *args: Union[float, np.ndarray]) -> float:
+                            f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any) -> float:
         """ Wrapper to allow access to the method as if it's unbound.
 
         This is needed for use with numba.
@@ -268,7 +273,7 @@ class DataComparisonCostFunction(CostFunctionBase):
         Returns:
             The cost function evaluated at all the corresponding data points (ie. data.x).
         """
-        return cls._cost_function(data.x, data.y, data.errors, data.bin_edges, f, *args)
+        return cls._cost_function(data.x, data.y, data.errors, data.bin_edges, f, *args, **kwargs)
 
 def _chi_squared(x: np.ndarray, y: np.ndarray,
                  errors: np.ndarray, _: np.ndarray,
@@ -391,7 +396,7 @@ class LogLikelihood(StandaloneCostFunction):
 
 def _extended_binned_log_likelihood(x: np.ndarray, y: np.ndarray,
                                     errors: np.ndarray, bin_edges: np.ndarray,
-                                    f: Callable[..., float], *args: float) -> Any:
+                                    f: Callable[..., float], *args: float, use_weights: bool = False) -> Any:
     r""" Actual implementation of the extended binned log likelihood (cost function).
 
     Based on Probfit's binned log likelihood implementation. I also looked at
@@ -411,11 +416,13 @@ def _extended_binned_log_likelihood(x: np.ndarray, y: np.ndarray,
 
         E_i = \frac{f(l_i, arg\ldots )+f(r_i, arg \ldots )}{2} \times b_i
 
-    and s_i is:
+    and s_i is unity when performing a standard fit, and:
 
     .. math::
 
-        s_i = h_i / \sum w_i^2
+        s_i = h_i / error_i^2
+
+    when performing a weighted fit.
 
     Note:
         It returns a float, but numba can't handle cast. So we return ``Any`` and then cast the result.
@@ -427,23 +434,30 @@ def _extended_binned_log_likelihood(x: np.ndarray, y: np.ndarray,
         bin_edges: Bin widths of the histogram.
         f: Fit function.
         args: Additional arguments for the fit function.
+        use_weights: Use data weights in calculating the log likelihood.
     Returns:
         Binned log likelihood.
     """
     # Need to normalize the contributions.
-    total_error = np.sum(np.square(errors))
+    scale = y / errors ** 2 if use_weights else np.ones(len(y))
     expected_values = _integrate_1D(f, bin_edges, *args)
     # We don't use log rules to combine the log1p expressions (ie. log(expected_values / y)) because it appears
     # to create numerical issues (throwing NaN).
     # It sounds like the absolute value of FCN doesn't necessarily mean much for the log likelihood ratio
-    # In principle, I should be able to get it to match ROOT, but that doesn't seem to trivial in practice.
-    return -1 * np.sum(errors / total_error * (y * (np.log1p(expected_values) - np.log1p(y)) + (y - expected_values)))
+    # In principle, I should be able to get it to match ROOT, but that doesn't seem so trivial in practice.
+    return -1 * np.sum(scale * (y * (np.log1p(expected_values) - np.log1p(y)) + (y - expected_values)))
 
 class BinnedLogLikelihood(DataComparisonCostFunction):
     """ Binned log likelihood cost function.
 
     Calling this class will calculate the chi squared. Implemented with some help from ...
 
+    Args:
+        f: The fit function.
+        data: Data to be used for fitting.
+        use_weights: Whether to use the data weights when calculating the cost function.
+            This is equivalent to the "WL" option in ROOT. Default: False.
+        additional_call_options: Additional keyword options to be passed when calling the cost function.
     Attributes:
         f: The fit function.
         func_code: Function arguments derived from the fit function. They need to be separately specified
@@ -451,4 +465,8 @@ class BinnedLogLikelihood(DataComparisonCostFunction):
         data: Data to be used for fitting.
         _cost_function: Function to be used to calculate the actual cost function.
     """
+    def __init__(self, use_weights: bool = False, *args: Any, **kwargs: Any):
+        kwargs["use_weights"] = use_weights
+        super().__init__(*args, **kwargs)
+
     _cost_function = _extended_binned_log_likelihood
