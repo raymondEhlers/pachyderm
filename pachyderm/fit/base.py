@@ -10,7 +10,9 @@ import itertools
 import logging
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import (
+    TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+)
 
 import iminuit
 import numdifftools as nd
@@ -221,6 +223,33 @@ class FitResult(BaseFitResult):
             errors = [],
         )
 
+def _extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> Tuple[Dict[str, Any], List[str]]:
+    """ Extract the parameters relevant to the given function from a fit result.
+
+    Note:
+        The fit result may have more arguments at minimum and free parameters than the fit function that we've
+        passed (for example, if we've calculating the background parameters for the inclusive signal fit), so
+        we need to determine the free parameters here.
+
+    Args:
+        func: Function of interest.
+        fit_result: Fit result from which we will extract the information.
+    Returns:
+        ((kw)args at minimum, free parameters)
+    """
+    # Setup the parameters needed to execute the function.
+    # Determine relevant parameters for the given function
+    func_parameters = iminuit.util.describe(func)
+    # Determine the arguments for the fit function
+    # NOTE: The fit result may have more arguments at minimum and free parameters than the fit function that we've
+    #       passed (for example, if we've calculating the background parameters for the inclusive signal fit), so
+    #       we need to determine the free parameters here.
+    args_at_minimum = {k: v for k, v in fit_result.values_at_minimum.items() if k in func_parameters}
+    # Retrieve the parameters to use in calculating the fit errors.
+    free_parameters = [p for p in fit_result.free_parameters if p in func_parameters]
+
+    return args_at_minimum, free_parameters
+
 def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
     """ Calculate the errors of the given function based on values from the fit.
 
@@ -238,21 +267,52 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
         The calculated error values.
     """
     # Setup the parameters needed to execute the function.
-    # Determine relevant parameters for the given function
-    func_parameters = iminuit.util.describe(func)
-    # Determine the arguments for the fit function
-    # NOTE: The fit result may have more arguments at minimum and free parameters than the fit function that we've
-    #       passed (for example, if we've calculating the background parameters for the inclusive signal fit), so
-    #       we need to determine the free parameters here.
-    args_at_minimum = {k: v for k, v in fit_result.values_at_minimum.items() if k in func_parameters}
-    # Retrieve the parameters to use in calculating the fit errors.
-    free_parameters = [p for p in fit_result.free_parameters if p in func_parameters]
+    # Determine the arguments for the fit function and the parameters to use in calculating the fit errors.
+    args_at_minimum, free_parameters = _extract_function_values(func, fit_result)
     # To calculate the error, we need to match up the parameter names to their index in the arguments list
     args_at_minimum_keys = list(args_at_minimum)
     name_to_index = {name: args_at_minimum_keys.index(name) for name in free_parameters}
     logger.debug(f"args_at_minimum: {args_at_minimum}")
     logger.debug(f"free_parameters: {free_parameters}")
     logger.debug(f"name_to_index: {name_to_index}")
+
+    # Evaluate the gradient
+    partial_derivative_result = evaluate_gradient(func = func, fit_result = fit_result, x = x)
+
+    # Finally, calculate the error by multiplying the matrix of gradient values by the covariance matrix values.
+    error_vals = np.zeros(len(x))
+    for i_name in free_parameters:
+        for j_name in free_parameters:
+            # Determine the error value
+            #logger.debug(f"Calculating error for i_name: {i_name}, j_name: {j_name}")
+            # Add error to overall error value
+            # NOTE: This is a vector operation for the partial_derivative_result values.
+            error_vals += (
+                partial_derivative_result[:, name_to_index[i_name]]
+                * partial_derivative_result[:, name_to_index[j_name]]
+                * fit_result.covariance_matrix[(i_name, j_name)]
+            )
+    #logger.debug("error_val: shape: {error_val.shape}, error_val: {error_val}")
+
+    # We want the error itself, so we take the square root.
+    return np.sqrt(error_vals)
+
+def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
+    """ Evaluate the gradient of the given function based on the fit values.
+
+    For a function of 5 free parameters (7 total) and 10 x values, the returned result would be of the shape (10, 5).
+
+    Args:
+        func: Function to use in calculating the errors.
+        fit_result: Fit result for which the errors will be calculated.
+        x: x values where the errors will be evaluated.
+    Returns:
+        For each x value, the gradient is evaluated for each free parameter. It will be of the
+        shape (len(x_values), len(free_parameters)).
+    """
+    # Setup the parameters needed to execute the function.
+    # Determine the arguments for the fit function and the parameters to use in calculating the fit errors.
+    args_at_minimum, free_parameters = _extract_function_values(func, fit_result)
 
     # To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
     # must contain a list of values that it will vary when taking the gradient. The rest of the args are
@@ -301,23 +361,7 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
         partial_derivative_result = partial_derivative_result[:, np.newaxis]
         logger.debug(f"shape after adding axis : {partial_derivative_result.shape}")
 
-    # Finally, calculate the error by multiplying the matrix of gradient values by the covariance matrix values.
-    error_vals = np.zeros(len(x))
-    for i_name in free_parameters:
-        for j_name in free_parameters:
-            # Determine the error value
-            #logger.debug(f"Calculating error for i_name: {i_name}, j_name: {j_name}")
-            # Add error to overall error value
-            # NOTE: This is a vector operation for the partial_derivative_result values.
-            error_vals += (
-                partial_derivative_result[:, name_to_index[i_name]]
-                * partial_derivative_result[:, name_to_index[j_name]]
-                * fit_result.covariance_matrix[(i_name, j_name)]
-            )
-    #logger.debug("error_val: shape: {error_val.shape}, error_val: {error_val}")
-
-    # We want the error itself, so we take the square root.
-    return np.sqrt(error_vals)
+    return partial_derivative_result
 
 class FuncCode(generic_class.EqualityMixin):
     """ Minimal class to describe function arguments.
