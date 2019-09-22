@@ -8,7 +8,7 @@
 import abc
 import logging
 import operator
-from typing import Any, Callable, Dict, Iterable, Iterator, Tuple, TypeVar, Union
+from typing import Any, Callable, Dict, Iterable, Iterator, TypeVar, Union
 
 import iminuit
 import numpy as np
@@ -163,7 +163,7 @@ class CostFunctionBase(abc.ABC):
     """
     _cost_function: Callable[..., float]
 
-    def __init__(self, f: Callable[..., float], data: Tuple[np.ndarray, histogram.Histogram1D],
+    def __init__(self, f: Callable[..., float], data: Union[np.ndarray, histogram.Histogram1D],
                  **additional_call_options: Any):
         # If using numba, we would need to JIT the function to be able to pass it to the cost function.
         self.f = f
@@ -189,7 +189,7 @@ class CostFunctionBase(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def _call_cost_function(cls, data: Tuple[np.ndarray, histogram.Histogram1D],
+    def _call_cost_function(cls, data: Union[np.ndarray, histogram.Histogram1D],
                             f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any) -> float:
         """ Wrapper to allow access to the method as if it's unbound.
 
