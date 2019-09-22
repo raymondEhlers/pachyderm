@@ -223,7 +223,7 @@ class FitResult(BaseFitResult):
             errors = [],
         )
 
-def _extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> Tuple[Dict[str, Any], List[str]]:
+def extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> Tuple[Dict[str, Any], List[str]]:
     """ Extract the parameters relevant to the given function from a fit result.
 
     Note:
@@ -268,7 +268,7 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
     """
     # Setup the parameters needed to execute the function.
     # Determine the arguments for the fit function and the parameters to use in calculating the fit errors.
-    args_at_minimum, free_parameters = _extract_function_values(func, fit_result)
+    args_at_minimum, free_parameters = extract_function_values(func, fit_result)
     # To calculate the error, we need to match up the parameter names to their index in the arguments list
     args_at_minimum_keys = list(args_at_minimum)
     name_to_index = {name: args_at_minimum_keys.index(name) for name in free_parameters}
@@ -312,7 +312,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
     """
     # Setup the parameters needed to execute the function.
     # Determine the arguments for the fit function and the parameters to use in calculating the fit errors.
-    args_at_minimum, free_parameters = _extract_function_values(func, fit_result)
+    args_at_minimum, free_parameters = extract_function_values(func, fit_result)
 
     # To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
     # must contain a list of values that it will vary when taking the gradient. The rest of the args are
