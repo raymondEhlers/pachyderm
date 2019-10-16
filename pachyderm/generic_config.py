@@ -13,7 +13,7 @@ import enum
 import itertools
 import logging
 import string
-from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
 
 from pachyderm import yaml
 from pachyderm.yaml import DictLike
@@ -457,8 +457,11 @@ def apply_formatting_dict(obj: Any, formatting: Dict[str, Any]) -> Any:
 
     return new_obj
 
-def iterate_with_selected_objects(analysis_objects: Mapping[Any, Any],
-                                  **selections: Any) -> Iterator[Tuple[Any, Any]]:
+_T_Key = TypeVar("_T_Key")
+_T_Analysis = TypeVar("_T_Analysis")
+
+def iterate_with_selected_objects(analysis_objects: Mapping[_T_Key, _T_Analysis],
+                                  **selections: Any) -> Iterator[Tuple[_T_Key, _T_Analysis]]:
     """ Iterate over an analysis dictionary with selected attributes.
 
     Args:
@@ -475,9 +478,9 @@ def iterate_with_selected_objects(analysis_objects: Mapping[Any, Any],
         if selected_obj:
             yield key_index, obj
 
-def iterate_with_selected_objects_in_order(analysis_objects: Mapping[Any, Any],
+def iterate_with_selected_objects_in_order(analysis_objects: Mapping[_T_Key, _T_Analysis],
                                            analysis_iterables: Mapping[str, Sequence[Any]],
-                                           selection: Union[str, Sequence[str]]) -> Iterator[List[Tuple[Any, Any]]]:
+                                           selection: Union[str, Sequence[str]]) -> Iterator[List[Tuple[_T_Key, _T_Analysis]]]:
     """ Iterate over an analysis dictionary, yielding the selected attributes in order.
 
     So if there are three iterables, a, b, and c, if we selected c, then we iterate over a and b,
