@@ -2,6 +2,32 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.3] - 16 October 2019
+
+### Added
+
+- Scalar division for `Histogram1D`. See: `c4230c6cfed7334cb0da44490d67cd5c351ae1fb`.
+- All arithmetic operations for PDFs when fitting. This expands from just adding PDFs, which was all that was
+  available up to now. See: `1799c9e68a2e8b10b6762e03850d125d9f29e1d1`.
+
+### Changed
+
+- Make gradient calculation available through the package API. It can be useful for more complex error
+  propagation. See: `6454c8627972156e0526a31a280ee629a55f99ca` and `3891fedffc138112c85a01b870a25260b9f31d0f`.
+
+### Fixed
+
+- Binned log likelihood fit values, error matrix, covariance, etc, now agrees with ROOT. This is important for
+  error calculation! See: `dc3e1ff02157bf3cc8005f07985acfbf46bba026`.
+- Explicit weighted histogram option for binned log likelihood. See:
+  `dc3e1ff02157bf3cc8005f07985acfbf46bba026`.
+- Calculation of chi squared for goodness of fit when there are empty bins (i.e. for calculating the effective
+  chi squared when performing a log likelihood fit). The empty bins are ignored. See:
+  `0e66393b745c00fd925ef6670512eb7f86647c6f`.
+- Typing for a variety of functions.
+- Typos in documentation.
+- Check for `Histogram1D` when attempting to create a new one. See: `62d8613fcfa0b1a4117a13f4537e99d00b556bfd`.
+
 ## [2.2.1] - 7 September 2019
 
 ### Added
