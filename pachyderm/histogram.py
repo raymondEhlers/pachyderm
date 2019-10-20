@@ -500,13 +500,13 @@ class Histogram1D:
             self.y *= other.y
         return self
 
-    def __truediv__(self: _T, other: _T) -> _T:
+    def __truediv__(self: _T, other: Union[_T, float]) -> _T:
         """ Handles ``a = b / c``. """
         new = self.copy()
         new /= other
         return new
 
-    def __itruediv__(self: _T, other: _T) -> _T:
+    def __itruediv__(self: _T, other: Union[_T, float]) -> _T:
         """ Handles ``a /= b``. """
         if np.isscalar(other):
             # Help out mypy...
@@ -514,6 +514,9 @@ class Histogram1D:
             # Scale histogram by a scalar
             self *= 1. / other
         else:
+            # Help out mypy...
+            assert isinstance(other, Histogram1D)
+            # Validation
             if not np.allclose(self.bin_edges, other.bin_edges):
                 raise TypeError(
                     f"Binning is different for given histograms."
