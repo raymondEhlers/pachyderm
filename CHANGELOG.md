@@ -2,6 +2,12 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.3.1] - 20 October 2019
+
+### Fixed
+
+- Fixed typing for `Histogram1D` scalar division. See: `7cc7a7e9c2b16546e6dadacbb92cb0da10c032bb`.
+
 ## [2.3] - 16 October 2019
 
 ### Added
