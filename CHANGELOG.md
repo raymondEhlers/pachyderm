@@ -2,6 +2,12 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.3.2] - 21 October 2019
+
+### Fixed
+
+- Improved typing for `generic_config` iterators of possible values. See: `797848212b03e8c36174cbb1a6b9bc1fda7b7739`.
+
 ## [2.3.1] - 20 October 2019
 
 ### Fixed
