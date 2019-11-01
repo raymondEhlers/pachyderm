@@ -5,7 +5,10 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+from typing import Optional, Union
+
 import matplotlib
+import matplotlib.colors
 
 def restore_defaults() -> None:
     """ Restore the default matplotlib settings. """
@@ -176,3 +179,75 @@ def configure() -> None:
 
     # Apply the updated settings.
     matplotlib.rcParams.update(params)
+
+def convert_mpl_color_scheme_to_ROOT(name: Optional[str] = None,
+                                     cmap: Optional[Union[matplotlib.colors.ListedColormap, matplotlib.colors.LinearSegmentedColormap]] = None,
+                                     reversed: bool = False, n_values_to_cut_from_top: int = 0) -> str:
+    """ Convert matplotlib color scheme to ROOT.
+
+    Args:
+        name: Name of the matplotlib color scheme.
+        reversed: True if the color scheme should be reversed.
+        n_values_to_cut_from_top: Number of values to cut from the top of the color scheme.
+    Returns:
+        Snippet to add the color scheme to ROOT.
+    """
+    # Setup
+    import numpy as np
+
+    # Validation
+    if name is None and cmap is None:
+        raise ValueError("Must pass the name of a colormap to retrieve from MPL or an existing colormap.")
+    # We select on the passed cmap rather than the name because we might use the name later.
+    if cmap is None:
+        color_scheme = matplotlib.cm.get_cmap(name)
+    else:
+        if not isinstance(cmap, matplotlib.colors.ListedColormap):
+            color_scheme = matplotlib.colors.ListedColormap(cmap)
+        else:
+            color_scheme = cmap
+
+    # Reverse if requested.
+    if reversed:
+        color_scheme = color_scheme.reversed()
+
+    # Extract the colors
+    if isinstance(color_scheme, matplotlib.colors.ListedColormap):
+        arrs = np.array(color_scheme.colors)
+        n_colors = arrs.shape[0]
+    else:
+        # Need to query for the colors, so we have to decide how many we want beforehand.
+        n_colors = 255
+        arrs = color_scheme(range(n_colors))
+    reds = arrs[:, 0]
+    greens = arrs[:, 1]
+    blues = arrs[:, 2]
+
+    if n_values_to_cut_from_top:
+        n_colors -= n_values_to_cut_from_top
+        reds = reds[:-n_values_to_cut_from_top]
+        greens = greens[:-n_values_to_cut_from_top]
+        blues = blues[:-n_values_to_cut_from_top]
+
+    stops: np.ndarray = np.linspace(0, 1, n_colors + 1)
+
+    def listing_array(arr: np.ndaray) -> str:
+        return ", ".join(str(v) for v in arr)
+
+    s = f"""
+const Int_t NRGBs = {n_colors};
+const Int_t NCont = 99;
+Int_t colors[NRGBs] = {{0}};
+Double_t stops[{len(stops)}] = {{ {listing_array(stops)} }};
+Double_t red[NRGBs]   = {{ {listing_array(reds)} }};
+Double_t green[NRGBs] = {{ {listing_array(greens)} }};
+Double_t blue[NRGBs]  = {{ {listing_array(blues)} }};
+/*Int_t res = TColor::CreateGradientColorTable(NRGBs, stops, red, green, blue, NCont);
+gStyle->SetNumberContours(NCont);*/
+
+/*for (unsigned int i = 0; i < NRGBs; i++) {{
+    colors[i] = res + i;
+}}
+gStyle->SetPalette(NCont + 1, colors);*/
+"""
+    return s
