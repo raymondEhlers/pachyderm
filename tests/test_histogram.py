@@ -8,6 +8,7 @@
 import logging
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -1065,3 +1066,54 @@ class TestHistogramIntegralValidation:
         with pytest.raises(ValueError) as exception_info:
             h.integral(min_value = 3, max_value = 1)
         assert "greater than" in exception_info.value.args[0]
+
+def test_convert_HEPdata_hist(logging_mixin: Any) -> None:
+    """ Test converting HEPdata into Histogram1D objects.
+
+    Compare to pp pion-hadron correlations.
+    """
+    hepdata_path = Path(__file__).parent / "testFiles" / "pionHadron.yaml"
+    print(hepdata_path)
+
+    # Load the HEP data.
+    from pachyderm import yaml
+    y = yaml.yaml()
+    with open(hepdata_path, "r") as f:
+        hepdata = y.load(f)
+
+    hists = histogram.Histogram1D.from_hepdata(hepdata)
+
+    # Check histograms
+    # We only spot check histograms for sanity.
+    # 0.5 - 1.0
+    lowest_pt_bin = hists[0]
+    assert np.isclose(len(lowest_pt_bin.x), 36)
+    assert np.isclose(lowest_pt_bin.bin_edges[5], -0.7)
+    assert np.isclose(lowest_pt_bin.y[15], 0.6884)
+    assert np.isclose(lowest_pt_bin.y[-2], 0.706)
+    assert np.isclose(lowest_pt_bin.errors[-5], 0.0194)
+    assert np.isclose(lowest_pt_bin.metadata["sys_error"][-6], 0.0167)
+    # 1.0 - 2.0
+    mid_low_pt_bin = hists[1]
+    assert np.isclose(len(mid_low_pt_bin.bin_edges), 37)
+    assert np.isclose(mid_low_pt_bin.bin_edges[2], -1.22)
+    assert np.isclose(mid_low_pt_bin.y[2], 0.3479)
+    assert np.isclose(mid_low_pt_bin.y[-2], 0.3663)
+    assert np.isclose(mid_low_pt_bin.errors[-3], 0.014)
+    assert np.isclose(mid_low_pt_bin.metadata["sys_error"][-3], 0.0043)
+    # 2.0 - 4.0
+    mid_high_pt_bin = hists[2]
+    assert np.isclose(len(mid_high_pt_bin.bin_edges), 37)
+    assert np.isclose(mid_high_pt_bin.bin_edges[1], -1.4)
+    assert np.isclose(mid_high_pt_bin.y[1], 0.09936)
+    assert np.isclose(mid_high_pt_bin.y[-2], 0.1072)
+    assert np.isclose(mid_high_pt_bin.errors[-5], 0.009)
+    assert np.isclose(mid_high_pt_bin.metadata["sys_error"][-5], 0.0028)
+    # 4 - 6
+    high_pt_bin = hists[3]
+    assert np.isclose(len(high_pt_bin.bin_edges), 37)
+    assert np.isclose(high_pt_bin.bin_edges[-1], 4.71)
+    assert np.isclose(high_pt_bin.y[2], 0.01138)
+    assert np.isclose(high_pt_bin.y[-4], 0.01208)
+    assert np.isclose(high_pt_bin.errors[-2], 0.00315)
+    assert np.isclose(high_pt_bin.metadata["sys_error"][-2], 0.00147)
