@@ -5,11 +5,12 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+import collections
 import itertools
 import logging
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Any, ContextManager, Dict, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Callable, ContextManager, Dict, List, Mapping, Optional, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
 
@@ -19,6 +20,7 @@ from pachyderm.typing_helpers import Axis, Hist, TFile
 logger = logging.getLogger(__name__)
 
 _T_ContextManager = TypeVar("_T_ContextManager")
+T_Extraction_Function = Tuple[Union[List[float], np.ndarray], Union[List[float], np.ndarray], Dict[str, Any]]
 
 class RootOpen(ContextManager[_T_ContextManager]):
     """ Very simple helper to open root files. """
@@ -132,6 +134,56 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
         # Iterate over the objects in the collection and recursively store them
         for obj_temp in list(obj):
             _retrieve_object(output_dict[obj.GetName()], obj_temp)
+
+def _extract_values_from_hepdata_dependent_variable(var: Mapping[str, Any]) -> T_Extraction_Function:
+    """ Extract values from a HEPdata dependent variable.
+
+    As the simplest useful HEPdata extraction function possible, it retrieves y values, symmetric
+    statical errors. Symmetric systematic errors are stored in the metadata.
+
+    Args:
+        var: HEPdata dependent variable.
+    Returns:
+        y values, errors squared, metadata containing the systematic errors.
+    """
+    values = var["values"]
+    hist_values = [val["value"] for val in values]
+    # For now, only support symmetric errors.
+    hist_stat_errors = []
+    hist_sys_errors = []
+
+    for val in values:
+        for error in val["errors"]:
+            if error["label"] == "stat":
+                hist_stat_errors.append(error["symerror"])
+            elif "sys" in error["label"]:
+                hist_sys_errors.append(error["symerror"])
+
+    # Validate the collected values.
+    if len(hist_stat_errors) == 0:
+        raise ValueError(
+            f"Could not retrieve statistical errors for dependent var {var}.\n"
+            f" hist_stat_errors: {hist_stat_errors}"
+        )
+    if len(hist_values) != len(hist_stat_errors):
+        raise ValueError(
+            f"Could not retrieve the same number of values and statistical errors for dependent var {var}.\n"
+            f" hist_values: {hist_values}\n"
+            f" hist_stat_errors: {hist_stat_errors}"
+        )
+    if len(hist_sys_errors) != 0 and len(hist_sys_errors) != len(hist_stat_errors):
+        raise ValueError(
+            f"Could not extract the same number of statistical and systematic errors for dependent var {var}.\n"
+            f" hist_stat_errors: {hist_stat_errors}\n"
+            f" hist_sys_errors: {hist_sys_errors}"
+        )
+
+    # Create the histogram
+    metadata: Dict[str, Any] = {
+        "sys_error": hist_sys_errors
+    }
+
+    return hist_values, hist_stat_errors, metadata
 
 # Typing helpers
 _T = TypeVar("_T", bound = "Histogram1D")
@@ -567,8 +619,8 @@ class Histogram1D:
         Args:
             hist (uproot.hist.TH1*): Input histogram.
         Returns:
-            tuple: (x, y, errors) where x is the bin centers, y is the bin values, and
-                errors are the sumw2 bin errors.
+            tuple: (bin_edges, y, errors, metadata) where bin_edges are the bin edges, y is the bin values, and
+                errors are the sumw2 bin errors, and metadata is the extracted metadata.
         """
         # This excludes underflow and overflow
         (y, bin_edges) = hist.numpy()
@@ -587,6 +639,62 @@ class Histogram1D:
 
         return (bin_edges, y, errors, metadata)
 
+    @classmethod
+    def from_hepdata(cls: Type[_T], hist: Mapping[str, Any],
+                     extraction_function: Callable[[Mapping[str, Any]], T_Extraction_Function] = _extract_values_from_hepdata_dependent_variable
+                     ) -> List[_T]:
+        """ Convert (a set) of HEPdata histogram(s) to a Histogram1D.
+
+        Will include any information that the extraction function extracts and returns.
+
+        Note:
+            This is not included in the ``from_existing_hist(...)`` function because HEPdata files are oriented
+            towards potentially containing multiple histograms in a single object. So we just return all of them
+            and let the user sort it out.
+
+        Note:
+            It only grabs the first independent variable to determining the x axis.
+
+        Args:
+            hist: HEPdata input histogram(s).
+            extraction_function: Extract values from HEPdata dict to be used to construct a histogram. Default:
+                Retrieves y values, symmetric statical errors. Symmetric systematic errors are stored in the metadata.
+        Returns:
+            List of Histogram1D constructed from the input HEPdata.
+        """
+        # HEP Data is just a map containing the data.
+        if not isinstance(hist, collections.Mapping):
+            raise TypeError(
+                f"Does not appear to be valid HEPdata. Must pass a map with the HEPdata information. Passed: {hist}"
+            )
+        histograms = []
+        try:
+            # We only support one independent variable, so we take the first entry.
+            independent_variable = hist["independent_variables"][0]
+            # Assumes that the bin edges are continuous.
+            bin_edges = [v["low"] for v in independent_variable["values"]]
+            # Grab the last upper bin edge.
+            bin_edges.append(independent_variable["values"][-1]["high"])
+
+            # We only take the first dependent variable.
+            # Loop over the dependent variables. We will create one Histogram1D for each.
+            dependent_variables = hist["dependent_variables"]
+            for var in dependent_variables:
+                y, errors_squared, metadata = extraction_function(var)
+                histograms.append(
+                    cls(
+                        bin_edges = bin_edges,
+                        y = y,
+                        errors_squared = [err ** 2 for err in errors_squared],
+                        metadata = metadata,
+                    )
+                )
+
+        except IndexError as e:
+            raise TypeError(f"Invalid HEPdata histogram {hist}") from e
+
+        return histograms
+
     @staticmethod
     def _from_th1(hist: Hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
         """ Convert a TH1 histogram to a Histogram.
@@ -597,8 +705,8 @@ class Histogram1D:
         Args:
             hist (ROOT.TH1): Input histogram.
         Returns:
-            tuple: (x, y, errors) where x is the bin centers, y is the bin values, and
-                errors are the sumw2 bin errors.
+            tuple: (bin_edges, y, errors, metadata) where bin_edges are the bin edges, y is the bin values, and
+                errors are the sumw2 bin errors, and metadata is the extracted metadata.
         """
         # Enable sumw2 if it's not already calculated
         if hist.GetSumw2N() == 0:
