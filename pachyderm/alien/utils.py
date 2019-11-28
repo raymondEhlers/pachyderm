@@ -269,13 +269,10 @@ class PoolFiller(threading.Thread, abc.ABC):
     def __init__(self, data_pool: queue.Queue[FilePair]) -> None:
         super().__init__()
         self._queue = data_pool
-        self.active = False
 
     def run(self) -> None:
         """ Main entry point called when joining a thread. """
-        self.active = True
         self._process()
-        self.active = False
 
     def _wait(self) -> None:
         """ If the pool is full, wait until it starts to empty before filling further. """
@@ -329,9 +326,8 @@ class CopyHandler(threading.Thread):
                 self._queue.task_done()
 
 class RunByRunTrainOutputFiller(PoolFiller):
-    def __init__(
-        self, output_dir: Union[Path, str], train_run: int, legotrain: str, dataset: str, recpass: str, aodprod: str, *args: Any, **kwargs: Any
-    ):
+    def __init__(self, output_dir: Union[Path, str], train_run: int, legotrain: str, dataset: str,
+                 recpass: str, aodprod: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._output_dir = Path(output_dir)
         self._train_run = train_run
@@ -374,10 +370,12 @@ class RunByRunTrainOutputFiller(PoolFiller):
                 run_dir = run_dir / self._aod_production
             run_output_dir = self._output_dir / r
             logger.info(f"run_dir: {run_dir}")
+
             data = list_alien_dir(run_dir)
             if not self._lego_train.split("/")[0] in data:
                 logger.error(f"PWG dir not found four run {r}")
                 continue
+
             lego_trains_dir = run_dir / self._lego_train.split("/")[0]
             lego_trains = list_alien_dir(lego_trains_dir)
             if not self._lego_train.split("/")[1] in lego_trains:
@@ -385,23 +383,20 @@ class RunByRunTrainOutputFiller(PoolFiller):
                     f"Train {self._lego_train.split('/')[1]} not found in pwg dir for run {r}"
                 )
                 continue
+
             train_base = run_dir / self._lego_train
             train_runs = list_alien_dir(train_base)
             train_dir = [
                 x for x in train_runs if self._extract_train_ID(x) == self._train_run
             ]
             if not len(train_dir):
-                logger.error(
-                    f"Train run {self._train_run} not found for run {r}"
-                )
+                logger.error(f"Train run {self._train_run} not found for run {r}")
                 continue
+
             full_train_dir = train_base / train_dir[0]
-            trainfiles = list_alien_dir(full_train_dir)
-            if "AnalysisResults.root" not in trainfiles:
-                logger.info(
-                    "Train directory %s doesn't contain AnalysisResults.root",
-                    full_train_dir,
-                )
+            train_files = list_alien_dir(full_train_dir)
+            if "AnalysisResults.root" not in train_files:
+                logger.info(f"Train directory {full_train_dir} doesn't contain AnalysisResults.root")
             else:
                 inputfile = full_train_dir / "AnalysisResults.root"
                 outputfile = run_output_dir / "AnalysisResults.root"
