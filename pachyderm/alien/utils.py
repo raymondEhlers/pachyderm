@@ -248,12 +248,13 @@ def download_dataset(dataset_config_filename: str, dataset_name: str) -> str:
 
     data_pool: queue.Queue[FilePair] = queue.Queue()
     pool_filler = PoolFiller(data_pool = data_pool)
+    pool_filler.start()
 
     workers = []
 
     # Setup downloads
     for properties in _combinations(dataset.selections):
-        worker = CopyHandler(data_pool=data_pool, pool_filler = pool_filler)
+        worker = CopyHandler(data_pool=data_pool)
         #worker.download(dataset, properties)
         workers.append(worker)
 
@@ -265,10 +266,9 @@ def download_dataset(dataset_config_filename: str, dataset_name: str) -> str:
     return ""
 
 class PoolFiller(threading.Thread, abc.ABC):
-    def __init__(self, data_pool: queue.Queue[FilePair], max_pool_size: int = 1000) -> None:
+    def __init__(self, data_pool: queue.Queue[FilePair]) -> None:
         super().__init__()
         self._queue = data_pool
-        self._max_pool_size = max_pool_size
         self.active = False
 
     def run(self) -> None:
@@ -280,11 +280,10 @@ class PoolFiller(threading.Thread, abc.ABC):
     def _wait(self) -> None:
         """ If the pool is full, wait until it starts to empty before filling further. """
         # If less than the max pool size, no need to wait.
-        #if self.__datapool.getpoolsize() < self.__maxpoolsize:
-        if self._queue.qsize() < self._max_pool_size:
+        if self._queue.qsize() < self._queue.maxsize:
             return None
         # Pool full, wait until half empty
-        empty_limit = self._max_pool_size / 2
+        empty_limit = self._queue.maxsize / 2
         while self._queue.qsize() > empty_limit:
             time.sleep(5)
 
@@ -296,54 +295,38 @@ class PoolFiller(threading.Thread, abc.ABC):
         ...
 
 class CopyHandler(threading.Thread):
-    def __init__(self, data_pool: queue.Queue[FilePair], pool_filler: PoolFiller):
+    def __init__(self, data_pool: queue.Queue[FilePair]):
         threading.Thread.__init__(self)
-        self._data_pool = data_pool
-        self._pool_filler = pool_filler
-        self.max_trials = 5
-
-    def wait_for_work(self) -> None:
-        """ Wait for work to be available. """
-        # If there's something in the pool, then return immediately and start working.
-        if self._data_pool.qsize():
-            return None
-        # If the Pool filler isn't active, then go to work so we can finish up.
-        if not self._pool_filler.active:
-            return None
-        # If nothing in the pool, there's nothing to do.
-        while not self._data_pool.qsize():
-            # If the pool filler becomes inactive, then break so we can finish up.
-            if not self._pool_filler.active:
-                break
-            # Wait for new files to be added into the pool.
-            time.sleep(5)
-        return None
+        self._queue = data_pool
+        self.max_tries = 5
 
     def run(self) -> None:
         """ Copy the files stored into the data pool. """
-        has_work = True
-        while has_work:
-            self.wait_for_work()
-            next_file = self._data_pool.get()
-            # If the pool is empty, then next_file will be empty.
-            if next_file:
-                copy_status = copy_from_alien(next_file.source, next_file.target)
-                if not copy_status:
-                    # put file back on the pool in case of copy failure
-                    # only allow for a maximum amount of copy trials
-                    trials = next_file.n_tries
-                    trials += 1
-                    if trials >= self.max_trials:
-                        logger.error(f"File {next_file.source} failed copying in {self.max_trials} trials - giving up")
-                    else:
-                        logger.error(f"File {next_file.source} failed copying ({trials}/{self.max_trials}) "
-                                     "- re-inserting into the pool ...")
-                        next_file.n_tries = trials
-                        self._data_pool.put(next_file)
-            if not self._pool_filler.active:
-                # if pool is empty exit, else keep thread alive for remaining files
-                if not self._data_pool.qsize():
-                    has_work = False
+        while True:
+            # This blocks waiting for the next file.
+            next_file = self._queue.get()
+            # We're all done - time to stop.
+            if next_file is None:
+                break
+
+            # Attempt to copy the file from AliEn
+            copy_status = copy_from_alien(next_file.source, next_file.target)
+            # Deal with failures.
+            if not copy_status:
+                # Put file back in the queue in case of copy failure.
+                # Only allow for a maximum amount of copy tries
+                n_tries = next_file.n_tries
+                n_tries += 1
+                if n_tries >= self.max_tries:
+                    logger.error(f"File {next_file.source} failed copying in {self.max_tries} tries - giving up")
+                else:
+                    logger.error(f"File {next_file.source} failed copying ({n_tries}/{self.max_tries}) "
+                                 "- re-inserting into the pool ...")
+                    next_file.n_tries = n_tries
+                    self._queue.put(next_file)
+            else:
+                # Notify that the file was copied successfully.
+                self._queue.task_done()
 
 class RunByRunTrainOutputFiller(PoolFiller):
     def __init__(
@@ -430,31 +413,30 @@ class RunByRunTrainOutputFiller(PoolFiller):
                     self._queue.put(FilePair(inputfile, outputfile))
 
 class DatasetDownloadFiller(PoolFiller):
-    def __init__(self, data_pool: queue.Queue[FilePair], dataset: str, ) -> None:
+    def __init__(self, dataset: str, *args: queue.Queue[FilePair], **kwargs: queue.Queue[FilePair]) -> None:
+        super().__init__(*args, **kwargs)
+        self.dataset = dataset
+
+    def _process(self) -> None:
         ...
 
 def fetchtrainparallel(outputpath: Union[Path, str], trainrun: int, legotrain: str, dataset: str,
                        recpass: str, aodprod: str) -> None:
-    data_pool: queue.Queue[FilePair] = queue.Queue()
+    data_pool: queue.Queue[FilePair] = queue.Queue(maxsize = 1000)
     logger.info(f"Checking dataset {dataset} for train with ID {trainrun} ({legotrain})")
 
     pool_filler = RunByRunTrainOutputFiller(
         outputpath, trainrun,
         legotrain, dataset,
         recpass, aodprod if len(aodprod) > 0 else "",
-        data_pool = data_pool, max_pool_size = 1000,
+        data_pool = data_pool,
     )
-    #poolfiller.setdatapool(datapool)
-    #poolfiller.setalientool(alienhelper)
     pool_filler.start()
 
     workers = []
     # use 4 threads in order to keep number of network request at an acceptable level
     for i in range(0, 4):
-        worker = CopyHandler(data_pool=data_pool, pool_filler=pool_filler)
-        #worker.setdatapool(datapool)
-        #worker.setpoolfiller(poolfiller)
-        #worker.setalienhelper(alienhelper)
+        worker = CopyHandler(data_pool=data_pool)
         worker.start()
         workers.append(worker)
 
