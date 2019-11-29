@@ -271,60 +271,25 @@ def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[
     # See: https://stackoverflow.com/a/15211805
     return (dict(zip(sels, v)) for v in itertools.product(*sels.values()))
 
-class DummyHandler(threading.Thread):
-    def __init__(self, q: queue.Queue[Union[FilePair, None]]):
-        threading.Thread.__init__(self)
-        self._queue = q
-        self.max_tries = 5
-
-    def run(self) -> None:
-        """ Dummy to test copying the files stored into the data pool. """
-        import random
-        while True:
-            # This blocks waiting for the next file.
-            next_file = self._queue.get()
-            # We're all done - time to stop.
-            logger.debug(f"next_file: {next_file}")
-            if next_file is None:
-                # Ensure that it propagates to the other tasks.
-                self._queue.put(None)
-                break
-
-            # Attempt to copy the file from AliEn
-            copy_status = random.choice([False, True])
-            logger.debug(f"Success: {copy_status}. Sleep for a second.")
-            time.sleep(2)
-            # Deal with failures.
-            if not copy_status:
-                # Put file back in the queue in case of copy failure.
-                # Only allow for a maximum amount of copy tries
-                n_tries = next_file.n_tries
-                n_tries += 1
-                if n_tries >= self.max_tries:
-                    logger.error(f"File {next_file.source} failed copying in {self.max_tries} tries - giving up")
-                else:
-                    logger.error(f"File {next_file.source} failed copying ({n_tries}/{self.max_tries}) "
-                                 "- re-inserting into the pool ...")
-                    self._queue.task_done()
-                    next_file.n_tries = n_tries
-                    self._queue.put(next_file)
-            else:
-                # Notify that the file was copied successfully.
-                logger.debug(f"Successfully copied {next_file.source} to {next_file.target}")
-                time.sleep(5)
-                self._queue.task_done()
-
 class CopyHandler(threading.Thread):
     def __init__(self, q: queue.Queue[Union[FilePair, None]]):
         threading.Thread.__init__(self)
         self._queue = q
         self.max_tries = 5
+        self._copy_function = utils.copy_from_alien
+        # If we want to test, make below the copy function.
+        #def random_choice(source: Path, target: Path) -> bool:
+        #    import random
+        #    logging.debug("Random choice for debugging!")
+        #    return random.choice([False, True])
+        #self._copy_function = random_choice
 
     def run(self) -> None:
         """ Copy the files stored into the data pool. """
         while True:
             # This blocks waiting for the next file.
             next_file = self._queue.get()
+            logger.debug(f"next_file: {next_file}")
             # We're all done - time to stop.
             if next_file is None:
                 # Ensure that it propagates to the other handlers.
@@ -332,11 +297,13 @@ class CopyHandler(threading.Thread):
                 break
 
             # Attempt to copy the file from AliEn
-            copy_status = utils.copy_from_alien(next_file.source, next_file.target)
-            # TEMP
-            logger.debug(f"Copy success: {copy_status}. Sleep for a second.")
-            time.sleep(2)
-            # ENDTEMP
+            copy_status = self._copy_function(next_file.source, next_file.target)
+            logger.debug(f"Copy success: {copy_status}.")
+            # Help out with debugging if needed.
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("Sleep for 2 second for debugging purposes.")
+                time.sleep(2)
+
             # Deal with failures.
             if not copy_status:
                 # Put file back in the queue in case of copy failure.
@@ -355,10 +322,10 @@ class CopyHandler(threading.Thread):
                     next_file.n_tries = n_tries
                     self._queue.put(next_file)
             else:
-                # TEMP
                 logger.debug(f"Successfully copied {next_file.source} to {next_file.target}")
-                time.sleep(2)
-                # ENDTEMP
+                # Help out with debugging if needed.
+                if logger.isEnabledFor(logging.DEBUG):
+                    time.sleep(2)
                 # Notify that the file was copied successfully.
                 self._queue.task_done()
 
