@@ -20,7 +20,9 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, Union
+
+import importlib_resources
 
 from pachyderm import yaml
 
@@ -329,22 +331,37 @@ class DataSet:
             selections = selections
         )
 
-def _extract_datasets_from_yaml(filename: Union[Path, str]) -> yaml.DictLike:
+def _extract_dataset_from_yaml(period: str, datasets_path: Optional[Union[Path, str]] = None) -> DataSet:
     """ Extract the datasets from YAML.
 
     Args:
-        filename: Path to the YAML file.
+        period: Run period which we should load.
+        datatsets_path: Filename of the YAML configuration file. Default: None,
+            in which case, the files will be taken from those defined in the package.
     Returns:
-        The datasets extract from the YAML file.
+        The dataset extract from the YAML file.
     """
     # Validation
-    filename = Path(filename)
-
+    # This will always be named according to the run period.
+    filename = f"{period}.yaml"
+    if datasets_path:
+        datasets_path = Path(datasets_path) / filename
+        with open(datasets_path, "r") as f:
+            file_contents = f.read()
+    else:
+        file_contents = importlib_resources.read_text("pachyderm.alice.datasets", filename)
+    # Read the YAML
     y = yaml.yaml()
-    with open(filename, "r") as f:
-        datasets = y.load(f)
+    dataset_information = y.load(file_contents)
 
-    return datasets
+    # Setup dataset
+    logger.debug(f"parameters: {list(dataset_information['parameters'].keys())}")
+    logger.debug(f"selections: {list(dataset_information['selections'].keys())}")
+    dataset = DataSet.from_specification(
+        period = period, **dataset_information["parameters"], **dataset_information["selections"]
+    )
+
+    return dataset
 
 def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[str, Any]]:
     """ Find all permutations of combinations of selections.
@@ -375,18 +392,29 @@ def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[
     # See: https://stackoverflow.com/a/15211805
     return (dict(zip(sels, v)) for v in itertools.product(*sels.values()))
 
-def download_dataset(dataset_config_filename: str, dataset_name: str, output_path: str) -> str:
+def download_dataset(period: str, output_path: Union[Path, str], datasets_path: Optional[Union[Path, str]] = None) -> str:
     """ Download files from the given dataset with the provided selections.
 
-
     Args:
-        dataset_config_filename: Filename of the configuration file.
-        dataset_name: Name of the dataset to be downloaded.
+        period: Name of the period to be downloaded.
         output_path: Path to where the data should be stored.
+        dataset_config_filename: Filename of the configuration file. Default: None,
+            in which case, the files will be taken from those defined in the package.
+    Returns:
+        None.
     """
+    # Validation
+    output_path = Path(output_path)
+    if datasets_path:
+        datasets_path = Path(datasets_path)
+
+    # Setup the dataset
+    dataset = _extract_dataset_from_yaml(period = period, datasets_path = datasets_path)
+
+    # Setup
     q: queue.Queue[Union[FilePair, None]] = queue.Queue()
     pool_filler = DatasetDownloadFiller(
-        config_filename = dataset_config_filename, dataset = dataset_name, output_path = output_path,
+        dataset = dataset, output_path = output_path,
         q = q,
     )
     pool_filler.start()
@@ -583,40 +611,28 @@ class RunByRunTrainOutputFiller(QueueFiller):
                     self._queue.put(FilePair(inputfile, outputfile))
 
 class DatasetDownloadFiller(QueueFiller):
-    def __init__(self, config_filename: Union[Path, str], dataset: str, output_path: Union[Path, str],
+    def __init__(self, dataset: DataSet, output_path: Union[Path, str],
                  *args: queue.Queue[Union[FilePair, None]], **kwargs: queue.Queue[Union[FilePair, None]]) -> None:
         super().__init__(*args, **kwargs)
-        self.config_filename = Path(config_filename)
         self.dataset = dataset
         self.output_path = Path(output_path)
 
     def _process(self) -> None:
-        # Setup dataset
-        datasets = _extract_datasets_from_yaml(filename = self.config_filename)
-        try:
-            dataset_information = datasets[self.dataset]
-        except KeyError as e:
-            raise KeyError(f"Dataset {self.dataset} not found. Must specify it in the configuration!") from e
-        logger.debug(f"parameters: {list(dataset_information['parameters'].keys())}")
-        logger.debug(f"selections: {list(dataset_information['selections'].keys())}")
-        dataset = DataSet.from_specification(
-            period = self.dataset, **dataset_information["parameters"], **dataset_information["selections"]
-        )
 
         # Setup downloads
-        for j, properties in enumerate(_combinations_of_selections(dataset.selections)):
+        for j, properties in enumerate(_combinations_of_selections(self.dataset.selections)):
             # TEMP
             if j > 2:
                 break
             # Determine search and output paths
-            logger.debug(f"dataset.__dict__: {dataset.__dict__}")
+            logger.debug(f"dataset.__dict__: {self.dataset.__dict__}")
             logger.debug(f"properties: {properties}")
-            kwargs = dataset.__dict__.copy()
-            kwargs["data_type"] = dataset.data_type
+            kwargs = self.dataset.__dict__.copy()
+            kwargs["data_type"] = self.dataset.data_type
             kwargs.update(properties)
-            #search_path = Path(str(dataset.search_path).format(**dataset.__dict__, **properties))
-            #output_path = Path(str(self.output_path).format(**dataset.__dict__, **properties))
-            search_path = Path(str(dataset.search_path).format(**kwargs))
+            #search_path = Path(str(self.dataset.search_path).format(**self.dataset.__dict__, **properties))
+            #output_path = Path(str(self.output_path).format(**self.dataset.__dict__, **properties))
+            search_path = Path(str(self.dataset.search_path).format(**kwargs))
             output_path = Path(str(self.output_path).format(**kwargs))
             logger.debug(f"search_path: {search_path}, output_path: {output_path}")
 
@@ -629,14 +645,14 @@ class DatasetDownloadFiller(QueueFiller):
                 if i > 0:
                     break
                 # Determine output directory. It will be created if necessary when copying.
-                output = output_path / directory / dataset.filename
+                output = output_path / directory / self.dataset.filename
                 if output.exists():
                     logger.info(f"Output file {output} already found - not copying again")
                 else:
-                    logger.debug(f"Adding input: {search_path / directory / dataset.filename}, output: {output}")
+                    logger.debug(f"Adding input: {search_path / directory / self.dataset.filename}, output: {output}")
                     # Add to the queue
                     self._queue.put(FilePair(
-                        search_path / directory / dataset.filename, output
+                        search_path / directory / self.dataset.filename, output
                     ))
 
 def fetchtrainparallel(outputpath: Union[Path, str], trainrun: int, legotrain: str, dataset: str,
@@ -708,7 +724,7 @@ if __name__ == "__main__":
     #)
 
     download_dataset(
-        dataset_config_filename = "pachyderm/alice/dataset.yaml",
-        dataset_name = "lhc16j5",
+        period = "lhc16j5",
         output_path = "alice/{data_type}/{year}/{period}/{pt_hard_bin}/{run}/AOD{production_number}",
+        datasets_path = "pachyderm/alice/datasets/",
     )

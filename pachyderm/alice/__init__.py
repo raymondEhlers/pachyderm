@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" AliEn utilities.
+""" ALICE related utilities and functionality.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
