@@ -27,7 +27,7 @@ from pachyderm import yaml
 logger = logging.getLogger(__name__)
 
 def local_md5(fname: Union[Path, str]) -> str:
-    """ Calculate md5 sum for the file at a given filename.
+    """ Calculate a chunked md5 sum for the file at a given filename.
 
     Args:
         fname: Path to the file.
@@ -62,7 +62,6 @@ def grid_md5(gridfile: Union[Path, str]) -> str:
     errorstate = True
     while errorstate:
         errorstate = False
-        #_, gb_out = subprocess.getstatusoutput(f"gbbox md5sum {gridfile}")
         result = subprocess.run(["gbbox", "md5sum", str(gridfile)], capture_output = True, check = True)
         gb_out = result.stdout.decode()
         # Check that the command ran successfully
@@ -78,6 +77,9 @@ def grid_md5(gridfile: Union[Path, str]) -> str:
 def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -> bool:
     """ Copy a file using alien_cp.
 
+    The function must be robust enough to fetch all possible xrd error states which
+    it usually gets from the stdout of the query process.
+
     Args:
         inputfile: Path to the file to be copied.
         outputfile: Path to where the file should be copied.
@@ -90,20 +92,17 @@ def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -
 
     # Create the output location
     logger.info(f"Copying {inputfile} to {outputfile}")
-    #if not os.path.exists(os.path.dirname(outputfile)):
-    #    os.makedirs(os.path.dirname(outputfile), 0o755)
     outputfile.parent.mkdir(mode = 0o755, exist_ok = True, parents = True)
-    #subprocess.call(["alien_cp", f"alien://{inputfile}", outputfile])
     subprocess.run(["alien_cp", f"alien://{inputfile}", str(outputfile)], capture_output = True, check = True)
 
     # Check that the file was copied successfully.
     if outputfile.exists():
         localmd5 = local_md5(outputfile)
         gridmd5 = grid_md5(inputfile)
-        logger.debug(f"MD5local: {localmd5}, MD5grid {gridmd5}")
+        #logger.debug(f"MD5local: {localmd5}, MD5grid {gridmd5}")
         if localmd5 != gridmd5:
             logger.error(f"Mismatch in MD5 sum for file {outputfile}")
-            # incorrect MD5sum, outputfile probably corrupted
+            # Incorrect MD5 sum - probably a corrupted output file.
             outputfile.unlink()
             return False
         else:
@@ -132,12 +131,7 @@ def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
     while errorstate:
         # Grab the list of files from alien via alien_ls
         logger.debug("Searching for files on AliEn...")
-        #dirs = subprocess.getstatusoutput(f"alien_ls {input_dir}")
         process = subprocess.run(["alien_ls", str(input_dir)], capture_output = True, check = True)
-        logger.debug("Found files in AliEn.")
-        #logger.debug(f"process: {process}")
-        #logger.debug(f"process.stdout: {process.stdout}")
-        #logger.debug(f"process.stderr: {process.stderr}")
 
         # Extract the files from the output.
         errorstate = False
@@ -158,6 +152,15 @@ def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
 
 @dataclass
 class FilePair:
+    """ Pair for file paths to copy from source to target.
+
+    This also a counter for the number of times that we've tried to copy this file.
+
+    Attributes:
+        source: Path to the source file.
+        target: Path to the target file.
+        n_tries: Number of attempts to copy the source file.
+    """
     source: Union[Path, str]
     target: Union[Path, str]
     n_tries: int = 0
@@ -166,6 +169,63 @@ class FilePair:
         """ Ensure that we actually receive Paths. """
         self.source = Path(self.source)
         self.target = Path(self.target)
+
+class QueueFiller(threading.Thread, abc.ABC):
+    """ Fill file pairs into the queue.
+
+    Args:
+        q: Queue where the files will be stored.
+    """
+    def __init__(self, q: queue.Queue[Union[FilePair, None]]) -> None:
+        super().__init__()
+        self._queue = q
+
+    def run(self) -> None:
+        """ Main entry point called when joining a thread.
+
+        The daughter class should implemented ``_process()`` instead of ``run()``
+        so that we can control calls to the processing if necessary.
+
+        Args:
+            None.
+        Returns:
+            None.
+        """
+        self._process()
+
+    def _wait(self) -> None:
+        """ Determine whether to wait before filling into the queue.
+
+        If the pool is full, it will wait until it starts to empty before filling further.
+
+        Note:
+            Since the queue blocks when it is full, I'm not sure this is really necessary.
+            It is perhaps nice that it backs off, but I don't think that's required.
+
+        Args:
+            None.
+        Returns:
+            None.
+        """
+        # If less than the max pool size, no need to wait.
+        if self._queue.qsize() < self._queue.maxsize:
+            return None
+        # Pool full, wait until half empty
+        empty_limit = self._queue.maxsize / 2
+        while self._queue.qsize() > empty_limit:
+            time.sleep(5)
+
+    def _process(self) -> None:
+        """ Find and fill files into the queue.
+
+        To be implemented by the daughter classes.
+
+        Args:
+            None.
+        Returns:
+            None.
+        """
+        ...
 
 def does_period_contain_data(period: str) -> bool:
     """ Does the given period contain data or simulation?
@@ -187,10 +247,19 @@ _T = TypeVar("_T", bound = "DataSet")
 class DataSet:
     """ Contains dataset information necessary to download the associated files.
 
+    Attributes:
+        period: The run period.
+        system: The collision system.
+        year: Year the data was collected or simulated.
+        file_type: Data type - either "ESD" or "AOD".
+        search_path: Search path to be utilized via ``alien_ls``.
+        filename: Name of the file to download from AliEn.
+        selections: User selections provided in the YAML file.
+        is_data: True if the DataSet corresponds to real data or simulation.
+        data_type: Data type - either "data" or "sim".
     """
     period: str
     system: str
-    data_type: str
     year: int
     file_type: str
     search_path: Path
@@ -199,18 +268,53 @@ class DataSet:
 
     @property
     def is_data(self) -> bool:
+        """ Check whether the DataSet provides real data or simulated data.
+
+        Args:
+            None.
+        Returns:
+            True if the DataSet contains real data.
+        """
         return does_period_contain_data(self.period)
 
+    @property
+    def data_type(self) -> str:
+        """ The data type of either "data" or "sim".
+
+        Args:
+            None.
+        Returns:
+            "data" if the DataSet contains real data, and "sim" if it is simulation.
+        """
+        return "data" if self.is_data else "sim"
+
     @classmethod
-    def from_specification(cls: Type[_T], period: str, system: str, data_type: str, year: int,
+    def from_specification(cls: Type[_T], period: str, system: str, year: int,
                            file_types: Dict[str, Dict[str, str]], **selections: Any) -> _T:
+        """ Initializes the DataSet from a specification stored in a YAML file.
+
+        Args:
+            period: The run period.
+            system: The collision system.
+            year: Year the data was collected or simulated.
+            file_types: Specifications that vary for the ESD or AOD files, including
+                the search path and the filename.
+            selections: User selections provided in the YAML file.
+        Returns:
+            A DataSet constructed using this information.
+        """
         # Validation
         # Ensure that "LHC" is in all caps.
         period = period[:3].upper() + period[3:]
-        if not does_period_contain_data(period):
+        # Rename variables so that they better fit the expected arguments.
+        # Piratically, this means removing the trailing "s"
+        for var_name in ["runs", "pt_hard_bins"]:
+            selections[var_name[:-1]] = selections.pop(var_name)
+        # Rename "runs" -> "run"
+        if does_period_contain_data(period):
             # Need to prepend "000"
-            #selections["run"] = ["000" + str(r) for r in selections["run"]]
-            ...
+            selections["run"] = ["000" + str(r) for r in selections["run"]]
+
         # Extract the rest of the information from the file type options
         file_type = selections["file_type"]
         options = file_types[file_type]
@@ -220,7 +324,7 @@ class DataSet:
 
         # Create the object
         return cls(
-            period = period, system = system, data_type = data_type, year = year, file_type = file_type,
+            period = period, system = system, year = year, file_type = file_type,
             search_path = path, filename = filename,
             selections = selections
         )
@@ -242,19 +346,23 @@ def _extract_datasets_from_yaml(filename: Union[Path, str]) -> yaml.DictLike:
 
     return datasets
 
-#def _validate_input(run: Optional[int] = None, runs: Optional[List[int]] = None) -> bool:
-#    # Validation
-#    if run is None and runs is None:
-#        raise ValueError("Must pass either a single run or list of runs.")
-#    # We want to proceed with runs regardless of what was passed. So if a single
-#    # run was passed, we convert it into runs list of length 1.
-#    if runs is None:
-#        # Help out mypy...
-#        assert run is not None
-#        runs = [run]
+def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[str, Any]]:
+    """ Find all permutations of combinations of selections.
 
-def _combinations(selections: Mapping[str, Any]) -> Iterable[Dict[str, Any]]:
-    """ Combine all permutations of selections.
+    This is useful for passing the selections as kwargs to a function (perhaps for formatting).
+    As a concrete example,
+
+    ```python
+    >>> selections = {"a": [1], "b": [2, 3]}
+    >>> list(_combinations_of_selections(selections))
+    [{'a': 1, 'b': 2}, {'a': 1, 'b': 3}]
+
+    ```
+
+    Note:
+        The arguments are validated such that if there is only a single value for a given selection,
+        it is converted to a list of length 1. Of course, it will be returned as a single value in
+        the arguments.
 
     Args:
         selections: Selections from the dataset.
@@ -270,62 +378,41 @@ def _combinations(selections: Mapping[str, Any]) -> Iterable[Dict[str, Any]]:
 def download_dataset(dataset_config_filename: str, dataset_name: str, output_path: str) -> str:
     """ Download files from the given dataset with the provided selections.
 
+
+    Args:
+        dataset_config_filename: Filename of the configuration file.
+        dataset_name: Name of the dataset to be downloaded.
+        output_path: Path to where the data should be stored.
     """
-    data_pool: queue.Queue[Union[FilePair, None]] = queue.Queue()
+    q: queue.Queue[Union[FilePair, None]] = queue.Queue()
     pool_filler = DatasetDownloadFiller(
         config_filename = dataset_config_filename, dataset = dataset_name, output_path = output_path,
-        data_pool = data_pool,
+        q = q,
     )
     pool_filler.start()
 
     workers = []
     for i in range(0, 1):
-        #worker = DummyHandler(data_pool=data_pool)
-        worker = CopyHandler(data_pool=data_pool)
+        #worker = DummyHandler(q = q)
+        worker = CopyHandler(q = q)
         worker.start()
         workers.append(worker)
 
     pool_filler.join()
     # Finish up.
-    data_pool.join()
+    q.join()
     # Tell the workers to exit.
-    data_pool.put(None)
+    q.put(None)
     for worker in workers:
         worker.join()
 
     # TODO: Generate file list
     return ""
 
-class PoolFiller(threading.Thread, abc.ABC):
-    def __init__(self, data_pool: queue.Queue[Union[FilePair, None]]) -> None:
-        super().__init__()
-        self._queue = data_pool
-
-    def run(self) -> None:
-        """ Main entry point called when joining a thread. """
-        self._process()
-
-    def _wait(self) -> None:
-        """ If the pool is full, wait until it starts to empty before filling further. """
-        # If less than the max pool size, no need to wait.
-        if self._queue.qsize() < self._queue.maxsize:
-            return None
-        # Pool full, wait until half empty
-        empty_limit = self._queue.maxsize / 2
-        while self._queue.qsize() > empty_limit:
-            time.sleep(5)
-
-    def _process(self) -> None:
-        """ Find and fill files into the queue.
-
-        To be implemented by the daughter classes.
-        """
-        ...
-
 class DummyHandler(threading.Thread):
-    def __init__(self, data_pool: queue.Queue[Union[FilePair, None]]):
+    def __init__(self, q: queue.Queue[Union[FilePair, None]]):
         threading.Thread.__init__(self)
-        self._queue = data_pool
+        self._queue = q
         self.max_tries = 5
 
     def run(self) -> None:
@@ -366,9 +453,9 @@ class DummyHandler(threading.Thread):
                 self._queue.task_done()
 
 class CopyHandler(threading.Thread):
-    def __init__(self, data_pool: queue.Queue[Union[FilePair, None]]):
+    def __init__(self, q: queue.Queue[Union[FilePair, None]]):
         threading.Thread.__init__(self)
-        self._queue = data_pool
+        self._queue = q
         self.max_tries = 5
 
     def run(self) -> None:
@@ -413,7 +500,7 @@ class CopyHandler(threading.Thread):
                 # Notify that the file was copied successfully.
                 self._queue.task_done()
 
-class RunByRunTrainOutputFiller(PoolFiller):
+class RunByRunTrainOutputFiller(QueueFiller):
     def __init__(self, output_dir: Union[Path, str], train_run: int, legotrain: str, dataset: str,
                  recpass: str, aodprod: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -495,7 +582,7 @@ class RunByRunTrainOutputFiller(PoolFiller):
                     self._wait()
                     self._queue.put(FilePair(inputfile, outputfile))
 
-class DatasetDownloadFiller(PoolFiller):
+class DatasetDownloadFiller(QueueFiller):
     def __init__(self, config_filename: Union[Path, str], dataset: str, output_path: Union[Path, str],
                  *args: queue.Queue[Union[FilePair, None]], **kwargs: queue.Queue[Union[FilePair, None]]) -> None:
         super().__init__(*args, **kwargs)
@@ -517,7 +604,7 @@ class DatasetDownloadFiller(PoolFiller):
         )
 
         # Setup downloads
-        for j, properties in enumerate(_combinations(dataset.selections)):
+        for j, properties in enumerate(_combinations_of_selections(dataset.selections)):
             # TEMP
             if j > 2:
                 break
@@ -525,6 +612,7 @@ class DatasetDownloadFiller(PoolFiller):
             logger.debug(f"dataset.__dict__: {dataset.__dict__}")
             logger.debug(f"properties: {properties}")
             kwargs = dataset.__dict__.copy()
+            kwargs["data_type"] = dataset.data_type
             kwargs.update(properties)
             #search_path = Path(str(dataset.search_path).format(**dataset.__dict__, **properties))
             #output_path = Path(str(self.output_path).format(**dataset.__dict__, **properties))
@@ -553,21 +641,21 @@ class DatasetDownloadFiller(PoolFiller):
 
 def fetchtrainparallel(outputpath: Union[Path, str], trainrun: int, legotrain: str, dataset: str,
                        recpass: str, aodprod: str) -> None:
-    data_pool: queue.Queue[Union[FilePair, None]] = queue.Queue(maxsize = 1000)
+    q: queue.Queue[Union[FilePair, None]] = queue.Queue(maxsize = 1000)
     logger.info(f"Checking dataset {dataset} for train with ID {trainrun} ({legotrain})")
 
     pool_filler = RunByRunTrainOutputFiller(
         outputpath, trainrun,
         legotrain, dataset,
         recpass, aodprod if len(aodprod) > 0 else "",
-        data_pool = data_pool,
+        q = q,
     )
     pool_filler.start()
 
     workers = []
     # use 4 threads in order to keep number of network request at an acceptable level
     for i in range(0, 4):
-        worker = CopyHandler(data_pool=data_pool)
+        worker = CopyHandler(q=q)
         worker.start()
         workers.append(worker)
 
