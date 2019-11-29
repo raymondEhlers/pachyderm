@@ -10,7 +10,7 @@ Uses some code from Markus' download train run-by-run output script.
 from __future__ import annotations
 
 import abc
-#import argparse
+import argparse
 import hashlib
 import itertools
 import logging
@@ -180,7 +180,7 @@ class QueueFiller(threading.Thread, abc.ABC):
     """ Fill file pairs into the queue.
 
     Args:
-        q: Queue where the files will be stored.
+        q: Queue where the file pairs will be stored.
     """
     def __init__(self, q: queue.Queue[Union[FilePair, None]]) -> None:
         super().__init__()
@@ -396,19 +396,19 @@ def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[
     # See: https://stackoverflow.com/a/15211805
     return (dict(zip(sels, v)) for v in itertools.product(*sels.values()))
 
-def download_dataset(period: str, output_path: Union[Path, str], datasets_path: Optional[Union[Path, str]] = None) -> List[str]:
+def download_dataset(period: str, output_dir: Union[Path, str], datasets_path: Optional[Union[Path, str]] = None) -> List[Path]:
     """ Download files from the given dataset with the provided selections.
 
     Args:
         period: Name of the period to be downloaded.
-        output_path: Path to where the data should be stored.
+        output_dir: Path to where the data should be stored.
         dataset_config_filename: Filename of the configuration file. Default: None,
             in which case, the files will be taken from those defined in the package.
     Returns:
         None.
     """
     # Validation
-    output_path = Path(output_path)
+    output_dir = Path(output_dir)
     if datasets_path:
         datasets_path = Path(datasets_path)
 
@@ -418,7 +418,7 @@ def download_dataset(period: str, output_path: Union[Path, str], datasets_path: 
     # Setup
     q: queue.Queue[Union[FilePair, None]] = queue.Queue()
     queue_filler = DatasetDownloadFiller(
-        dataset = dataset, output_path = output_path,
+        dataset = dataset, output_dir = output_dir,
         q = q,
     )
     queue_filler.start()
@@ -441,8 +441,10 @@ def download_dataset(period: str, output_path: Union[Path, str], datasets_path: 
     for worker in workers:
         worker.join()
 
-    # TODO: Generate file list
-    return list(Path("alice").glob("**/*.root"))
+    # Return the files that are stored corresponding to this period.
+    period_specific_dir = output_dir / dataset.data_type / str(dataset.year) / dataset.period.upper()
+    # TODO: Store this filelist.
+    return sorted(Path(period_specific_dir).glob("**/*.root"))
 
 class DummyHandler(threading.Thread):
     def __init__(self, q: queue.Queue[Union[FilePair, None]]):
@@ -618,11 +620,26 @@ class RunByRunTrainOutputFiller(QueueFiller):
                     self._queue.put(FilePair(inputfile, outputfile))
 
 class DatasetDownloadFiller(QueueFiller):
-    def __init__(self, dataset: DataSet, output_path: Union[Path, str],
+    """ Fill in files to download from a given DataSet.
+
+    Args:
+        dataset: DataSet which provides the properties of the dataset.
+        output_dir: Base output directory where the files will be copied. This doesn't specify the entire path.
+            Rather, the grid path (except for "alice") is appended to this directory. Maintaining this directory
+            structure yields better compatibility with the analysis manager.
+        q: Queue where the file pairs should be stored.
+
+    Attributes:
+        dataset: DataSet which provides the properties of the dataset.
+        output_dir: Base output directory where the files will be copied. This doesn't specify the entire path.
+            Rather, the grid path (except for "alice") is appended to this directory. Maintaining this directory
+            structure yields better compatibility with the analysis manager.
+    """
+    def __init__(self, dataset: DataSet, output_dir: Union[Path, str],
                  *args: queue.Queue[Union[FilePair, None]], **kwargs: queue.Queue[Union[FilePair, None]]) -> None:
         super().__init__(*args, **kwargs)
         self.dataset = dataset
-        self.output_path = Path(output_path)
+        self.output_dir = Path(output_dir)
 
     def _process(self) -> None:
         """ Determine and fill in the filenames of the dataset.
@@ -640,10 +657,12 @@ class DatasetDownloadFiller(QueueFiller):
             kwargs["data_type"] = self.dataset.data_type
             kwargs.update(properties)
             #search_path = Path(str(self.dataset.search_path).format(**self.dataset.__dict__, **properties))
-            #output_path = Path(str(self.output_path).format(**self.dataset.__dict__, **properties))
+            #output_dir = Path(str(self.output_dir).format(**self.dataset.__dict__, **properties))
             search_path = Path(str(self.dataset.search_path).format(**kwargs))
-            output_path = Path(str(self.output_path).format(**kwargs))
-            logger.debug(f"search_path: {search_path}, output_path: {output_path}")
+            #output_dir = Path(str(self.output_dir).format(**kwargs))
+            # We want the output_dir to emulate the path on the grid. We just want to change where it's stored.
+            output_dir = self.output_dir / str(search_path).replace("/alice/", "")
+            logger.debug(f"search_path: {search_path}, output_dir: {output_dir}")
 
             max_files_per_selection = properties["n_files_per_selection"]
 
@@ -658,7 +677,7 @@ class DatasetDownloadFiller(QueueFiller):
                     break
 
                 # Determine output directory. It will be created if necessary when copying.
-                output = output_path / directory / self.dataset.filename
+                output = output_dir / directory / self.dataset.filename
                 if output.exists():
                     logger.info(f"Output file {output} already found - not copying again")
                 else:
@@ -668,18 +687,19 @@ class DatasetDownloadFiller(QueueFiller):
                         search_path / directory / self.dataset.filename, output
                     ))
 
-def fetchtrainparallel(outputpath: Union[Path, str], trainrun: int, legotrain: str, dataset: str,
-                       recpass: str, aodprod: str) -> None:
+def download_run_by_run_train_output(outputpath: Union[Path, str],
+                                     trainrun: int, legotrain: str, dataset: str,
+                                     recpass: str, aodprod: str) -> None:
     q: queue.Queue[Union[FilePair, None]] = queue.Queue(maxsize = 1000)
     logger.info(f"Checking dataset {dataset} for train with ID {trainrun} ({legotrain})")
 
-    pool_filler = RunByRunTrainOutputFiller(
+    queue_filler = RunByRunTrainOutputFiller(
         outputpath, trainrun,
         legotrain, dataset,
         recpass, aodprod if len(aodprod) > 0 else "",
         q = q,
     )
-    pool_filler.start()
+    queue_filler.start()
 
     workers = []
     # use 4 threads in order to keep number of network request at an acceptable level
@@ -688,57 +708,75 @@ def fetchtrainparallel(outputpath: Union[Path, str], trainrun: int, legotrain: s
         worker.start()
         workers.append(worker)
 
-    pool_filler.join()
+    # Finish up.
+    # First, ensure that all of the filers are added to the queue.
+    queue_filler.join()
+    # Next, we join the queue to ensure that all of the file pairs in it are processed.
+    q.join()
+    # Next, tell the workers to exit.
+    q.put(None)
+    # And then wait for them to process the exit signal.
     for worker in workers:
         worker.join()
 
-if __name__ == "__main__":
-    #parser = argparse.ArgumentParser(
-    #    prog="fetchTrainRunByRunParallel",
-    #    description="Tool to get runwise train output",
-    #)
-    #parser.add_argument(
-    #    "outputpath",
-    #    metavar="OUTPUTPATH",
-    #    help="Path where to store the output files run-by-run",
-    #)
-    #parser.add_argument(
-    #    "trainrun",
-    #    metavar="TRAINRUN",
-    #    type=int,
-    #    help="ID of the train run (number is sufficient, time stamp not necessary)",
-    #)
-    #parser.add_argument(
-    #    "legotrain",
-    #    metavar="LEGOTRAIN",
-    #    help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
-    #)
-    #parser.add_argument("dataset", metavar="DATASET", help="Name of the dataset")
-    #parser.add_argument(
-    #    "-p",
-    #    "--recpass",
-    #    type=str,
-    #    default="pass1",
-    #    help="Reconstruction pass (only meaningful in case of data) [default: pass1]",
-    #)
-    #parser.add_argument(
-    #    "-a",
-    #    "--aod",
-    #    type=str,
-    #    default="",
-    #    help="Dedicated AOD production (if requested) [default: not set]",
-    #)
-    #args = parser.parse_args()
-    logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.DEBUG)
-    #fetchtrainparallel(
-    #    args.outputpath,
-    #    args.trainrun, args.legotrain,
-    #    args.dataset, args.recpass, args.aod,
-    #)
-
-    output = download_dataset(
-        period = "lhc16j5",
-        output_path = "alice/{data_type}/{year}/{period}/{pt_hard_bin}/{run}/AOD{production_number}",
-        datasets_path = "pachyderm/alice/datasets/",
+def run_download_run_by_run_train_output() -> None:
+    """ Entry point for download run-by-run train output. """
+    logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
+    parser = argparse.ArgumentParser(
+        prog="downloadAliceRunByRun",
+        description="Download run-by-run LEGO train outputs",
     )
-    print(sorted(list(output)))
+    parser.add_argument(
+        "outputpath", metavar="OUTPUTPATH",
+        help="Path where to store the output files run-by-run",
+    )
+    parser.add_argument(
+        "trainrun", metavar="TRAINRUN", type=int,
+        help="ID of the train run (number is sufficient, time stamp not necessary)",
+    )
+    parser.add_argument(
+        "legotrain", metavar="LEGOTRAIN",
+        help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
+    )
+    parser.add_argument("dataset", metavar="DATASET", help="Name of the dataset")
+    parser.add_argument(
+        "-p", "--recpass", type=str, default="pass1",
+        help="Reconstruction pass (only meaningful in case of data) [default: pass1]",
+    )
+    parser.add_argument(
+        "-a", "--aod", type=str, default="",
+        help="Dedicated AOD production (if requested) [default: not set]",
+    )
+    args = parser.parse_args()
+    download_run_by_run_train_output(
+        args.outputpath,
+        args.trainrun, args.legotrain,
+        args.dataset, args.recpass, args.aod,
+    )
+
+def run_dataset_download() -> None:
+    """ Entry point for download a dataset. """
+    logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
+    parser = argparse.ArgumentParser(
+        prog="downloadALICEDataset",
+        description="Download an ALICE dataset in parallel",
+    )
+    parser.add_argument(
+        "-p", "--period", type=str, default="",
+        help="Run period (i.e. dataset) to download.",
+    )
+    parser.add_argument(
+        "-o", "--outputdir", type=str, default="alice",
+        help="Base output directory. [default: 'alice']",
+    )
+    parser.add_argument(
+        "-d", "--datasets", type=str, default=None, metavar="PATH",
+        help="Path to the datasets directory."
+    )
+    args = parser.parse_args()
+    output = download_dataset(
+        period = args.period,
+        output_dir = args.outputdir,
+        datasets_path = args.datasets,
+    )
+    print(output)

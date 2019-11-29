@@ -66,6 +66,9 @@ setup(
     # See: https://stackoverflow.com/a/8506532
     entry_points = {
         "console_scripts": [
+            #"downloadAliceDataset = pachyderm.alice.download:run_dataset_download",
+            "downloadALICEDataset = pachyderm.alice.utils:run_dataset_download",
+            "downloadALICERunByRun = pachyderm.alice.download:run_download_run_by_run_train_output",
         ],
     },
 
