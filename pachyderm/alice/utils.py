@@ -542,11 +542,14 @@ class DatasetDownloadFiller(PoolFiller):
                     break
                 # Determine output directory. It will be created if necessary when copying.
                 output = output_path / directory / dataset.filename
-                logger.debug(f"Adding input: {search_path / directory / dataset.filename}, output: {output}")
-                # Add to the queue
-                self._queue.put(FilePair(
-                    search_path / directory / dataset.filename, output
-                ))
+                if output.exists():
+                    logger.info(f"Output file {output} already found - not copying again")
+                else:
+                    logger.debug(f"Adding input: {search_path / directory / dataset.filename}, output: {output}")
+                    # Add to the queue
+                    self._queue.put(FilePair(
+                        search_path / directory / dataset.filename, output
+                    ))
 
 def fetchtrainparallel(outputpath: Union[Path, str], trainrun: int, legotrain: str, dataset: str,
                        recpass: str, aodprod: str) -> None:
@@ -617,7 +620,7 @@ if __name__ == "__main__":
     #)
 
     download_dataset(
-        dataset_config_filename = "pachyderm/alien/dataset.yaml",
+        dataset_config_filename = "pachyderm/alice/dataset.yaml",
         dataset_name = "lhc16j5",
         output_path = "alice/{data_type}/{year}/{period}/{pt_hard_bin}/{run}/AOD{production_number}",
     )
