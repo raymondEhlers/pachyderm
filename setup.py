@@ -86,7 +86,7 @@ setup(
         # For the fitting module
         "iminuit",
         "numdifftools",
-        "importlib_resources",
+        "importlib_resources;python_version<'3.7'",
     ],
 
     # Include additional files

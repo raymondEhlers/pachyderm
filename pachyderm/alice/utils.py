@@ -22,9 +22,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, Union
 
-import importlib_resources
-
 from pachyderm import yaml
+
+try:
+    import importlib.resources as resources
+except ImportError:
+    # Try the back ported package.
+    import importlib_resources as resources  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -349,7 +353,7 @@ def _extract_dataset_from_yaml(period: str, datasets_path: Optional[Union[Path, 
         with open(datasets_path, "r") as f:
             file_contents = f.read()
     else:
-        file_contents = importlib_resources.read_text("pachyderm.alice.datasets", filename)
+        file_contents = resources.read_text("pachyderm.alice.datasets", filename)
     # Read the YAML
     y = yaml.yaml()
     dataset_information = y.load(file_contents)
