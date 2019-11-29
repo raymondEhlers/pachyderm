@@ -396,7 +396,7 @@ def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[
     # See: https://stackoverflow.com/a/15211805
     return (dict(zip(sels, v)) for v in itertools.product(*sels.values()))
 
-def download_dataset(period: str, output_path: Union[Path, str], datasets_path: Optional[Union[Path, str]] = None) -> str:
+def download_dataset(period: str, output_path: Union[Path, str], datasets_path: Optional[Union[Path, str]] = None) -> List[str]:
     """ Download files from the given dataset with the provided selections.
 
     Args:
@@ -417,11 +417,11 @@ def download_dataset(period: str, output_path: Union[Path, str], datasets_path: 
 
     # Setup
     q: queue.Queue[Union[FilePair, None]] = queue.Queue()
-    pool_filler = DatasetDownloadFiller(
+    queue_filler = DatasetDownloadFiller(
         dataset = dataset, output_path = output_path,
         q = q,
     )
-    pool_filler.start()
+    queue_filler.start()
 
     workers = []
     for i in range(0, 1):
@@ -430,16 +430,19 @@ def download_dataset(period: str, output_path: Union[Path, str], datasets_path: 
         worker.start()
         workers.append(worker)
 
-    pool_filler.join()
     # Finish up.
+    # First, ensure that all of the filers are added to the queue.
+    queue_filler.join()
+    # Next, we join the queue to ensure that all of the file pairs in it are processed.
     q.join()
-    # Tell the workers to exit.
+    # Next, tell the workers to exit.
     q.put(None)
+    # And then wait for them to process the exit signal.
     for worker in workers:
         worker.join()
 
     # TODO: Generate file list
-    return ""
+    return list(Path("alice").glob("**/*.root"))
 
 class DummyHandler(threading.Thread):
     def __init__(self, q: queue.Queue[Union[FilePair, None]]):
@@ -622,12 +625,14 @@ class DatasetDownloadFiller(QueueFiller):
         self.output_path = Path(output_path)
 
     def _process(self) -> None:
+        """ Determine and fill in the filenames of the dataset.
 
-        # Setup downloads
-        for j, properties in enumerate(_combinations_of_selections(self.dataset.selections)):
-            # TEMP
-            if j > 2:
-                break
+        Args:
+            None.
+        Returns:
+            None.
+        """
+        for properties in _combinations_of_selections(self.dataset.selections):
             # Determine search and output paths
             logger.debug(f"dataset.__dict__: {self.dataset.__dict__}")
             logger.debug(f"properties: {properties}")
@@ -640,14 +645,18 @@ class DatasetDownloadFiller(QueueFiller):
             output_path = Path(str(self.output_path).format(**kwargs))
             logger.debug(f"search_path: {search_path}, output_path: {output_path}")
 
+            max_files_per_selection = properties["n_files_per_selection"]
+
             grid_files = list_alien_dir(search_path)
             # We are only looking for numbered directories, so we can easy grab these by requiring them to be digits.
             grid_files = [v for v in grid_files if v.isdigit()]
+            logger.debug(f"grid_files: {grid_files}")
 
             for i, directory in enumerate(grid_files):
-                # TEMP!
-                if i > 0:
+                # We could receive a ton of files. Only copy as many as the max.
+                if i >= max_files_per_selection:
                     break
+
                 # Determine output directory. It will be created if necessary when copying.
                 output = output_path / directory / self.dataset.filename
                 if output.exists():
@@ -727,8 +736,9 @@ if __name__ == "__main__":
     #    args.dataset, args.recpass, args.aod,
     #)
 
-    download_dataset(
+    output = download_dataset(
         period = "lhc16j5",
         output_path = "alice/{data_type}/{year}/{period}/{pt_hard_bin}/{run}/AOD{production_number}",
         datasets_path = "pachyderm/alice/datasets/",
     )
+    print(sorted(list(output)))

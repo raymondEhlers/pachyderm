@@ -15,8 +15,9 @@ parameters:
             search_path: "/alice/{data_type}/{year}/{period}/{pt_hard_bin}/{run}/AOD{production_number}"
             filename: "AliAOD.root"
 selections:
-    n_files_per_run: 2
+    n_files_per_selection: 2
     file_type: AOD
     production_number: 200
     runs: [246945]
-    pt_hard_bins: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    #pt_hard_bins: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    pt_hard_bins: [1, 2, 3]
