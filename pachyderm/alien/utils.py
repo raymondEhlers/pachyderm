@@ -7,8 +7,10 @@ Uses some code from Markus' download train run-by-run output script.
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
+from __future__ import annotations
+
 import abc
-import argparse
+#import argparse
 import hashlib
 import itertools
 import logging
@@ -61,7 +63,7 @@ def grid_md5(gridfile: Union[Path, str]) -> str:
     while errorstate:
         errorstate = False
         #_, gb_out = subprocess.getstatusoutput(f"gbbox md5sum {gridfile}")
-        result = subprocess.run(f"gbbox md5sum {gridfile}", capture_output = True)
+        result = subprocess.run(["gbbox", "md5sum", str(gridfile)], capture_output = True, check = True)
         gb_out = result.stdout.decode()
         # Check that the command ran successfully
         if (
@@ -90,9 +92,9 @@ def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -
     logger.info(f"Copying {inputfile} to {outputfile}")
     #if not os.path.exists(os.path.dirname(outputfile)):
     #    os.makedirs(os.path.dirname(outputfile), 0o755)
-    outputfile.parent.mkdir(mode = 0o755, exist_ok = True)
+    outputfile.parent.mkdir(mode = 0o755, exist_ok = True, parents = True)
     #subprocess.call(["alien_cp", f"alien://{inputfile}", outputfile])
-    subprocess.run(["alien_cp", f"alien://{inputfile}", outputfile])
+    subprocess.run(["alien_cp", f"alien://{inputfile}", str(outputfile)], capture_output = True, check = True)
 
     # Check that the file was copied successfully.
     if outputfile.exists():
@@ -111,28 +113,31 @@ def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -
         logger.error(f"output file {outputfile} not found")
         return False
 
-def list_alien_dir(inputdir: Union[Path, str]) -> List[str]:
+def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
     """ List the files in a directory on AliEn.
 
     The function must be robust against error states which it can only get from the stdout. As
     long as the request ends in error state it should retry.
 
     Args:
-        inputdir: Path to the directory on AliEn.
+        input_dir: Path to the directory on AliEn.
     Returns:
         List of files on AliEn in the given directory.
     """
     # Validation
-    inputdir = Path(inputdir)
+    input_dir = Path(input_dir)
 
     # Search for the files.
     errorstate = True
     while errorstate:
         # Grab the list of files from alien via alien_ls
         logger.debug("Searching for files on AliEn...")
-        #dirs = subprocess.getstatusoutput(f"alien_ls {inputdir}")
-        process = subprocess.run(f"alien_ls {inputdir}")
+        #dirs = subprocess.getstatusoutput(f"alien_ls {input_dir}")
+        process = subprocess.run(["alien_ls", str(input_dir)], capture_output = True, check = True)
         logger.debug("Found files in AliEn.")
+        #logger.debug(f"process: {process}")
+        #logger.debug(f"process.stdout: {process.stdout}")
+        #logger.debug(f"process.stderr: {process.stderr}")
 
         # Extract the files from the output.
         errorstate = False
@@ -142,7 +147,7 @@ def list_alien_dir(inputdir: Union[Path, str]) -> List[str]:
                 errorstate = True
                 break
             mydir = d.rstrip().lstrip()
-            if len(mydir):
+            if len(mydir) and mydir.isdigit():
                 result.append(mydir)
 
         # If we haven't successes, let's try again.
@@ -162,6 +167,20 @@ class FilePair:
         self.source = Path(self.source)
         self.target = Path(self.target)
 
+def does_period_contain_data(period: str) -> bool:
+    """ Does the given period contain data or simulation?
+
+    If the period is 6 characters long, then it's data.
+
+    Args:
+        period: Run period to be checked.
+    Returns:
+        True if the period contains data.
+    """
+    if len(period) == 6:
+        return True
+    return False
+
 _T = TypeVar("_T", bound = "DataSet")
 
 @dataclass
@@ -169,6 +188,7 @@ class DataSet:
     """ Contains dataset information necessary to download the associated files.
 
     """
+    period: str
     system: str
     data_type: str
     year: int
@@ -177,17 +197,30 @@ class DataSet:
     filename: str
     selections: Dict[str, Any] = field(default_factory = dict)
 
+    @property
+    def is_data(self) -> bool:
+        return does_period_contain_data(self.period)
+
     @classmethod
-    def from_specification(cls: Type[_T], system: str, data_type: str, year: int, file_type: str, file_type_options: Dict[str, Dict[str, str]], **selections: Any) -> _T:
+    def from_specification(cls: Type[_T], period: str, system: str, data_type: str, year: int,
+                           file_types: Dict[str, Dict[str, str]], **selections: Any) -> _T:
+        # Validation
+        # Ensure that "LHC" is in all caps.
+        period = period[:3].upper() + period[3:]
+        if not does_period_contain_data(period):
+            # Need to prepend "000"
+            #selections["run"] = ["000" + str(r) for r in selections["run"]]
+            ...
         # Extract the rest of the information from the file type options
-        options = file_type_options[file_type]
-        search_path = options.get("search_path", "/alice/${data}/${year}/${period}/${ptHardBin}/${run}/")
+        file_type = selections["file_type"]
+        options = file_types[file_type]
+        search_path = options.get("search_path", "/alice/{data_type}/{year}/{period}/{pt_hard_bin}/{run}/")
         path = Path(search_path)
         filename = options.get("filename", "root_archive.zip")
 
         # Create the object
         return cls(
-            system = system, data_type = data_type, year = year, file_type = file_type,
+            period = period, system = system, data_type = data_type, year = year, file_type = file_type,
             search_path = path, filename = filename,
             selections = selections
         )
@@ -234,39 +267,37 @@ def _combinations(selections: Mapping[str, Any]) -> Iterable[Dict[str, Any]]:
     # See: https://stackoverflow.com/a/15211805
     return (dict(zip(sels, v)) for v in itertools.product(*sels.values()))
 
-def download_dataset(dataset_config_filename: str, dataset_name: str) -> str:
+def download_dataset(dataset_config_filename: str, dataset_name: str, output_path: str) -> str:
     """ Download files from the given dataset with the provided selections.
 
     """
-    # Setup dataset
-    datasets = _extract_datasets_from_yaml(filename = dataset_config_filename)
-    try:
-        dataset_information = datasets[dataset_name]
-    except KeyError as e:
-        raise KeyError(f"Dataset {dataset_name} not found. Must specify it in the configuration!") from e
-    dataset = DataSet.from_specification(**dataset_information["parameters"], **dataset_information["selections"])
-
-    data_pool: queue.Queue[FilePair] = queue.Queue()
-    pool_filler = PoolFiller(data_pool = data_pool)
+    data_pool: queue.Queue[Union[FilePair, None]] = queue.Queue()
+    pool_filler = DatasetDownloadFiller(
+        config_filename = dataset_config_filename, dataset = dataset_name, output_path = output_path,
+        data_pool = data_pool,
+    )
     pool_filler.start()
 
     workers = []
-
-    # Setup downloads
-    for properties in _combinations(dataset.selections):
+    for i in range(0, 1):
+        #worker = DummyHandler(data_pool=data_pool)
         worker = CopyHandler(data_pool=data_pool)
-        #worker.download(dataset, properties)
+        worker.start()
         workers.append(worker)
 
-    # Perform the actual downloads.
+    pool_filler.join()
+    # Finish up.
+    data_pool.join()
+    # Tell the workers to exit.
+    data_pool.put(None)
     for worker in workers:
         worker.join()
 
-    # Generate file list
+    # TODO: Generate file list
     return ""
 
 class PoolFiller(threading.Thread, abc.ABC):
-    def __init__(self, data_pool: queue.Queue[FilePair]) -> None:
+    def __init__(self, data_pool: queue.Queue[Union[FilePair, None]]) -> None:
         super().__init__()
         self._queue = data_pool
 
@@ -291,23 +322,29 @@ class PoolFiller(threading.Thread, abc.ABC):
         """
         ...
 
-class CopyHandler(threading.Thread):
-    def __init__(self, data_pool: queue.Queue[FilePair]):
+class DummyHandler(threading.Thread):
+    def __init__(self, data_pool: queue.Queue[Union[FilePair, None]]):
         threading.Thread.__init__(self)
         self._queue = data_pool
         self.max_tries = 5
 
     def run(self) -> None:
-        """ Copy the files stored into the data pool. """
+        """ Dummy to test copying the files stored into the data pool. """
+        import random
         while True:
             # This blocks waiting for the next file.
             next_file = self._queue.get()
             # We're all done - time to stop.
+            logger.debug(f"next_file: {next_file}")
             if next_file is None:
+                # Ensure that it propagates to the other tasks.
+                self._queue.put(None)
                 break
 
             # Attempt to copy the file from AliEn
-            copy_status = copy_from_alien(next_file.source, next_file.target)
+            copy_status = random.choice([False, True])
+            logger.debug(f"Success: {copy_status}. Sleep for a second.")
+            time.sleep(2)
             # Deal with failures.
             if not copy_status:
                 # Put file back in the queue in case of copy failure.
@@ -319,9 +356,60 @@ class CopyHandler(threading.Thread):
                 else:
                     logger.error(f"File {next_file.source} failed copying ({n_tries}/{self.max_tries}) "
                                  "- re-inserting into the pool ...")
+                    self._queue.task_done()
                     next_file.n_tries = n_tries
                     self._queue.put(next_file)
             else:
+                # Notify that the file was copied successfully.
+                logger.debug(f"Successfully copied {next_file.source} to {next_file.target}")
+                time.sleep(5)
+                self._queue.task_done()
+
+class CopyHandler(threading.Thread):
+    def __init__(self, data_pool: queue.Queue[Union[FilePair, None]]):
+        threading.Thread.__init__(self)
+        self._queue = data_pool
+        self.max_tries = 5
+
+    def run(self) -> None:
+        """ Copy the files stored into the data pool. """
+        while True:
+            # This blocks waiting for the next file.
+            next_file = self._queue.get()
+            # We're all done - time to stop.
+            if next_file is None:
+                # Ensure that it propagates to the other handlers.
+                self._queue.put(None)
+                break
+
+            # Attempt to copy the file from AliEn
+            copy_status = copy_from_alien(next_file.source, next_file.target)
+            # TEMP
+            logger.debug(f"Copy success: {copy_status}. Sleep for a second.")
+            time.sleep(2)
+            # ENDTEMP
+            # Deal with failures.
+            if not copy_status:
+                # Put file back in the queue in case of copy failure.
+                # Only allow for a maximum amount of copy tries
+                n_tries = next_file.n_tries
+                n_tries += 1
+                if n_tries >= self.max_tries:
+                    logger.error(f"File {next_file.source} failed copying in {self.max_tries} tries - giving up")
+                else:
+                    logger.error(f"File {next_file.source} failed copying ({n_tries}/{self.max_tries}) "
+                                 "- re-inserting into the pool ...")
+                    # Although this copying failed and we're going to reinsert this into queue, from
+                    # the perspective of the queue, the task was "completed", so we have to note that
+                    # the task is done in order for us to be able to join the queue.
+                    self._queue.task_done()
+                    next_file.n_tries = n_tries
+                    self._queue.put(next_file)
+            else:
+                # TEMP
+                logger.debug(f"Successfully copied {next_file.source} to {next_file.target}")
+                time.sleep(2)
+                # ENDTEMP
                 # Notify that the file was copied successfully.
                 self._queue.task_done()
 
@@ -344,9 +432,7 @@ class RunByRunTrainOutputFiller(PoolFiller):
 
     @property
     def _is_data(self) -> bool:
-        if len(self._dataset) == 6:
-            return True
-        return False
+        return does_period_contain_data(self._dataset)
 
     def _extract_train_ID(self, idstring: str) -> int:
         trainid = idstring.split("_")[0]
@@ -396,7 +482,9 @@ class RunByRunTrainOutputFiller(PoolFiller):
             full_train_dir = train_base / train_dir[0]
             train_files = list_alien_dir(full_train_dir)
             if "AnalysisResults.root" not in train_files:
-                logger.info(f"Train directory {full_train_dir} doesn't contain AnalysisResults.root")
+                logger.info(
+                    f"Train directory {full_train_dir} doesn't contain AnalysisResults.root. Skipping run {r}..."
+                )
             else:
                 inputfile = full_train_dir / "AnalysisResults.root"
                 outputfile = run_output_dir / "AnalysisResults.root"
@@ -408,16 +496,61 @@ class RunByRunTrainOutputFiller(PoolFiller):
                     self._queue.put(FilePair(inputfile, outputfile))
 
 class DatasetDownloadFiller(PoolFiller):
-    def __init__(self, dataset: str, *args: queue.Queue[FilePair], **kwargs: queue.Queue[FilePair]) -> None:
+    def __init__(self, config_filename: Union[Path, str], dataset: str, output_path: Union[Path, str],
+                 *args: queue.Queue[Union[FilePair, None]], **kwargs: queue.Queue[Union[FilePair, None]]) -> None:
         super().__init__(*args, **kwargs)
+        self.config_filename = Path(config_filename)
         self.dataset = dataset
+        self.output_path = Path(output_path)
 
     def _process(self) -> None:
-        ...
+        # Setup dataset
+        datasets = _extract_datasets_from_yaml(filename = self.config_filename)
+        try:
+            dataset_information = datasets[self.dataset]
+        except KeyError as e:
+            raise KeyError(f"Dataset {self.dataset} not found. Must specify it in the configuration!") from e
+        logger.debug(f"parameters: {list(dataset_information['parameters'].keys())}")
+        logger.debug(f"selections: {list(dataset_information['selections'].keys())}")
+        dataset = DataSet.from_specification(
+            period = self.dataset, **dataset_information["parameters"], **dataset_information["selections"]
+        )
+
+        # Setup downloads
+        for j, properties in enumerate(_combinations(dataset.selections)):
+            # TEMP
+            if j > 2:
+                break
+            # Determine search and output paths
+            logger.debug(f"dataset.__dict__: {dataset.__dict__}")
+            logger.debug(f"properties: {properties}")
+            kwargs = dataset.__dict__.copy()
+            kwargs.update(properties)
+            #search_path = Path(str(dataset.search_path).format(**dataset.__dict__, **properties))
+            #output_path = Path(str(self.output_path).format(**dataset.__dict__, **properties))
+            search_path = Path(str(dataset.search_path).format(**kwargs))
+            output_path = Path(str(self.output_path).format(**kwargs))
+            logger.debug(f"search_path: {search_path}, output_path: {output_path}")
+
+            grid_files = list_alien_dir(search_path)
+            # We are only looking for numbered directories, so we can easy grab these by requiring them to be digits.
+            grid_files = [v for v in grid_files if v.isdigit()]
+
+            for i, directory in enumerate(grid_files):
+                # TEMP!
+                if i > 0:
+                    break
+                # Determine output directory. It will be created if necessary when copying.
+                output = output_path / directory / dataset.filename
+                logger.debug(f"Adding input: {search_path / directory / dataset.filename}, output: {output}")
+                # Add to the queue
+                self._queue.put(FilePair(
+                    search_path / directory / dataset.filename, output
+                ))
 
 def fetchtrainparallel(outputpath: Union[Path, str], trainrun: int, legotrain: str, dataset: str,
                        recpass: str, aodprod: str) -> None:
-    data_pool: queue.Queue[FilePair] = queue.Queue(maxsize = 1000)
+    data_pool: queue.Queue[Union[FilePair, None]] = queue.Queue(maxsize = 1000)
     logger.info(f"Checking dataset {dataset} for train with ID {trainrun} ({legotrain})")
 
     pool_filler = RunByRunTrainOutputFiller(
@@ -440,45 +573,51 @@ def fetchtrainparallel(outputpath: Union[Path, str], trainrun: int, legotrain: s
         worker.join()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        prog="fetchTrainRunByRunParallel",
-        description="Tool to get runwise train output",
-    )
-    parser.add_argument(
-        "outputpath",
-        metavar="OUTPUTPATH",
-        help="Path where to store the output files run-by-run",
-    )
-    parser.add_argument(
-        "trainrun",
-        metavar="TRAINRUN",
-        type=int,
-        help="ID of the train run (number is sufficient, time stamp not necessary)",
-    )
-    parser.add_argument(
-        "legotrain",
-        metavar="LEGOTRAIN",
-        help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
-    )
-    parser.add_argument("dataset", metavar="DATASET", help="Name of the dataset")
-    parser.add_argument(
-        "-p",
-        "--recpass",
-        type=str,
-        default="pass1",
-        help="Reconstruction pass (only meaningful in case of data) [default: pass1]",
-    )
-    parser.add_argument(
-        "-a",
-        "--aod",
-        type=str,
-        default="",
-        help="Dedicated AOD production (if requested) [default: not set]",
-    )
-    args = parser.parse_args()
-    logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-    fetchtrainparallel(
-        args.outputpath,
-        args.trainrun, args.legotrain,
-        args.dataset, args.recpass, args.aod,
+    #parser = argparse.ArgumentParser(
+    #    prog="fetchTrainRunByRunParallel",
+    #    description="Tool to get runwise train output",
+    #)
+    #parser.add_argument(
+    #    "outputpath",
+    #    metavar="OUTPUTPATH",
+    #    help="Path where to store the output files run-by-run",
+    #)
+    #parser.add_argument(
+    #    "trainrun",
+    #    metavar="TRAINRUN",
+    #    type=int,
+    #    help="ID of the train run (number is sufficient, time stamp not necessary)",
+    #)
+    #parser.add_argument(
+    #    "legotrain",
+    #    metavar="LEGOTRAIN",
+    #    help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
+    #)
+    #parser.add_argument("dataset", metavar="DATASET", help="Name of the dataset")
+    #parser.add_argument(
+    #    "-p",
+    #    "--recpass",
+    #    type=str,
+    #    default="pass1",
+    #    help="Reconstruction pass (only meaningful in case of data) [default: pass1]",
+    #)
+    #parser.add_argument(
+    #    "-a",
+    #    "--aod",
+    #    type=str,
+    #    default="",
+    #    help="Dedicated AOD production (if requested) [default: not set]",
+    #)
+    #args = parser.parse_args()
+    logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.DEBUG)
+    #fetchtrainparallel(
+    #    args.outputpath,
+    #    args.trainrun, args.legotrain,
+    #    args.dataset, args.recpass, args.aod,
+    #)
+
+    download_dataset(
+        dataset_config_filename = "pachyderm/alien/dataset.yaml",
+        dataset_name = "lhc16j5",
+        output_path = "alice/{data_type}/{year}/{period}/{pt_hard_bin}/{run}/AOD{production_number}",
     )
