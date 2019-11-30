@@ -484,7 +484,14 @@ def download_dataset(period: str, output_dir: Union[Path, str], fewer_threads: b
     return period_files
 
 def run_dataset_download() -> None:
-    """ Entry point for download a dataset. """
+    """ Entry point for download a dataset.
+
+    Example invocation:
+
+    ```bash
+    $ downloadALICEDataset -p lhc16j5 -o /alice/
+    ```
+    """
     logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
     parser = argparse.ArgumentParser(
         prog="downloadALICEDataset",
@@ -636,7 +643,14 @@ def download_run_by_run_train_output(outputpath: Union[Path, str],
     _download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
 
 def run_download_run_by_run_train_output() -> None:
-    """ Entry point for download run-by-run train output. """
+    """ Entry point for download run-by-run train output.
+
+    Example invocation:
+
+    ```bash
+    $ downloadALICERunByRun -o /alice/trains/pp/ -t 1744 -l PWGJE/Jets_EMC_pp -d LHC17p -p pass1_CENT_woSDD -a AOD208
+    ```
+    """
     logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
     parser = argparse.ArgumentParser(
         prog="downloadAliceRunByRun",
