@@ -15,6 +15,40 @@ from typing import List, Union
 
 logger = logging.getLogger(__name__)
 
+def valid_alien_token() -> bool:
+    """ Check if there is a valid AliEn token.
+
+    The function must be robust enough to fetch all possible xrd error states which
+    it usually gets from the stdout of the query process.
+
+    Args:
+        None.
+    Returns:
+        True if there is a valid AliEn token, or false otherwise.
+    """
+    errorstate = True
+    while errorstate:
+        errorstate = False
+        result = subprocess.run(["alien-token-info"], capture_output = True)
+        output = result.stdout.decode()
+        # Check that the command ran successfully
+        if (
+            output.startswith("Error")
+            or output.startswith("Warning")
+            or "CheckErrorStatus" in output
+        ):
+            errorstate = True
+
+    # We've successfully queried, so now we look at the result.
+    # One possible approach is:
+    # If there's no token, we get "No Token found!"
+    # If there's a valid token, we get "Token is still valid!" at the end.
+    #return ("Token is still valid!" in output)
+    # However, we can do better:
+    # `alien-token-init` returns a status code of 1 if there is no token or a problem
+    # and 0 if there is a valid token.
+    return result.returncode == 0
+
 def local_md5(fname: Union[Path, str]) -> str:
     """ Calculate a chunked md5 sum for the file at a given filename.
 

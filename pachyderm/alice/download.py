@@ -31,6 +31,9 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# TODO: Increase number of threads back to 4.
+NTHREADS = 1
+
 @dataclass
 class FilePair:
     """ Pair for file paths to copy from source to target.
@@ -338,14 +341,17 @@ def _download(queue_filler: QueueFiller, q: queue.Queue[Union[FilePair, None]]) 
     Returns:
         True if the tasks were successful.
     """
-    # TODO: Check to alien-token somehow??
+    # Check that we have a valid alien-token.
+    # Otherwise, the other calls to the grid will silently fail.
+    if not utils.valid_alien_token():
+        raise RuntimeError("AliEn token doesn't appear to be valid. Please check!")
 
+    # Start filling the queue
     queue_filler.start()
 
     workers = []
     # use 4 threads in order to keep number of network request at an acceptable level
-    # TODO: Increase number of threads back to 4.
-    for i in range(0, 1):
+    for i in range(0, NTHREADS):
         worker = CopyHandler(q = q)
         worker.start()
         workers.append(worker)
