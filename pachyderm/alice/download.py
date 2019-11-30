@@ -510,7 +510,8 @@ class RunByRunTrainOutputFiller(QueueFiller):
     def __init__(self, output_dir: Union[Path, str], train_run: int, legotrain: str, dataset: str,
                  recpass: str, aodprod: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._output_dir = Path(output_dir)
+        # We want the output to be stored inside a directory labeled by the train number.
+        self._output_dir = Path(output_dir) / str(train_run)
         self._train_run = train_run
         self._lego_train = legotrain
         self._dataset = dataset
@@ -552,14 +553,14 @@ class RunByRunTrainOutputFiller(QueueFiller):
 
             data = utils.list_alien_dir(run_dir)
             if not self._lego_train.split("/")[0] in data:
-                logger.error(f"PWG dir not found four run {r}")
+                logger.error(f"PWG directory {self._lego_train.split('/')[0]} was not found for run {r}")
                 continue
 
             lego_trains_dir = run_dir / self._lego_train.split("/")[0]
             lego_trains = utils.list_alien_dir(lego_trains_dir)
             if not self._lego_train.split("/")[1] in lego_trains:
                 logger.error(
-                    f"Train {self._lego_train.split('/')[1]} not found in pwg dir for run {r}"
+                    f"Train {self._lego_train.split('/')[1]} not found in PWG directory for run {r}"
                 )
                 continue
 
@@ -610,18 +611,18 @@ def run_download_run_by_run_train_output() -> None:
         description="Download run-by-run LEGO train outputs",
     )
     parser.add_argument(
-        "outputpath", metavar="OUTPUTPATH",
+        "-o", "--outputdir", metavar="OUTPUTDIR",
         help="Path where to store the output files run-by-run",
     )
     parser.add_argument(
-        "trainrun", metavar="TRAINRUN", type=int,
+        "-t", "--trainrun", metavar="TRAINRUN", type=int,
         help="ID of the train run (number is sufficient, time stamp not necessary)",
     )
     parser.add_argument(
-        "legotrain", metavar="LEGOTRAIN",
+        "-l", "--legotrain", metavar="LEGOTRAIN",
         help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
     )
-    parser.add_argument("dataset", metavar="DATASET", help="Name of the dataset")
+    parser.add_argument("-d", "--dataset", metavar="DATASET", help="Name of the dataset")
     parser.add_argument(
         "-p", "--recpass", type=str, default="pass1",
         help="Reconstruction pass (only meaningful in case of data) [default: pass1]",
@@ -632,7 +633,7 @@ def run_download_run_by_run_train_output() -> None:
     )
     args = parser.parse_args()
     download_run_by_run_train_output(
-        args.outputpath,
+        args.outputdir,
         args.trainrun, args.legotrain,
         args.dataset, args.recpass, args.aod,
     )
