@@ -329,6 +329,40 @@ class CopyHandler(threading.Thread):
                 # Notify that the file was copied successfully.
                 self._queue.task_done()
 
+def _download(queue_filler: QueueFiller, q: queue.Queue[Union[FilePair, None]]) -> bool:
+    """ Actually utilize the queue filler and copy the files.
+
+    Args:
+        queue_filler: Class to handle filling the queue.
+        q: The queue to be filled.
+    Returns:
+        True if the tasks were successful.
+    """
+    # TODO: Check to alien-token somehow??
+
+    queue_filler.start()
+
+    workers = []
+    # use 4 threads in order to keep number of network request at an acceptable level
+    # TODO: Increase number of threads back to 4.
+    for i in range(0, 1):
+        worker = CopyHandler(q = q)
+        worker.start()
+        workers.append(worker)
+
+    # Finish up.
+    # First, ensure that all of the filers are added to the queue.
+    queue_filler.join()
+    # Next, we join the queue to ensure that all of the file pairs in it are processed.
+    q.join()
+    # Next, tell the workers to exit.
+    q.put(None)
+    # And then wait for them to process the exit signal.
+    for worker in workers:
+        worker.join()
+
+    return True
+
 class DatasetDownloadFiller(QueueFiller):
     """ Fill in files to download from a given DataSet.
 
@@ -422,25 +456,7 @@ def download_dataset(period: str, output_dir: Union[Path, str], datasets_path: O
         dataset = dataset, output_dir = output_dir,
         q = q,
     )
-    queue_filler.start()
-
-    workers = []
-    for i in range(0, 1):
-        #worker = DummyHandler(q = q)
-        worker = CopyHandler(q = q)
-        worker.start()
-        workers.append(worker)
-
-    # Finish up.
-    # First, ensure that all of the filers are added to the queue.
-    queue_filler.join()
-    # Next, we join the queue to ensure that all of the file pairs in it are processed.
-    q.join()
-    # Next, tell the workers to exit.
-    q.put(None)
-    # And then wait for them to process the exit signal.
-    for worker in workers:
-        worker.join()
+    _download(queue_filler = queue_filler, q = q)
 
     # Return the files that are stored corresponding to this period.
     period_specific_dir = output_dir / dataset.data_type / str(dataset.year) / dataset.period.upper()
@@ -578,25 +594,7 @@ def download_run_by_run_train_output(outputpath: Union[Path, str],
         recpass, aodprod if len(aodprod) > 0 else "",
         q = q,
     )
-    queue_filler.start()
-
-    workers = []
-    # use 4 threads in order to keep number of network request at an acceptable level
-    for i in range(0, 4):
-        worker = CopyHandler(q=q)
-        worker.start()
-        workers.append(worker)
-
-    # Finish up.
-    # First, ensure that all of the filers are added to the queue.
-    queue_filler.join()
-    # Next, we join the queue to ensure that all of the file pairs in it are processed.
-    q.join()
-    # Next, tell the workers to exit.
-    q.put(None)
-    # And then wait for them to process the exit signal.
-    for worker in workers:
-        worker.join()
+    _download(queue_filler = queue_filler, q = q)
 
 def run_download_run_by_run_train_output() -> None:
     """ Entry point for download run-by-run train output. """
