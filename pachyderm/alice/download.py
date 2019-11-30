@@ -31,8 +31,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# TODO: Increase number of threads back to 4.
-NTHREADS = 1
+# Use 4 threads by default in order to keep number of network request at an acceptable level
+NTHREADS: int = 4
 
 @dataclass
 class FilePair:
@@ -332,12 +332,13 @@ class CopyHandler(threading.Thread):
                 # Notify that the file was copied successfully.
                 self._queue.task_done()
 
-def _download(queue_filler: QueueFiller, q: queue.Queue[Union[FilePair, None]]) -> bool:
+def _download(queue_filler: QueueFiller, q: queue.Queue[Union[FilePair, None]], fewer_threads: bool) -> bool:
     """ Actually utilize the queue filler and copy the files.
 
     Args:
         queue_filler: Class to handle filling the queue.
         q: The queue to be filled.
+        fewer_threads: If True, reduce the number of threads by half.
     Returns:
         True if the tasks were successful.
     """
@@ -350,8 +351,9 @@ def _download(queue_filler: QueueFiller, q: queue.Queue[Union[FilePair, None]]) 
     queue_filler.start()
 
     workers = []
-    # use 4 threads in order to keep number of network request at an acceptable level
-    for i in range(0, NTHREADS):
+    n_threads = int(NTHREADS / 2) if fewer_threads else NTHREADS
+    logger.info(f"Using {n_threads} threads to download files.")
+    for i in range(0, n_threads):
         worker = CopyHandler(q = q)
         worker.start()
         workers.append(worker)
@@ -437,12 +439,14 @@ class DatasetDownloadFiller(QueueFiller):
                         search_path / directory / self.dataset.filename, output
                     ))
 
-def download_dataset(period: str, output_dir: Union[Path, str], datasets_path: Optional[Union[Path, str]] = None) -> List[Path]:
+def download_dataset(period: str, output_dir: Union[Path, str], fewer_threads: bool,
+                     datasets_path: Optional[Union[Path, str]] = None) -> List[Path]:
     """ Download files from the given dataset with the provided selections.
 
     Args:
         period: Name of the period to be downloaded.
         output_dir: Path to where the data should be stored.
+        fewer_threads: If True, reduce the number of threads by half.
         dataset_config_filename: Filename of the configuration file. Default: None,
             in which case, the files will be taken from those defined in the package.
     Returns:
@@ -462,7 +466,7 @@ def download_dataset(period: str, output_dir: Union[Path, str], datasets_path: O
         dataset = dataset, output_dir = output_dir,
         q = q,
     )
-    _download(queue_filler = queue_filler, q = q)
+    _download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
 
     # Return the files that are stored corresponding to this period.
     period_specific_dir = output_dir / dataset.data_type / str(dataset.year) / dataset.period.upper()
@@ -495,6 +499,10 @@ def run_dataset_download() -> None:
         help="Base output directory. [default: 'alice']",
     )
     parser.add_argument(
+        "-f", "--fewerThreads", action="store_true", default=False,
+        help="Decrease the number of threads by half."
+    )
+    parser.add_argument(
         "-d", "--datasets", type=str, default=None, metavar="PATH",
         help="Path to the datasets directory."
     )
@@ -502,11 +510,22 @@ def run_dataset_download() -> None:
     output = download_dataset(
         period = args.period,
         output_dir = args.outputdir,
+        fewer_threads = args.fewerThreads,
         datasets_path = args.datasets,
     )
     print(output)
 
 class RunByRunTrainOutputFiller(QueueFiller):
+    """ Fill in files to download run-by-run train output.
+
+    Args:
+        output_dir: Path to where the train output should be stored.
+        train_run: Train number.
+        legotrain: Name of the LEGO train, such as "PWGJE/Jets_EMC_pp".
+        dataset: Name of the dataset, such as "LHC17p".
+        recpass: Name of the reconstruction pass, such as "pass1" or "pass1_FAST".
+        aodprod: Name of the AOD production, such as "AOD208".
+    """
     def __init__(self, output_dir: Union[Path, str], train_run: int, legotrain: str, dataset: str,
                  recpass: str, aodprod: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -591,7 +610,20 @@ class RunByRunTrainOutputFiller(QueueFiller):
 
 def download_run_by_run_train_output(outputpath: Union[Path, str],
                                      trainrun: int, legotrain: str, dataset: str,
-                                     recpass: str, aodprod: str) -> None:
+                                     recpass: str, aodprod: str, fewer_threads: bool) -> None:
+    """ Download run-by-run train output for the given arguments.
+
+    Args:
+        output_dir: Path to where the train output should be stored.
+        train_run: Train number.
+        legotrain: Name of the LEGO train, such as "PWGJE/Jets_EMC_pp".
+        dataset: Name of the dataset, such as "LHC17p".
+        recpass: Name of the reconstruction pass, such as "pass1" or "pass1_FAST".
+        aodprod: Name of the AOD production, such as "AOD208".
+        fewer_threads: If True, reduce the number of threads by half.
+    Returns:
+        None.
+    """
     q: queue.Queue[Union[FilePair, None]] = queue.Queue(maxsize = 1000)
     logger.info(f"Checking dataset {dataset} for train with ID {trainrun} ({legotrain})")
 
@@ -601,7 +633,7 @@ def download_run_by_run_train_output(outputpath: Union[Path, str],
         recpass, aodprod if len(aodprod) > 0 else "",
         q = q,
     )
-    _download(queue_filler = queue_filler, q = q)
+    _download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
 
 def run_download_run_by_run_train_output() -> None:
     """ Entry point for download run-by-run train output. """
@@ -631,9 +663,14 @@ def run_download_run_by_run_train_output() -> None:
         "-a", "--aod", type=str, default="",
         help="Dedicated AOD production (if requested) [default: not set]",
     )
+    parser.add_argument(
+        "-f", "--fewerThreads", action="store_true", default=False,
+        help="Decrease the number of threads by half."
+    )
     args = parser.parse_args()
     download_run_by_run_train_output(
         args.outputdir,
         args.trainrun, args.legotrain,
         args.dataset, args.recpass, args.aod,
+        args.fewerThreads,
     )
