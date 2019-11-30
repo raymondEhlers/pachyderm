@@ -468,12 +468,12 @@ def download_dataset(period: str, output_dir: Union[Path, str], datasets_path: O
     period_specific_dir = output_dir / dataset.data_type / str(dataset.year) / dataset.period.upper()
     period_files = sorted(Path(period_specific_dir).glob("**/*.root"))
     # Write out the file list
-    filelist = Path(output_dir) / "filelists" / f"{dataset.period}.txt"
+    filelist = Path(output_dir) / "filelists" / f"{dataset.period}{dataset.file_type}.txt"
     filelist.parent.mkdir(exist_ok=True, parents=True)
     # Add the suffix to access the ROOT file if it's contained in a zip archive.
     suffix = ""
     if ".zip" in dataset.filename:
-        suffix = "#AliAOD.root" if dataset.data_type == "AOD" else "#AliESDs.root"
+        suffix = "#AliAOD.root" if dataset.file_type == "AOD" else "#AliESDs.root"
     with open(filelist, "w") as f:
         # One file per line.
         f.write("\n".join([f"{p}{suffix}" for p in period_files]))
