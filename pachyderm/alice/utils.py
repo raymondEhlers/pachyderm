@@ -154,20 +154,27 @@ def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
     while errorstate:
         # Grab the list of files from alien via alien_ls
         logger.debug("Searching for files on AliEn...")
-        process = subprocess.run(["alien_ls", str(input_dir)], capture_output = True, check = True)
+        process = subprocess.run(["alien_ls", str(input_dir)], capture_output = True)
 
         # Extract the files from the output.
         errorstate = False
         result: List[str] = []
-        for d in process.stdout.decode().split("\n"):
-            if d.startswith("Error") or d.startswith("Warning"):
-                errorstate = True
-                break
-            mydir = d.rstrip().lstrip()
-            if len(mydir) and mydir.isdigit():
-                result.append(mydir)
+        if process.returncode == 0:
+            # Only process if the command itself didn't report an issue via the return code.
+            for d in process.stdout.decode().split("\n"):
+                if d.startswith("Error") or d.startswith("Warning"):
+                    errorstate = True
+                    break
+                mydir = d.rstrip().lstrip()
+                #if len(mydir) and mydir.isdigit():
+                if len(mydir):
+                    result.append(mydir)
+        else:
+            # The directory doesn't exist (most likely), or some other issue reported directly from
+            # alien_ls via return code. In this case, we just want to return an empty list.
+            ...
 
-        # If we haven't successes, let's try again.
+        # If we haven't succeeded, let's try again.
         if errorstate:
             continue
 
