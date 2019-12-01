@@ -16,7 +16,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Mapping, Optional, Sequence, Type, TypeVar, Union
 
 from pachyderm import yaml
 from pachyderm.alice import utils
@@ -337,7 +337,7 @@ class CopyHandler(threading.Thread):
                 # Notify that the file was copied successfully.
                 self._queue.task_done()
 
-def _download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool) -> bool:
+def download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool = False) -> bool:
     """ Actually utilize the queue filler and copy the files.
 
     Args:
@@ -375,6 +375,46 @@ def _download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool) 
         worker.join()
 
     return True
+
+class FileListDownloadFiller(QueueFiller):
+    """ Download list of file pairs already provided to the task.
+
+    This is a basic task for simple cases when it's easier to just enumerate the list of files to download by hand.
+
+    Note:
+        We don't provide an entry point for this class. Instead, we expect others to use it.
+
+    The class can be used via:
+
+    ```python
+    # Create and somehow fill in the file_pair_list
+    file_pair_list = [
+        # ...
+    ]
+    # Setup the queue and filler, and then start downloading.
+    q: download.FilePairQueue = queue.Queue()
+    queue_filler = download.FileListDownloadFiller(pairs = file_pair_list, q = q)
+    download.download(queue_filler = queue_filler, q = q)
+    ```
+
+    Args:
+        pairs: File pairs that are externally generated. It's up to the user to determine the input and output paths.
+    """
+    def __init__(self, pairs: Sequence[FilePair], *args: FilePairQueue, **kwargs: FilePairQueue) -> None:
+        super().__init__(*args, **kwargs)
+        self._file_pairs = pairs
+
+    def _process(self) -> None:
+        for file_pair in self._file_pairs:
+            # Determine output directory. It will be created if necessary when copying.
+            # Help out mypy...
+            output = Path(file_pair.target)
+            if output.exists():
+                logger.info(f"Output file {file_pair.target} already found - not copying again")
+            else:
+                logger.debug(f"Adding input: {file_pair.source}, output: {file_pair.target}")
+                # Add to the queue
+                self._queue.put(file_pair)
 
 class DatasetDownloadFiller(QueueFiller):
     """ Fill in files to download from a given DataSet.
@@ -471,7 +511,7 @@ def download_dataset(period: str, output_dir: Union[Path, str], fewer_threads: b
         dataset = dataset, output_dir = output_dir,
         q = q,
     )
-    _download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
+    download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
 
     # Return the files that are stored corresponding to this period.
     period_specific_dir = output_dir / dataset.data_type / str(dataset.year) / dataset.period.upper()
@@ -645,7 +685,7 @@ def download_run_by_run_train_output(outputpath: Union[Path, str],
         recpass, aodprod if len(aodprod) > 0 else "",
         q = q,
     )
-    _download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
+    download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
 
 def run_download_run_by_run_train_output() -> None:
     """ Entry point for download run-by-run train output.
