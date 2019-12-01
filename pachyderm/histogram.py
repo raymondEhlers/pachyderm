@@ -9,6 +9,7 @@ import collections
 import itertools
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from types import TracebackType
 from typing import Any, Callable, ContextManager, Dict, List, Mapping, Optional, Tuple, Type, TypeVar, Union, cast
 
@@ -24,11 +25,12 @@ T_Extraction_Function = Tuple[Union[List[float], np.ndarray], Union[List[float],
 
 class RootOpen(ContextManager[_T_ContextManager]):
     """ Very simple helper to open root files. """
-    def __init__(self, filename: str, mode: str = "read"):
+    def __init__(self, filename: Union[Path, str], mode: str = "read"):
         import ROOT
-        self.filename = filename
+        # Valdiate as a path
+        self.filename = Path(filename)
         self.mode = mode
-        self.f = ROOT.TFile.Open(self.filename, self.mode)
+        self.f = ROOT.TFile.Open(str(self.filename), self.mode)
 
     def __enter__(self) -> TFile:
         if not self.f or self.f.IsZombie():
@@ -50,7 +52,7 @@ class RootOpen(ContextManager[_T_ContextManager]):
         # We don't return anything because we always want the exceptions to continue
         # to be raised.
 
-def get_histograms_in_file(filename: str) -> Dict[str, Any]:
+def get_histograms_in_file(filename: Union[Path, str]) -> Dict[str, Any]:
     """ Helper function which gets all histograms in a file.
 
     Args:
@@ -59,9 +61,11 @@ def get_histograms_in_file(filename: str) -> Dict[str, Any]:
         Contains hists with keys as their names. Lists are recursively added, mirroring
             the structure under which the hists were stored.
     """
+    # Validation
+    filename = Path(filename)
     return get_histograms_in_list(filename = filename)
 
-def get_histograms_in_list(filename: str, list_name: Optional[str] = None) -> Dict[str, Any]:
+def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] = None) -> Dict[str, Any]:
     """ Get histograms from the file and make them available in a dict.
 
     Lists are recursively explored, with all lists converted to dictionaries, such that the return
@@ -77,6 +81,9 @@ def get_histograms_in_list(filename: str, list_name: Optional[str] = None) -> Di
     Raises:
         ValueError: If the list could not be found in the given file.
     """
+    # Validation
+    filename = Path(filename)
+
     hists: Dict[str, Any] = {}
     with RootOpen(filename = filename, mode = "READ") as fIn:
         if list_name is not None:
