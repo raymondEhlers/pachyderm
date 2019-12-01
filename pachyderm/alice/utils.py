@@ -29,7 +29,7 @@ def valid_alien_token() -> bool:
     errorstate = True
     while errorstate:
         errorstate = False
-        result = subprocess.run(["alien-token-info"], capture_output = True)
+        result = subprocess.run(["alien-token-info"], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
         output = result.stdout.decode()
         # Check that the command ran successfully
         if (
@@ -85,7 +85,9 @@ def grid_md5(gridfile: Union[Path, str]) -> str:
     errorstate = True
     while errorstate:
         errorstate = False
-        result = subprocess.run(["gbbox", "md5sum", str(gridfile)], capture_output = True, check = True)
+        result = subprocess.run(
+            ["gbbox", "md5sum", str(gridfile)], stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True
+        )
         gb_out = result.stdout.decode()
         # Check that the command ran successfully
         if (
@@ -116,7 +118,10 @@ def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -
     # Create the output location
     logger.info(f"Copying {inputfile} to {outputfile}")
     outputfile.parent.mkdir(mode = 0o755, exist_ok = True, parents = True)
-    subprocess.run(["alien_cp", f"alien://{inputfile}", str(outputfile)], capture_output = True, check = True)
+    subprocess.run(
+        ["alien_cp", f"alien://{inputfile}", str(outputfile)],
+        stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True
+    )
 
     # Check that the file was copied successfully.
     if outputfile.exists():
@@ -154,7 +159,7 @@ def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
     while errorstate:
         # Grab the list of files from alien via alien_ls
         logger.debug("Searching for files on AliEn...")
-        process = subprocess.run(["alien_ls", str(input_dir)], capture_output = True)
+        process = subprocess.run(["alien_ls", str(input_dir)], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
 
         # Extract the files from the output.
         errorstate = False
