@@ -8,12 +8,12 @@ and based on: https://python-packaging.readthedocs.io/en/latest/index.html
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-# Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+import os
 # To use a consistent encoding
 from codecs import open
-import os
-from typing import Any, cast, Dict
+# Always prefer setuptools over distutils
+from setuptools import find_packages, setup
+from typing import Any, Dict, cast
 
 def get_version() -> str:
     version_module: Dict[str, Any] = {}
@@ -66,6 +66,8 @@ setup(
     # See: https://stackoverflow.com/a/8506532
     entry_points = {
         "console_scripts": [
+            "downloadALICEDataset = pachyderm.alice.download:run_dataset_download",
+            "downloadALICERunByRun = pachyderm.alice.download:run_download_run_by_run_train_output",
         ],
     },
 
@@ -86,6 +88,7 @@ setup(
         # For the fitting module
         "iminuit",
         "numdifftools",
+        "importlib_resources;python_version<'3.7'",
     ],
 
     # Include additional files
