@@ -7,8 +7,6 @@ Based on code from Markus Fasel's download train run-by-run output in parallel s
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
-from __future__ import annotations
-
 import abc
 import argparse
 import itertools
@@ -18,7 +16,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Mapping, Optional, Type, TypeVar, Union
 
 from pachyderm import yaml
 from pachyderm.alice import utils
@@ -30,6 +28,13 @@ except ImportError:
     import importlib_resources as resources  # type: ignore
 
 logger = logging.getLogger(__name__)
+
+# Work around typing issues in python 3.6
+# If only supporting 3.7+, we can add `from __future__ import annotations` and just use the more detailed definition
+if TYPE_CHECKING:
+    FilePairQueue = queue.Queue[Union["FilePair", None]]
+else:
+    FilePairQueue = queue.Queue
 
 # Use 4 threads by default in order to keep number of network request at an acceptable level
 NTHREADS: int = 4
@@ -60,7 +65,7 @@ class QueueFiller(threading.Thread, abc.ABC):
     Args:
         q: Queue where the file pairs will be stored.
     """
-    def __init__(self, q: queue.Queue[Union[FilePair, None]]) -> None:
+    def __init__(self, q: FilePairQueue) -> None:
         super().__init__()
         self._queue = q
 
@@ -275,7 +280,7 @@ def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[
     return (dict(zip(sels, v)) for v in itertools.product(*sels.values()))
 
 class CopyHandler(threading.Thread):
-    def __init__(self, q: queue.Queue[Union[FilePair, None]]):
+    def __init__(self, q: FilePairQueue):
         threading.Thread.__init__(self)
         self._queue = q
         self.max_tries = 5
@@ -332,7 +337,7 @@ class CopyHandler(threading.Thread):
                 # Notify that the file was copied successfully.
                 self._queue.task_done()
 
-def _download(queue_filler: QueueFiller, q: queue.Queue[Union[FilePair, None]], fewer_threads: bool) -> bool:
+def _download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool) -> bool:
     """ Actually utilize the queue filler and copy the files.
 
     Args:
@@ -388,7 +393,7 @@ class DatasetDownloadFiller(QueueFiller):
             structure yields better compatibility with the analysis manager.
     """
     def __init__(self, dataset: DataSet, output_dir: Union[Path, str],
-                 *args: queue.Queue[Union[FilePair, None]], **kwargs: queue.Queue[Union[FilePair, None]]) -> None:
+                 *args: FilePairQueue, **kwargs: FilePairQueue) -> None:
         super().__init__(*args, **kwargs)
         self.dataset = dataset
         self.output_dir = Path(output_dir)
@@ -461,7 +466,7 @@ def download_dataset(period: str, output_dir: Union[Path, str], fewer_threads: b
     dataset = _extract_dataset_from_yaml(period = period, datasets_path = datasets_path)
 
     # Setup
-    q: queue.Queue[Union[FilePair, None]] = queue.Queue()
+    q: FilePairQueue = queue.Queue()
     queue_filler = DatasetDownloadFiller(
         dataset = dataset, output_dir = output_dir,
         q = q,
@@ -631,7 +636,7 @@ def download_run_by_run_train_output(outputpath: Union[Path, str],
     Returns:
         None.
     """
-    q: queue.Queue[Union[FilePair, None]] = queue.Queue(maxsize = 1000)
+    q: FilePairQueue = queue.Queue(maxsize = 1000)
     logger.info(f"Checking dataset {dataset} for train with ID {trainrun} ({legotrain})")
 
     queue_filler = RunByRunTrainOutputFiller(
