@@ -2,6 +2,24 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.4] - 4 December 2019
+
+### Added
+
+- Tools for downloading ALICE datasets and train outputs in parallel. It can download real or simulated
+  datasets, run-by-run LEGO train output, or any list of input and output files (for simpler cases, such as
+  meta-dataset trains). Derived and generalized from code from M. Fasel. See:
+  `76ce114ccff10e59330b541e38d685fc4aa7fb2d` to `51c469b078e8a9fe25a980bc7c8b61fb9633f83a`.
+- Convert HEPdata files directly into Histogram1D objects. Call via `Histogram1D.from_hepdata(...)`. Note that
+  it doesn't fit nicely into the from_existing_histogram function because additional information is needed
+  when reading HEPdata files. See: `c79f40b5a9c6cb5a8b31bd35275004196a5d8228`.
+- Ability to convert matplotlib color schemes to ROOT. See: `292106009c9e9d6d5d47bf5648a9481c89b1d20c`.
+
+### Changed
+
+- Support passing `Path` objects for opening ROOT files. See: `a2d644b6cab7c35fa15ba3614fac027599484b24`.
+- Update pre-commit hook versions. See: `2ad77745008ce81a62ba37282a35177e74e868fb`.
+
 ## [2.3.2] - 21 October 2019
 
 ### Fixed
