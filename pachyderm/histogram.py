@@ -142,6 +142,13 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
         for obj_temp in list(obj):
             _retrieve_object(output_dict[obj.GetName()], obj_temp)
 
+    if isinstance(obj, ROOT.TDirectory):
+        # Keeping it in order simply makes it easier to follow
+        output_dict[obj.GetName()] = {}
+        # Iterate over the objects in the collection and recursively store them
+        for obj_temp in obj.GetListOfKeys():
+            _retrieve_object(output_dict[obj.GetName()], obj_temp.ReadObj())
+
 def _extract_values_from_hepdata_dependent_variable(var: Mapping[str, Any]) -> T_Extraction_Function:
     """ Extract values from a HEPdata dependent variable.
 
