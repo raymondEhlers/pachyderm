@@ -118,10 +118,13 @@ def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -
     # Create the output location
     logger.info(f"Copying {inputfile} to {outputfile}")
     outputfile.parent.mkdir(mode = 0o755, exist_ok = True, parents = True)
-    subprocess.run(
+    process = subprocess.run(
         ["alien_cp", f"alien://{inputfile}", str(outputfile)],
-        stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True
+        stdout = subprocess.PIPE, stderr = subprocess.PIPE
     )
+    if process.returncode:
+        # Process failed. Return false so we can try again.
+        return False
 
     # Check that the file was copied successfully.
     if outputfile.exists():
