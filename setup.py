@@ -105,6 +105,7 @@ setup(
             "pytest",
             "pytest-cov",
             "pytest-mock",
+            "pytest-sugar",
             "codecov",
             # For comparison with existing methods
             "probfit",
