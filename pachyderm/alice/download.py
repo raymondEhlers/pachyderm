@@ -579,13 +579,14 @@ class RunByRunTrainOutputFiller(QueueFiller):
         aodprod: Name of the AOD production, such as "AOD208".
     """
     def __init__(self, output_dir: Union[Path, str], train_run: int, legotrain: str, dataset: str,
-                 recpass: str, aodprod: str, *args: Any, **kwargs: Any) -> None:
+                 pt_hard_bin: int, recpass: str, aodprod: str, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         # We want the output to be stored inside a directory labeled by the train number.
         self._output_dir = Path(output_dir) / str(train_run)
         self._train_run = train_run
         self._lego_train = legotrain
         self._dataset = dataset
+        self._pt_hard_bin = pt_hard_bin
         self._reconstruction_pass = recpass
         self._aod_production = aodprod
 
@@ -605,16 +606,23 @@ class RunByRunTrainOutputFiller(QueueFiller):
             return int(trainid)
         return 0
 
-    def _process(self) -> None:
+    @property
+    def _grid_base(self) -> Path:
         datatag = "data" if self._is_data else "sim"
         grid_base: Path = Path("/alice") / datatag / str(self._year) / self._dataset
-        logger.info(f"Searching output files in train directory {grid_base}")
-        for r in utils.list_alien_dir(grid_base):
+        if self._pt_hard_bin:
+            grid_base = grid_base / str(self._pt_hard_bin)
+
+        return grid_base
+
+    def _process(self) -> None:
+        logger.info(f"Searching output files in train directory {self._grid_base}")
+        for r in utils.list_alien_dir(self._grid_base):
             logger.info(f"Checking run {r}")
             if not r.isdigit():
                 continue
 
-            run_dir = grid_base / r
+            run_dir = self._grid_base / r
             if self._is_data:
                 run_dir = run_dir / self._reconstruction_pass
             if self._aod_production:
@@ -661,7 +669,7 @@ class RunByRunTrainOutputFiller(QueueFiller):
                     self._queue.put(FilePair(inputfile, outputfile))
 
 def download_run_by_run_train_output(outputpath: Union[Path, str],
-                                     trainrun: int, legotrain: str, dataset: str,
+                                     trainrun: int, legotrain: str, dataset: str, pt_hard_bin: int,
                                      recpass: str, aodprod: str, fewer_threads: bool) -> None:
     """ Download run-by-run train output for the given arguments.
 
@@ -670,6 +678,7 @@ def download_run_by_run_train_output(outputpath: Union[Path, str],
         train_run: Train number.
         legotrain: Name of the LEGO train, such as "PWGJE/Jets_EMC_pp".
         dataset: Name of the dataset, such as "LHC17p".
+        pt_hard_bin: Number of the pt hard bin to download. Only meaningful for MC.
         recpass: Name of the reconstruction pass, such as "pass1" or "pass1_FAST".
         aodprod: Name of the AOD production, such as "AOD208".
         fewer_threads: If True, reduce the number of threads by half.
@@ -681,7 +690,7 @@ def download_run_by_run_train_output(outputpath: Union[Path, str],
 
     queue_filler = RunByRunTrainOutputFiller(
         outputpath, trainrun,
-        legotrain, dataset,
+        legotrain, dataset, pt_hard_bin,
         recpass, aodprod if len(aodprod) > 0 else "",
         q = q,
     )
@@ -715,6 +724,10 @@ def run_download_run_by_run_train_output() -> None:
     )
     parser.add_argument("-d", "--dataset", metavar="DATASET", help="Name of the dataset")
     parser.add_argument(
+        "--ptHardBin", metavar="BIN",
+        help="Pt hard bin (only meaningful in the case of pt-hard binned MC)"
+    )
+    parser.add_argument(
         "-p", "--recpass", type=str, default="pass1",
         help="Reconstruction pass (only meaningful in case of data) [default: pass1]",
     )
@@ -730,6 +743,6 @@ def run_download_run_by_run_train_output() -> None:
     download_run_by_run_train_output(
         args.outputdir,
         args.trainrun, args.legotrain,
-        args.dataset, args.recpass, args.aod,
+        args.dataset, args.ptHardBin, args.recpass, args.aod,
         args.fewerThreads,
     )
