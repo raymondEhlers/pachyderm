@@ -514,8 +514,9 @@ def download_dataset(period: str, output_dir: Union[Path, str], fewer_threads: b
     download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
 
     # Return the files that are stored corresponding to this period.
-    period_specific_dir = output_dir / dataset.data_type / str(dataset.year) / dataset.period.upper()
-    period_files = sorted(Path(period_specific_dir).glob("**/*.root"))
+    period_specific_dir = output_dir / dataset.data_type / str(dataset.year) / dataset.period
+    period_files = sorted(Path(period_specific_dir).glob(f"**/{dataset.filename}"))
+    logger.info(f"period_specific_dir: {period_specific_dir}, number of files: {len(period_files)}")
     # Write out the file list
     filelist = Path(output_dir) / "filelists" / f"{dataset.period}{dataset.file_type}.txt"
     filelist.parent.mkdir(exist_ok=True, parents=True)
@@ -544,7 +545,7 @@ def run_dataset_download() -> None:
     )
     parser.add_argument(
         "-p", "--period", type=str, default="",
-        help="Run period (i.e. dataset) to download.",
+        help="Run period (i.e. dataset) to download. For example, lhc16j5.",
     )
     parser.add_argument(
         "-o", "--outputdir", type=str, default="alice",
