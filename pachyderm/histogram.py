@@ -543,9 +543,9 @@ class Histogram1D:
 
     def __imul__(self: _T, other: Union[_T, float]) -> _T:
         """ Handles ``a *= b``. """
-        if np.isscalar(other):
+        if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
-            assert isinstance(other, (float, int, np.number))
+            assert isinstance(other, (float, int, np.number, np.ndarray))
             # Scale histogram by a scalar
             self.y *= other
             self.errors_squared *= (other ** 2)
@@ -574,9 +574,9 @@ class Histogram1D:
 
     def __itruediv__(self: _T, other: Union[_T, float]) -> _T:
         """ Handles ``a /= b``. """
-        if np.isscalar(other):
+        if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
-            assert isinstance(other, (float, int, np.number))
+            assert isinstance(other, (float, int, np.number, np.ndarray))
             # Scale histogram by a scalar
             self *= 1. / other
         else:
