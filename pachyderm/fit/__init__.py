@@ -2,6 +2,14 @@
 
 """ Interface for fitting with Minuit.
 
+Some useful references on understanding binned vs unbinned fitting, likelihoods, etc:
+
+- https://www.nbi.dk/~petersen/Teaching/Stat2015/Week3/week3.html
+- https://www.nbi.dk/~petersen/Teaching/Stat2015/Week3/LikelihoodFit.py
+- https://www.nbi.dk/~petersen/Teaching/Stat2017/Week3/AS2017_1205_Likelihood.pdf
+
+See also the appendix of my thesis.
+
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
