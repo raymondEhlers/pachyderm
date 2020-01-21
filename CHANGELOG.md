@@ -2,6 +2,25 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [2.5] - 5 December 2019
+
+### Added
+
+- Support for multiplying or dividing by a numpy array. See: `c4187228b5f942c2daf36d39c487d984f9772a61`.
+- Extracting `TDirectory` objects from a ROOT file. See: `d698fb40d18bcacf630f42fa5a7b9fb4b8fddb29`.
+- Support downloading pt hard binned train output. See: `f41606d78c8f871a584069a27c2af8ea38dcfa95`.
+- Some additional documentation.
+
+### Changed
+
+- Improved support for failed copying from AliEn. See: `76c7aa7082e5533441e464d1355d398996288686`.
+- Improved tests output. See: `b4f599f8d355790eac5a662376ede6bea0d5d81d`.
+- Improved `LHC16j5` dataset definition. See: `9e3b5bd61fd3e22a8795991d277a30d479655820`.
+
+### Fixed
+
+- Filelist generation didn't always include the right files. See: `684c42c8388f9bf765d6f49f205780e345da4291`.
+
 ## [2.4] - 4 December 2019
 
 ### Added
