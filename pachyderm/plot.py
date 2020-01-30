@@ -9,6 +9,7 @@ import logging
 from typing import Optional, Union
 
 import matplotlib
+import matplotlib.axes
 import matplotlib.colors
 import numpy as np
 
