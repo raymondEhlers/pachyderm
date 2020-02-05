@@ -24,6 +24,7 @@ htmlcov/
 # Virtual environments
 .py*/
 .pachyderm/
+env/
 
 # Ignore filetypes
 *.root
