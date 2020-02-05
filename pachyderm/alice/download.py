@@ -198,7 +198,10 @@ class DataSet:
         # Rename variables so that they better fit the expected arguments.
         # Piratically, this means removing the trailing "s"
         for var_name in ["runs", "pt_hard_bins"]:
-            selections[var_name[:-1]] = selections.pop(var_name)
+            # They may not always be defined, so skip if they're not.
+            val = selections.pop(var_name, None)
+            if val is not None:
+                selections[var_name[:-1]] = val
         # Rename "runs" -> "run"
         if does_period_contain_data(period):
             # Need to prepend "000"
