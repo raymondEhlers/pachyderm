@@ -194,7 +194,7 @@ def _extract_values_from_hepdata_dependent_variable(var: Mapping[str, Any]) -> T
 
     # Create the histogram
     metadata: Dict[str, Any] = {
-        "sys_error": hist_sys_errors
+        "sys_error": np.array(hist_sys_errors)
     }
 
     return hist_values, hist_stat_errors, metadata
