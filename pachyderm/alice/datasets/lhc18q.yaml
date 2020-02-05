@@ -1,0 +1,19 @@
+---
+# LHC18q: 2018 Pb--Pb data at 5.02 TeV.
+period: "lhc18q"
+parameters:
+    system: "PbPb"
+    year: 2018
+    file_types:
+        ESD:
+            search_path: "/alice/{data_type}/{year}/{period}/{run}/pass1"
+            filename: "root_archive.zip"
+        AOD:
+            # AOD Pass 2: /alice/data/2018/LHC18q/000296244/pass1
+            search_path: "/alice/{data_type}/{year}/{period}/{run}/pass1/{file_type}"
+            filename: "AliAOD.root"
+selections:
+    n_files_per_selection: 2
+    file_type: AOD
+    production_number: null
+    runs: [296550]
