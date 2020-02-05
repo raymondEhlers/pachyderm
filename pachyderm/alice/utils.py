@@ -9,6 +9,7 @@ Uses some code from Markus' download train run-by-run output script.
 
 import hashlib
 import logging
+import os
 import subprocess
 from pathlib import Path
 from typing import List, Union
@@ -26,28 +27,9 @@ def valid_alien_token() -> bool:
     Returns:
         True if there is a valid AliEn token, or false otherwise.
     """
-    errorstate = True
-    while errorstate:
-        errorstate = False
-        result = subprocess.run(["alien-token-info"], stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-        output = result.stdout.decode()
-        # Check that the command ran successfully
-        if (
-            output.startswith("Error")
-            or output.startswith("Warning")
-            or "CheckErrorStatus" in output
-        ):
-            errorstate = True
-
-    # We've successfully queried, so now we look at the result.
-    # One possible approach is:
-    # If there's no token, we get "No Token found!"
-    # If there's a valid token, we get "Token is still valid!" at the end.
-    #return ("Token is still valid!" in output)
-    # However, we can do better:
-    # `alien-token-init` returns a status code of 1 if there is no token or a problem
-    # and 0 if there is a valid token.
-    return result.returncode == 0
+    # With JAliEn, this information is no longer available, so this is a no-op
+    # that always just returns True.
+    return True
 
 def local_md5(fname: Union[Path, str]) -> str:
     """ Calculate a chunked md5 sum for the file at a given filename.
@@ -86,7 +68,7 @@ def grid_md5(gridfile: Union[Path, str]) -> str:
     while errorstate:
         errorstate = False
         result = subprocess.run(
-            ["gbbox", "md5sum", str(gridfile)], stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True
+            ["alien.py", "md5sum", str(gridfile)], stdout = subprocess.PIPE, stderr = subprocess.PIPE, check = True
         )
         gb_out = result.stdout.decode()
         # Check that the command ran successfully
@@ -119,7 +101,7 @@ def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -
     logger.info(f"Copying {inputfile} to {outputfile}")
     outputfile.parent.mkdir(mode = 0o755, exist_ok = True, parents = True)
     process = subprocess.run(
-        ["alien_cp", f"alien://{inputfile}", str(outputfile)],
+        ["alien_cp", str(inputfile), f"file://{outputfile}"],
         stdout = subprocess.PIPE, stderr = subprocess.PIPE
     )
     if process.returncode:
@@ -173,7 +155,11 @@ def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
                 if d.startswith("Error") or d.startswith("Warning"):
                     errorstate = True
                     break
-                mydir = d.rstrip().lstrip()
+                # Remove leading and trailing whitespace.
+                # jalien now returns directories with trailing slashes (different from legacy AliEn).
+                # We depended on this behavior, so we strip out the trailing slashes (via os.sep).
+                mydir = d.rstrip().lstrip().rstrip(os.sep)
+
                 #if len(mydir) and mydir.isdigit():
                 if len(mydir):
                     result.append(mydir)
