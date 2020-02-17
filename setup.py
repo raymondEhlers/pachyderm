@@ -77,6 +77,7 @@ setup(
         # Pinned version because the typing information doesn't seem right,
         # at least with how I understand it.
         "ruamel.yaml<0.15.99",
+        "attrs",
         "numpy",
         "scipy",
         "uproot",
