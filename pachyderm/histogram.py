@@ -677,7 +677,7 @@ class Histogram1D:
             List of Histogram1D constructed from the input HEPdata.
         """
         # HEP Data is just a map containing the data.
-        if not isinstance(hist, collections.Mapping):
+        if not isinstance(hist, collections.abc.Mapping):
             raise TypeError(
                 f"Does not appear to be valid HEPdata. Must pass a map with the HEPdata information. Passed: {hist}"
             )
