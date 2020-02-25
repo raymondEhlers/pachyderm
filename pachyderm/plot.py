@@ -124,6 +124,8 @@ def configure() -> None:
     params = {
         # Enable latex
         "text.usetex": True,
+        # Enable tex preview, which improves the alignment of the baseline
+        "text.latex.preview": True,
         # Enable axis ticks (after they can be disabled by seaborn)
         "xtick.bottom": True,
         "ytick.left": True,
