@@ -269,6 +269,9 @@ class Histogram1D:
                 logger.warning(f"Object '{b_name}' shares memory with object '{a_name}'. Copying object '{b_name}'!")
                 setattr(self, b_name, b.copy())
 
+        # Create stats based on the stored data.
+        self._recalculate_stats()
+
     @property
     def errors(self) -> np.ndarray:
         return np.sqrt(self.errors_squared)
@@ -403,6 +406,13 @@ class Histogram1D:
         """ Integrate the histogram over the given range.
 
         Note:
+            Be very careful here! The equivalent of `TH1::Integral(...)` is `counts_in_interval(..)`.
+            That's because when we multiply by the bin width, we implicitly should be resetting the stats.
+            We will still get the right answer in terms of y and errors_squared, but if this result is used
+            to normalize the hist, the stats will be wrong. We can't just reset them here because the integral
+            doesn't modify the histogram.
+
+        Note:
             The integration limits could be described as inclusive. This matches the ROOT convention.
             See ``histogram1D._integral(...)`` for further details on how these limits are determined.
 
@@ -492,6 +502,12 @@ class Histogram1D:
         # with saving the final values to YAML.
         return float(value), float(np.sqrt(error_squared))
 
+    def _recalculate_stats(self: _T) -> None:
+        """ Recalculate the hist stats. """
+        self.metadata.update(calculate_binned_stats(
+            bin_edges=self.bin_edges, y = self.y, weights_squared = self.errors_squared
+        ))
+
     def __add__(self: _T, other: _T) -> _T:
         """ Handles ``a = b + c.`` """
         new = self.copy()
@@ -515,6 +531,16 @@ class Histogram1D:
             )
         self.y += other.y
         self.errors_squared += other.errors_squared
+        # Update stats.
+        for key in _stats_keys:
+            if key not in self.metadata:
+                logger.warning(f"Add: Missing stats {key} in existing hist. Can not update stored stats.")
+                continue
+            if key not in other.metadata:
+                logger.warning(f"Add: Missing stats {key} in other hist. Can not update stored stats.")
+                continue
+            self.metadata[key] += other.metadata[key]
+
         return self
 
     def __sub__(self: _T, other: _T) -> _T:
@@ -533,7 +559,20 @@ class Histogram1D:
             )
         self.y -= other.y
         self.errors_squared += other.errors_squared
+        # According to ROOT, we need to reset stats because we are subtracting. Otherwise, one
+        # can get negative variances
+        self._recalculate_stats()
         return self
+
+    def _scale_stats(self: _T, scale_factor: float) -> None:
+        for key in _stats_keys:
+            if key not in self.metadata:
+                logger.warning(f"Scaling: Missing stats {key}. Can not update stored stats.")
+                continue
+            factor = scale_factor
+            if key == "_total_sum_w2":
+                factor = scale_factor * scale_factor
+            self.metadata[key] = self.metadata[key] * factor
 
     def __mul__(self: _T, other: Union[_T, float]) -> _T:
         """ Handles ``a = b * c``. """
@@ -549,6 +588,11 @@ class Histogram1D:
             # Scale histogram by a scalar
             self.y *= other
             self.errors_squared *= (other ** 2)
+            # Scale stats accordingly. We can only preserve the stats if using a scalar (according to ROOT).
+            if np.isscalar(other):
+                self._scale_stats(scale_factor = other)
+            else:
+                self._recalculate_stats()
         else:
             # Help out mypy...
             assert isinstance(other, Histogram1D)
@@ -564,6 +608,10 @@ class Histogram1D:
             # NOTE: This is just error propagation, simplified with a = b * c!
             self.errors_squared = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
             self.y *= other.y
+
+            # Recalculate the stats (same as ROOT)
+            self._recalculate_stats()
+
         return self
 
     def __truediv__(self: _T, other: Union[_T, float]) -> _T:
@@ -579,6 +627,11 @@ class Histogram1D:
             assert isinstance(other, (float, int, np.number, np.ndarray))
             # Scale histogram by a scalar
             self *= 1. / other
+            # Scale stats accordingly. We can only preserve the stats if using a scalar (according to ROOT).
+            if np.isscalar(other):
+                self._scale_stats(scale_factor = 1. / other)
+            else:
+                self._recalculate_stats()
         else:
             # Help out mypy...
             assert isinstance(other, Histogram1D)
@@ -603,6 +656,10 @@ class Histogram1D:
                 out = np.zeros_like(errors_squared_numerator), where = errors_squared_denominator != 0,
             )
             self.y = np.divide(self.y, other.y, out = np.zeros_like(self.y), where = other.y != 0)
+
+            # Recalculate the stats (same as ROOT)
+            self._recalculate_stats()
+
         return self
 
     def __eq__(self, other: Any) -> bool:
@@ -619,7 +676,14 @@ class Histogram1D:
         #       it explicitly below.
         agreement = [np.allclose(getattr(self, a), getattr(other, a)) for a in attributes if a != "metadata"]
         # Check metadata
-        metadata_agree = (self.metadata == other.metadata)
+        metadata = self.metadata.copy()
+        other_metadata = other.metadata.copy()
+        metadata_agree = True
+        for key in _stats_keys:
+            if not np.isclose(metadata.pop(key, None), other_metadata.pop(key, None)):
+                metadata_agree = False
+                break
+        metadata_agree = metadata_agree and (metadata == other_metadata)
         # All arrays and the metadata must agree.
         return all(agreement) and metadata_agree
 
@@ -706,6 +770,10 @@ class Histogram1D:
 
         except IndexError as e:
             raise TypeError(f"Invalid HEPdata histogram {hist}") from e
+
+        for h in histograms:
+            # Calculate stats, which we won't have stored in HEPdata.
+            h._recalculate_stats()
 
         return histograms
 
@@ -917,6 +985,10 @@ def find_bin(bin_edges: np.ndarray, value: float) -> int:
         int,
         np.searchsorted(bin_edges, value, side = "right") - 1
     )
+
+_stats_keys = [
+    "_total_sum_w", "_total_sum_w2", "_total_sum_wx", "_total_sum_wx2",
+]
 
 def _create_stats_dict_from_values(total_sum_w: float, total_sum_w2: float,
                                    total_sum_wx: float, total_sum_wx2: float) -> Dict[str, float]:
