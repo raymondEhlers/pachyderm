@@ -6,6 +6,8 @@
 """
 
 __all__ = [
+    "alice",
+    "binned_data",
     "fit",
     "generic_class",
     "generic_config",

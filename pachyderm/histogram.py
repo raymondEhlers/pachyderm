@@ -270,7 +270,14 @@ class Histogram1D:
                 setattr(self, b_name, b.copy())
 
         # Create stats based on the stored data.
-        self._recalculate_stats()
+        # Only recalculate if they haven't already been passed in via the metadata.
+        calculate_stats = False
+        for key in _stats_keys:
+            if key not in self.metadata:
+                calculate_stats = True
+                break
+        if calculate_stats:
+            self._recalculate_stats()
 
     @property
     def errors(self) -> np.ndarray:
