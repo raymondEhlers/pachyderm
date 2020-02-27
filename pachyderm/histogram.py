@@ -351,6 +351,16 @@ class Histogram1D:
         """
         return binned_variance(self.metadata)
 
+    @property
+    def n_entries(self) -> float:
+        """ The number of entries in the hist.
+
+        Note:
+            This value is dependent on the weight. We don't have a weight independent measure like a ROOT hist,
+            so this value won't agree with the number of entries from a weighted ROOT hist.
+        """
+        return cast(float, np.sum(self.y))
+
     def find_bin(self, value: float) -> int:
         """ Find the bin corresponding to the specified value.
 
