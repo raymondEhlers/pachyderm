@@ -10,8 +10,9 @@ from __future__ import annotations
 import collections
 import logging
 import operator
+import uuid
 from functools import reduce
-from typing import Any, Dict, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Mapping, Sequence, Tuple, Type, TypeVar, Union, cast
 
 import attr
 import numpy as np
@@ -233,6 +234,7 @@ class BinnedData:
     variances: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _validate_arrays])
     metadata: Dict[str, Any] = attr.ib(factory = dict)
 
+    @property
     def axis(self) -> Axis:
         """ Returns the single axis when the binned data is 1D.
 
@@ -265,7 +267,6 @@ class BinnedData:
 
     # TODO: Add integral: Need to devise how best to pass axis limits.
     # TODO: Stats
-    # TODO: Add conversion from other types.
 
     def __add__(self: _T_BinnedData, other: _T_BinnedData) -> _T_BinnedData:
         """ Handles ``a = b + c.`` """
@@ -400,3 +401,214 @@ class BinnedData:
         metadata_agree = (self.metadata == other.metadata)
         # All arrays and the metadata must agree.
         return all(agreement) and axes_agree and metadata_agree
+
+    @classmethod
+    def from_hepdata(cls: Type[T_BinnedData], hist: Mapping[str, Any]) -> List[T_BinnedData]:
+        """ Convert (a set) of HEPdata histogram(s) to BinnedData objects.
+
+        Will include any information that the extraction function extracts and returns.
+
+        Note:
+            This is not included in the ``from_existing_hist(...)`` function because HEPdata files are oriented
+            towards potentially containing multiple histograms in a single object. So we just return all of them
+            and let the user sort it out.
+
+        Note:
+            It only grabs the first independent variable to determining the x axis.
+
+        Args:
+            hist: HEPdata input histogram(s).
+            extraction_function: Extract values from HEPdata dict to be used to construct a histogram. Default:
+                Retrieves y values, symmetric statical errors. Symmetric systematic errors are stored in the metadata.
+        Returns:
+            List of Histogram1D constructed from the input HEPdata.
+        """
+        ...
+        raise NotImplementedError("Not yet implemented.")
+
+    @classmethod
+    def from_uproot(cls: Type[T_BinnedData], hist: Any) -> T_BinnedData:
+        """ Convert from uproot read histogram to BinnedData.
+
+        """
+        # All of these methods should excludes underflow and overflow bins
+        bin_edges = hist.bins
+        values = hist.values
+        variances = hist.variances
+
+        metadata: Dict[str, Any] = {}
+
+        return cls(
+            axes = bin_edges,
+            values = values,
+            variances = variances,
+            metadata = metadata
+        )
+
+    @classmethod
+    def from_boost_histogram(cls: Type[T_BinnedData], hist: Any) -> T_BinnedData:
+        """ Convert from boost histogram to BinnedData.
+
+        """
+        view = hist.view()
+        metadata: Dict[str, Any] = {}
+
+        return cls(
+            axes = hist.axes.edges,
+            values = view.value,
+            variances = np.copy(view.variance),
+            metadata = metadata,
+        )
+
+    @classmethod
+    def from_ROOT(cls: Type[T_BinnedData], hist: Any) -> T_BinnedData:
+        """ Convert TH1, TH2, or TH3 histogram to BinnedData.
+
+        Note:
+            Under/Overflow bins are excluded.
+
+        """
+        # Setup
+        # Enable sumw2 if it's not already calculated
+        if hist.GetSumw2N() == 0:
+            hist.Sumw2(True)
+        class_name = hist.ClassName()
+        # TH*D
+        n_dim = class_name[2]
+        axis_methods = [hist.GetXaxis, hist.GetYaxis, hist.GetZaxis]
+        root_axes = axis_methods[:n_dim]
+
+        def get_bin_edges_from_axis(axis: Any) -> np.ndarray:
+            """ Get bin edges from a ROOT hist axis.
+
+            Note:
+                Doesn't include over- or underflow bins!
+
+            Args:
+                axis (ROOT.TAxis): Axis from which the bin edges should be extracted.
+            Returns:
+                Array containing the bin edges.
+            """
+            # Don't include over- or underflow bins
+            bins = range(1, axis.GetNbins() + 1)
+            # Bin edges
+            bin_edges = np.empty(len(bins) + 1)
+            bin_edges[:-1] = [axis.GetBinLowEdge(i) for i in bins]
+            bin_edges[-1] = axis.GetBinUpEdge(axis.GetNbins())
+
+            return bin_edges
+
+        # Exclude overflow
+        axes = [Axis(get_bin_edges_from_axis(axis())) for axis in root_axes]
+        # NOTE: The y value and bin error are stored with the hist, not the axis.
+        values = np.array([
+            hist.GetBinContent(i) for i in range(1, hist.GetNcells())
+            if not (hist.IsBinUnderflow(i) and hist.IsBinOverflow(i))
+        ])
+        errors = np.array(
+            hist.GetSumw2())
+        # Exclude the under/overflow bins
+        errors = errors[[slice(1, len(axis) + 1) for axis in axes]]
+
+        # Check for a TProfile.
+        # In that case we need to retrieve the errors manually because the Sumw2() errors are
+        # not the anticipated errors.
+        if hasattr(hist, "BuildOptions"):
+            errors = np.array([hist.GetBinError(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
+            # We expected variances (errors squared)
+            variances = errors ** 2
+        else:
+            # Sanity check. If they don't match, something odd has almost certainly occurred.
+            if not np.isclose(errors[0], hist.GetBinError(1) ** 2):
+                raise ValueError("Sumw2 errors don't seem to represent bin errors!")
+
+        metadata: Dict[str, Any] = {}
+
+        return cls(
+            axes=axes,
+            values=values,
+            variances=variances,
+            metadata=metadata,
+        )
+
+    @classmethod
+    def from_existing_data(cls: Type[T_BinnedData], binned_data: Any) -> T_BinnedData:
+        """ Convert an existing histogram.
+
+        Note:
+            Underflow and overflow bins are excluded!
+
+        Args:
+            hist (uproot.rootio.TH1* or ROOT.TH1): Histogram to be converted.
+        Returns:
+            Histogram: Dataclass with x, y, and errors
+        """
+        # If it's already BinnedData, just return it
+        if isinstance(binned_data, cls):
+            logger.warning(f"Passed binned data is already a {cls.__name__}. Returning the existing object.")
+            return binned_data
+
+        # Now actually deal with conversion from other types.
+        # "values" is a proxy for if we have an uproot hist.
+        if hasattr(binned_data, "values"):
+            return cls.from_uproot(binned_data)
+        if hasattr(binned_data, "view"):
+            return cls.from_boost_histogram(binned_data)
+
+        # Fall back to handling a traditional ROOT hist.
+        return cls.from_ROOT(binned_data)
+
+    # Convert to other formats.
+    def to_ROOT(self) -> Any:
+        """ Convert into a ROOT histogram.
+
+        NOTE:
+            This is a lossy operation because there is nowhere to store metadata is in the ROOT hist.
+
+        Returns:
+            ROOT histogram containing the data.
+        """
+        try:
+            import ROOT
+        except ImportError:
+            raise RuntimeError("Unable to import ROOT. Please ensure that ROOT is installed and in your $PYTHONPATH.")
+
+        unique_name = uuid.uuid4()
+        name = self.metadata.get("name", unique_name)
+        title = self.metadata.get("title", unique_name)
+
+        args = [name, title, *self.axes]
+        if len(self.axes) <= 3:
+            h = getattr(ROOT, f"TH{len(self.axes)}D")(*args)
+        else:
+            raise RuntimeError(f"Asking to create hist with {len(self.axes)} > 3 dimensions.")
+
+        for i, (value, error) in enumerate(zip(self.values, self.errors), start=1):
+            h.SetBinContent(i, value)
+            h.SetBinError(i, error)
+
+        return h
+
+    def to_boost_histogram(self) -> Any:
+        """ Convert into a boost-histogram.
+
+        NOTE:
+            This is a lossy operation. The metadata is not preserved.
+
+        Returns:
+            Boost histogram containing the data.
+        """
+        try:
+            import boost_histogram as bh
+        except ImportError:
+            raise RuntimeError("Unable to import boost histogram. Please install it to export to a boost histogram.")
+
+        axes = []
+        for axis in self.axes:
+            # NOTE: We use Variable instead of Regular even if the bin edges are Regular because it allows us to
+            #       construct the axes just from the bin edges.
+            axes.append(bh.axis.Variable(axis.bin_edges))
+        h = bh.Histogram(*axes, storage=bh.storage.Weight())
+        h[:] = self.values
+
+        return h
