@@ -16,8 +16,9 @@ repos:
             # no-incremental helps with a bug in ruamel.yaml typing.
             # See: https://sourceforge.net/p/ruamel-yaml/tickets/328/
             args: ["--ignore-missing-imports", "--no-incremental"]
-            # A sufficiently new version of attrs is needed to keep mypy happy
-            additional_dependencies: ["attrs>=19.3.0"]
+            # A sufficiently new version of attrs is needed to keep mypy happy.
+            # Same with ruamel.yaml
+            additional_dependencies: ["attrs>=19.3.0", "ruamel.yaml>=0.16.10"]
     - repo: https://github.com/pre-commit/pygrep-hooks
       rev: v1.5.1
       hooks:
