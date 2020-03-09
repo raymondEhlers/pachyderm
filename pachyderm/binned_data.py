@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import collections
+import itertools
 import logging
 import operator
 import uuid
@@ -16,6 +17,7 @@ from typing import Any, Dict, List, Mapping, Sequence, Tuple, Type, Union, cast
 
 import attr
 import numpy as np
+import ruamel.yaml
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +173,49 @@ class AxesTuple(Tuple[Axis, ...]):
 
     def __eq__(self, other: Any) -> bool:
         """ Check for equality. """
-        return all(a == b for a, b in zip(self, other))
+        if other:
+            return all(a == b for a, b in itertools.zip_longest(self, other))
+        return False
+
+    @classmethod
+    def to_yaml(cls: Type["AxesTuple"], representer: ruamel.yaml.representer.BaseRepresenter,
+                obj: "AxesTuple") -> ruamel.yaml.nodes.SequenceNode:
+        """ Encode YAML representation.
+
+        For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
+
+        Args:
+            representer: Representation from YAML.
+            data: AxesTuple to be converted to YAML.
+        Returns:
+            YAML representation of the AxesTuple object.
+        """
+        representation = representer.represent_sequence(
+            f"!{cls.__name__}", obj
+        )
+
+        # Finally, return the represented object.
+        return cast(
+            ruamel.yaml.nodes.SequenceNode,
+            representation,
+        )
+
+    @classmethod
+    def from_yaml(cls: Type["AxesTuple"], constructor: ruamel.yaml.constructor.BaseConstructor,
+                  data: ruamel.yaml.nodes.SequenceNode) -> "AxesTuple":
+        """ Decode YAML representation.
+
+        For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
+
+        Args:
+            constructor: Constructor from the YAML object.
+            node: YAML sequence node representing the AxesTuple object.
+        Returns:
+            The AxesTuple object constructed from the YAML specified values.
+        """
+        values = [constructor.construct_object(n) for n in data.value]
+        return cls(values)
+
 
 def _axes_tuple_from_axes_sequence(axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]) -> AxesTuple:
     """ Workaround for mypy issue in creating an AxesTuple from axes.
