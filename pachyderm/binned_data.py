@@ -11,7 +11,7 @@ import logging
 import operator
 import uuid
 from functools import reduce
-from typing import Any, Dict, List, Mapping, Sequence, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Sequence, Tuple, Type, Union, cast
 
 import attr
 import numpy as np
@@ -19,6 +19,14 @@ import ruamel.yaml
 
 logger = logging.getLogger(__name__)
 
+# Work around typing issues in python 3.6
+# If only supporting 3.7+, we can add `from __future__ import annotations` and just use the more detailed definition
+if TYPE_CHECKING:
+    AxesTupleAttribute = attr.Attribute["AxesTuple"]
+    NumpyAttribute = attr.Attribute[np.ndarray]
+else:
+    AxesTupleAttribute = attr.Attribute
+    NumpyAttribute = attr.Attribute
 
 def _axis_bin_edges_converter(value: Any) -> np.ndarray:
     """ Convert the bin edges input to a numpy array.
@@ -231,7 +239,7 @@ def _axes_tuple_from_axes_sequence(axes: Union[Axis, Sequence[Axis], np.ndarray,
 def _array_length_from_axes(axes: AxesTuple) -> int:
     return reduce(operator.mul, (len(a) for a in axes))
 
-def _validate_axes(instance: "BinnedData", attribute: attr.Attribute[AxesTuple], value: AxesTuple) -> None:
+def _validate_axes(instance: "BinnedData", attribute: AxesTupleAttribute, value: AxesTuple) -> None:
     array_length = _array_length_from_axes(value)
     for other_name, other_value in [("values", instance.values), ("variances", instance.variances)]:
         if array_length != other_value.size:
@@ -240,7 +248,7 @@ def _validate_axes(instance: "BinnedData", attribute: attr.Attribute[AxesTuple],
                 f" len({attribute.name}) = {array_length}, expected length from '{other_name}': {len(other_value)}."
             )
 
-def _validate_arrays(instance: "BinnedData", attribute: attr.Attribute[np.ndarray], value: np.ndarray) -> None:
+def _validate_arrays(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
     expected_length = _array_length_from_axes(instance.axes)
     if value.size != expected_length:
         raise ValueError(
@@ -248,7 +256,7 @@ def _validate_arrays(instance: "BinnedData", attribute: attr.Attribute[np.ndarra
             f" len({attribute}) = {len(value)}, expected length: {expected_length}."
         )
 
-def _shared_memory_check(instance: "BinnedData", attribute: attr.Attribute[np.ndarray], value: np.ndarray) -> None:
+def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
     # TODO: This trivially fails for axes.
     # Define this array for convenience in accessing the members. This way, we're less likely to miss
     # newly added members.
