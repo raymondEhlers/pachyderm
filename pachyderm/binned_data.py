@@ -12,7 +12,7 @@ import logging
 import operator
 import uuid
 from functools import reduce
-from typing import Any, Dict, List, Mapping, Sequence, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Mapping, Sequence, Tuple, Type, Union, cast
 
 import attr
 import numpy as np
@@ -73,8 +73,6 @@ def find_bin(bin_edges: np.ndarray, value: float) -> int:
         np.searchsorted(bin_edges, value, side = "right") - 1
     )
 
-_T_Axis = TypeVar("_T_Axis", bound="Axis")
-
 @attr.s(eq=False)
 class Axis:
     bin_edges: np.ndarray = attr.ib(converter=_axis_bin_edges_converter)
@@ -127,7 +125,7 @@ class Axis:
         """
         return find_bin(self.bin_edges, value)
 
-    def copy(self: _T_Axis) -> _T_Axis:
+    def copy(self: "Axis") -> "Axis":
         """ Copies the object.
 
         In principle, this should be the same as ``copy.deepcopy(...)``, at least when this was written in
@@ -143,8 +141,6 @@ class Axis:
         return cast(bool, np.allclose(self.bin_edges, other.bin_edges))
 
 
-T_AxesTuple = TypeVar("T_AxesTuple", bound="AxesTuple")
-
 class AxesTuple(Tuple[Axis, ...]):
     @property
     def bin_edges(self) -> Tuple[np.ndarray, ...]:
@@ -159,7 +155,7 @@ class AxesTuple(Tuple[Axis, ...]):
         return tuple(a.bin_centers for a in self)
 
     @classmethod
-    def from_axes(cls: Type[T_AxesTuple], axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]) -> T_AxesTuple:
+    def from_axes(cls: Type["AxesTuple"], axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]) -> "AxesTuple":
         values = axes
         # Convert to a list if necessary
         # Ideally, we want to check for anything that isn't a collection, and convert it to one if it's not.
@@ -190,12 +186,10 @@ def _axes_tuple_from_axes_sequence(axes: Union[Axis, Sequence[Axis], np.ndarray,
     """
     return AxesTuple.from_axes(axes)
 
-T_BinnedData = TypeVar("T_BinnedData", bound = "BinnedData")
-
 def _array_length_from_axes(axes: AxesTuple) -> int:
     return reduce(operator.mul, (len(a) for a in axes))
 
-def _validate_axes(instance: T_BinnedData, attribute: attr.Attribute[AxesTuple], value: AxesTuple) -> None:
+def _validate_axes(instance: "BinnedData", attribute: attr.Attribute[AxesTuple], value: AxesTuple) -> None:
     array_length = _array_length_from_axes(value)
     for other_name, other_value in [("values", instance.values), ("variances", instance.variances)]:
         if array_length != other_value.size:
@@ -204,7 +198,7 @@ def _validate_axes(instance: T_BinnedData, attribute: attr.Attribute[AxesTuple],
                 f" len({attribute.name}) = {array_length}, expected length from '{other_name}': {len(other_value)}."
             )
 
-def _validate_arrays(instance: T_BinnedData, attribute: attr.Attribute[np.ndarray], value: np.ndarray) -> None:
+def _validate_arrays(instance: "BinnedData", attribute: attr.Attribute[np.ndarray], value: np.ndarray) -> None:
     expected_length = _array_length_from_axes(instance.axes)
     if value.size != expected_length:
         raise ValueError(
@@ -212,7 +206,7 @@ def _validate_arrays(instance: T_BinnedData, attribute: attr.Attribute[np.ndarra
             f" len({attribute}) = {len(value)}, expected length: {expected_length}."
         )
 
-def _shared_memory_check(instance: T_BinnedData, attribute: attr.Attribute[np.ndarray], value: np.ndarray) -> None:
+def _shared_memory_check(instance: "BinnedData", attribute: attr.Attribute[np.ndarray], value: np.ndarray) -> None:
     # TODO: This trivially fails for axes.
     # Define this array for convenience in accessing the members. This way, we're less likely to miss
     # newly added members.
@@ -224,8 +218,6 @@ def _shared_memory_check(instance: T_BinnedData, attribute: attr.Attribute[np.nd
         if np.may_share_memory(value, other_value):
             logger.warning(f"Object '{other_name}' shares memory with object '{attribute.name}'. Copying '{attribute}'!")
             setattr(instance, attribute.name, value.copy())
-
-_T_BinnedData = TypeVar("_T_BinnedData", bound="BinnedData")
 
 @attr.s(eq=False)
 class BinnedData:
@@ -251,7 +243,7 @@ class BinnedData:
     def errors(self) -> np.ndarray:
         return np.sqrt(self.variances)
 
-    def copy(self: _T_BinnedData) -> _T_BinnedData:
+    def copy(self: "BinnedData") -> "BinnedData":
         """ Copies the object.
 
         In principle, this should be the same as ``copy.deepcopy(...)``, at least when this was written in
@@ -268,20 +260,20 @@ class BinnedData:
     # TODO: Add integral: Need to devise how best to pass axis limits.
     # TODO: Stats
 
-    def __add__(self: _T_BinnedData, other: _T_BinnedData) -> _T_BinnedData:
+    def __add__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
         """ Handles ``a = b + c.`` """
         new = self.copy()
         new += other
         return new
 
-    def __radd__(self: _T_BinnedData, other: _T_BinnedData) -> _T_BinnedData:
+    def __radd__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
         """ For use with sum(...). """
         if other == 0:
             return self
         else:
             return self + other
 
-    def __iadd__(self: _T_BinnedData, other: _T_BinnedData) -> _T_BinnedData:
+    def __iadd__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
         """ Handles ``a += b``. """
         if self.axes != other.axes:
             raise TypeError(
@@ -293,13 +285,13 @@ class BinnedData:
         self.variances += other.variances
         return self
 
-    def __sub__(self: _T_BinnedData, other: _T_BinnedData) -> _T_BinnedData:
+    def __sub__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
         """ Handles ``a = b - c``. """
         new = self.copy()
         new -= other
         return new
 
-    def __isub__(self: _T_BinnedData, other: _T_BinnedData) -> _T_BinnedData:
+    def __isub__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
         """ Handles ``a -= b``. """
         if self.axes != other.axes:
             raise TypeError(
@@ -311,13 +303,13 @@ class BinnedData:
         self.variances += other.variances
         return self
 
-    def __mul__(self: _T_BinnedData, other: Union[_T_BinnedData, float]) -> _T_BinnedData:
+    def __mul__(self: "BinnedData", other: Union["BinnedData", float]) -> "BinnedData":
         """ Handles ``a = b * c``. """
         new = self.copy()
         new *= other
         return new
 
-    def __imul__(self: _T_BinnedData, other: Union[_T_BinnedData, float]) -> _T_BinnedData:
+    def __imul__(self: "BinnedData", other: Union["BinnedData", float]) -> "BinnedData":
         """ Handles ``a *= b``. """
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
@@ -342,13 +334,13 @@ class BinnedData:
             self.values *= other.values
         return self
 
-    def __truediv__(self: _T_BinnedData, other: Union[_T_BinnedData, float]) -> _T_BinnedData:
+    def __truediv__(self: "BinnedData", other: Union["BinnedData", float]) -> "BinnedData":
         """ Handles ``a = b / c``. """
         new = self.copy()
         new /= other
         return new
 
-    def __itruediv__(self: _T_BinnedData, other: Union[_T_BinnedData, float]) -> _T_BinnedData:
+    def __itruediv__(self: "BinnedData", other: Union["BinnedData", float]) -> "BinnedData":
         """ Handles ``a /= b``. """
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
@@ -403,7 +395,7 @@ class BinnedData:
         return all(agreement) and axes_agree and metadata_agree
 
     @classmethod
-    def from_hepdata(cls: Type[T_BinnedData], hist: Mapping[str, Any]) -> List[T_BinnedData]:
+    def from_hepdata(cls: Type["BinnedData"], hist: Mapping[str, Any]) -> List["BinnedData"]:
         """ Convert (a set) of HEPdata histogram(s) to BinnedData objects.
 
         Will include any information that the extraction function extracts and returns.
@@ -427,7 +419,7 @@ class BinnedData:
         raise NotImplementedError("Not yet implemented.")
 
     @classmethod
-    def from_uproot(cls: Type[T_BinnedData], hist: Any) -> T_BinnedData:
+    def from_uproot(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
         """ Convert from uproot read histogram to BinnedData.
 
         """
@@ -446,7 +438,7 @@ class BinnedData:
         )
 
     @classmethod
-    def from_boost_histogram(cls: Type[T_BinnedData], hist: Any) -> T_BinnedData:
+    def from_boost_histogram(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
         """ Convert from boost histogram to BinnedData.
 
         """
@@ -461,7 +453,7 @@ class BinnedData:
         )
 
     @classmethod
-    def from_ROOT(cls: Type[T_BinnedData], hist: Any) -> T_BinnedData:
+    def from_ROOT(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
         """ Convert TH1, TH2, or TH3 histogram to BinnedData.
 
         Note:
@@ -532,7 +524,7 @@ class BinnedData:
         )
 
     @classmethod
-    def from_existing_data(cls: Type[T_BinnedData], binned_data: Any) -> T_BinnedData:
+    def from_existing_data(cls: Type["BinnedData"], binned_data: Any) -> "BinnedData":
         """ Convert an existing histogram.
 
         Note:
