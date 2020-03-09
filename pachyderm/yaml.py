@@ -12,7 +12,7 @@ Note:
     basically comes down to the fact that we are assigning a bound staticmethod to the class when we mix
     it in, and it doesn't seem to be able to resolving pickling the object (perhaps due to name resolution issues).
     For a bit more, see the comments `on this stackoverflow post <https://stackoverflow.com/q/46230799>`__.
-    Piratically, I believe that we could also resolve this by implementing ``__reduce_ex``, but that appears as if
+    Practically, I believe that we could also resolve this by implementing ``__reduce_ex``, but that appears as if
     it will be more work than our implemented workaround. Our workaround can be implemented as:
 
     .. code-block:: python
@@ -47,9 +47,10 @@ import ruamel.yaml
 logger = logging.getLogger(__name__)
 
 # Typing helpers
+# Careful: Importing these in other modules can cause mypy to give nonsense typing information!
 DictLike = ruamel.yaml.comments.CommentedMap
-Representer = Type[ruamel.yaml.representer.BaseRepresenter]
-Constructor = Type[ruamel.yaml.constructor.BaseConstructor]
+Representer = ruamel.yaml.representer.BaseRepresenter
+Constructor = ruamel.yaml.constructor.BaseConstructor
 T_EnumToYAML = TypeVar("T_EnumToYAML", bound = enum.Enum)
 T_EnumFromYAML = TypeVar("T_EnumFromYAML", bound = enum.Enum)
 
@@ -115,7 +116,7 @@ def register_module_classes(yaml: ruamel.yaml.YAML, modules: Optional[Iterable[A
 # Representers and constructors for individual classes.
 #
 
-def numpy_array_to_yaml(representer: Representer, data: np.ndarray) -> str:
+def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, data: np.ndarray) -> str:
     """ Write a numpy array to YAML.
 
     It registers the array under the tag ``!numpy_array``.
@@ -145,7 +146,8 @@ def numpy_array_to_yaml(representer: Representer, data: np.ndarray) -> str:
         )
     )
 
-def numpy_array_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.SequenceNode) -> np.ndarray:
+def numpy_array_from_yaml(constructor: ruamel.yaml.constructor.BaseConstructor,
+                          data: ruamel.yaml.nodes.SequenceNode) -> np.ndarray:
     """ Read an array from YAML to numpy.
 
     It reads arrays registered under the tag ``!numpy_array``.
@@ -188,7 +190,7 @@ def numpy_array_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.Sequ
         return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle = True)
     return return_value
 
-def numpy_float64_to_yaml(representer: Representer, data: np.float64) -> str:
+def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, data: np.float64) -> str:
     """ Write a numpy float64 to YAML.
 
     It registers the float under the tag ``!numpy_float64``.
@@ -218,7 +220,8 @@ def numpy_float64_to_yaml(representer: Representer, data: np.float64) -> str:
         )
     )
 
-def numpy_float64_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.ScalarNode) -> np.float64:
+def numpy_float64_from_yaml(constructor: ruamel.yaml.constructor.BaseConstructor,
+                            data: ruamel.yaml.nodes.ScalarNode) -> np.float64:
     """ Read an float64 from YAML to numpy.
 
     It reads the float64 registered under the tag ``!numpy_float64``.
@@ -259,7 +262,8 @@ def numpy_float64_from_yaml(constructor: Constructor, data: ruamel.yaml.nodes.Sc
     return return_value
 
 def enum_to_yaml(cls: Type[T_EnumToYAML],
-                 representer: Representer, data: T_EnumToYAML) -> ruamel.yaml.nodes.ScalarNode:
+                 representer: ruamel.yaml.representer.BaseRepresenter,
+                 data: T_EnumToYAML) -> ruamel.yaml.nodes.ScalarNode:
     """ Encodes YAML representation.
 
     This is a mixin method for writing enum values to YAML. It needs to be added to the enum
@@ -281,13 +285,17 @@ def enum_to_yaml(cls: Type[T_EnumToYAML],
     Returns:
         Scalar representation of the name of the enumeration value.
     """
-    return representer.represent_scalar(
-        f"!{cls.__name__}",
-        f"{str(data)}"
+    return cast(
+        ruamel.yaml.nodes.ScalarNode,
+        representer.represent_scalar(
+            f"!{cls.__name__}",
+            f"{str(data)}"
+        )
     )
 
 def enum_from_yaml(cls: Type[T_EnumFromYAML],
-                   constructor: Constructor, node: ruamel.yaml.nodes.ScalarNode) -> T_EnumFromYAML:
+                   constructor: ruamel.yaml.constructor.BaseConstructor,
+                   node: ruamel.yaml.nodes.ScalarNode) -> T_EnumFromYAML:
     """ Decode YAML representation.
 
     This is a mixin method for reading enum values from YAML. It needs to be added to the enum

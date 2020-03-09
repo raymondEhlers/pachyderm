@@ -74,9 +74,7 @@ setup(
     # This is usually the minimal set of the required packages.
     install_requires = [
         "dataclasses;python_version<'3.7'",
-        # Pinned version because the typing information doesn't seem right,
-        # at least with how I understand it.
-        "ruamel.yaml<0.15.99",
+        "ruamel.yaml",
         "attrs>=19.3.0",
         "numpy",
         "scipy",

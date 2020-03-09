@@ -13,7 +13,8 @@ _testScript: &testScript
         # Check code quality
         - flake8 .
         # Static type checking
-        - mypy pachyderm
+        # no-incremental helps with a ruamel.ymal bug. See: https://sourceforge.net/p/ruamel-yaml/tickets/328/
+        - mypy pachyderm --no-incremental
         # Run the tests
         - pytest -l -vv --cov=pachyderm --cov-branch -m "not ROOT" --durations=5 tests/
         # Check that the docs build successfully

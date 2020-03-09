@@ -7,16 +7,17 @@
 
 import abc
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union, cast
 
 import iminuit
 import numpy as np
+import ruamel.yaml
 
 from pachyderm import generic_class
 from pachyderm.fit import base, cost_function
 
 if TYPE_CHECKING:
-    from pachyderm import histogram, yaml
+    from pachyderm import histogram
 
 logger = logging.getLogger(__name__)
 
@@ -176,8 +177,8 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         return fit_result
 
     @classmethod
-    def to_yaml(cls: Type[_T_Fit], representer: "yaml.Representer",
-                obj: _T_Fit) -> "yaml.ruamel.yaml.nodes.SequenceNode":
+    def to_yaml(cls: Type[_T_Fit], representer: ruamel.yaml.representer.BaseRepresenter,
+                obj: _T_Fit) -> ruamel.yaml.nodes.SequenceNode:
         """ Encode YAML representation.
 
         Since YAML won't handle function very nicely, we convert them to strings and then check them
@@ -204,11 +205,11 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         )
 
         # Finally, return the represented object.
-        return representation
+        return cast(ruamel.yaml.nodes.SequenceNode, representation)
 
     @classmethod
-    def from_yaml(cls: Type[_T_Fit], constructor: "yaml.Constructor",
-                  data: "yaml.ruamel.yaml.nodes.MappingNode") -> _T_Fit:
+    def from_yaml(cls: Type[_T_Fit], constructor: ruamel.yaml.constructor.BaseConstructor,
+                  data: ruamel.yaml.nodes.MappingNode) -> _T_Fit:
         """ Decode YAML representation.
 
         Args:

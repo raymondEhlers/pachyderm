@@ -13,7 +13,7 @@ import enum
 import itertools
 import logging
 import string
-from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
 
 from pachyderm import yaml
 from pachyderm.yaml import DictLike
@@ -32,7 +32,7 @@ def load_configuration(yaml: yaml.ruamel.yaml.YAML, filename: str) -> DictLike:
     with open(filename, "r") as f:
         config = yaml.load(f)
 
-    return config
+    return cast(DictLike, config)
 
 def override_options(config: DictLike, selected_options: Tuple[Any, ...],
                      set_of_possible_options: Tuple[Iterable[Tuple[str, Any]], ...],
