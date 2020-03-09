@@ -5,8 +5,6 @@
 .. codeauthor:: Ramyond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
-from __future__ import annotations
-
 import collections
 import itertools
 import logging
