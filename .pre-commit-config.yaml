@@ -13,7 +13,9 @@ repos:
       rev: v0.761
       hooks:
           - id: mypy
-            args: ["--ignore-missing-imports"]
+            # no-incremental helps with a bug in ruamel.yaml typing.
+            # See: https://sourceforge.net/p/ruamel-yaml/tickets/328/
+            args: ["--ignore-missing-imports", "--no-incremental"]
             # A sufficiently new version of attrs is needed to keep mypy happy
             additional_dependencies: ["attrs>=19.3.0"]
     - repo: https://github.com/pre-commit/pygrep-hooks
@@ -27,7 +29,7 @@ repos:
           - id: trailing-whitespace
           - id: check-executables-have-shebangs
     - repo: https://github.com/asottile/seed-isort-config
-      rev: v1.9.4
+      rev: v2.1.0
       hooks:
           - id: seed-isort-config
     - repo: https://github.com/pre-commit/mirrors-isort
