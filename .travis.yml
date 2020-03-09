@@ -1,8 +1,8 @@
 ---
+os: linux
 # xenial is needed for python 3.7
 dist: xenial
 language: python
-sudo: required
 _testScript: &testScript
     language: python
     # Use cache with pip to save time.
@@ -69,7 +69,7 @@ jobs:
           script: true
           deploy:
               provider: pypi
-              user: rehlers
+              username: rehlers
               password:
                   secure: ccA9Supmt5iw3XXi5tUaMR5M63sx0Oo21DnfNkiR9MMadb3il9u4iLTV7IzaXOzAuLBkW/WNcATpGQAYrj9Vo0okUwOnOCnku+1A6XTE2BVDnUOt9tZ1bvAVIUeiIc3APlbjmdPbnowgJblwERXA8JmjSHLY7zEZeDoXLv9rjlCEfEB2HYP037zUQDznqvavJft61J8piQYvdgVjeSMod0kVW1TIZ6tpwQQ1vSvP7sR3p7/Xn1rZKSJLf2CVHCOU/owQTtKVQ0PYA4p2tlNhEkB4csv7MFaGNtrwGDy7BWMJw2coyxNgW68DobcAQL0H8TZSi0Q1UJKBjr8qLjkvYMAhzX0ykjtVA6uQ8PB0+qa/+qVwe6hbg+Ln9nWd7cgI8RUQliIXsOPAp0pdioqOQOk8fIiNhiLLcyqWC2jtxvbk1uHNsypMeeBs9JgmV2udGPVxGWSA9UtV2i1dCMdepUd5woi4eVWGKetQD1rHvek8h1fT+24DwyqzvWHDC0alUx7sUbkPvu+V8hUwYwJw+fG0J4YaL6Now8SceQ85ZOxZlqoNVe9jNPUoHgYdXaTW3m6KdVZXgth794Y6CJdEOhvEbcWepYSLP3Cvf5divGxoHA/P6Yy5qXj1Fzs2FSI1ad98qTvlh6d/jeUvBSivxjbGyvTAC8V6Txg9/IaOQlM=
               distributions: sdist bdist_wheel
