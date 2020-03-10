@@ -469,7 +469,7 @@ class BinnedData:
         raise NotImplementedError("Not yet implemented.")
 
     @classmethod
-    def from_uproot(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
+    def _from_uproot(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
         """ Convert from uproot read histogram to BinnedData.
 
         """
@@ -488,7 +488,7 @@ class BinnedData:
         )
 
     @classmethod
-    def from_boost_histogram(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
+    def _from_boost_histogram(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
         """ Convert from boost histogram to BinnedData.
 
         """
@@ -503,7 +503,7 @@ class BinnedData:
         )
 
     @classmethod
-    def from_ROOT(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
+    def _from_ROOT(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
         """ Convert TH1, TH2, or TH3 histogram to BinnedData.
 
         Note:
@@ -574,7 +574,7 @@ class BinnedData:
         )
 
     @classmethod
-    def from_existing_data(cls: Type["BinnedData"], binned_data: Any) -> "BinnedData":
+    def from_existing_data(cls: Type["BinnedData"], binned_data: Any, return_copy_if_already_converted: bool = True) -> "BinnedData":
         """ Convert an existing histogram.
 
         Note:
@@ -587,18 +587,21 @@ class BinnedData:
         """
         # If it's already BinnedData, just return it
         if isinstance(binned_data, cls):
-            logger.warning(f"Passed binned data is already a {cls.__name__}. Returning the existing object.")
-            return binned_data
+            logger.warning(f"Passed binned data is already a {cls.__name__}. Returning {'a copy' if return_copy_if_already_converted else 'the existing object'}.")
+            if return_copy_if_already_converted:
+                return binned_data.copy()
+            else:
+                return binned_data
 
         # Now actually deal with conversion from other types.
         # "values" is a proxy for if we have an uproot hist.
         if hasattr(binned_data, "values"):
-            return cls.from_uproot(binned_data)
+            return cls._from_uproot(binned_data)
         if hasattr(binned_data, "view"):
-            return cls.from_boost_histogram(binned_data)
+            return cls._from_boost_histogram(binned_data)
 
         # Fall back to handling a traditional ROOT hist.
-        return cls.from_ROOT(binned_data)
+        return cls._from_ROOT(binned_data)
 
     # Convert to other formats.
     def to_ROOT(self) -> Any:
