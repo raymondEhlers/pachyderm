@@ -587,10 +587,11 @@ class BinnedData:
         """
         # If it's already BinnedData, just return it
         if isinstance(binned_data, cls):
-            logger.warning(f"Passed binned data is already a {cls.__name__}. Returning {'a copy' if return_copy_if_already_converted else 'the existing object'}.")
             if return_copy_if_already_converted:
+                logger.debug(f"Passed binned data is already a {cls.__name__}. Returning a copy of the object.")
                 return binned_data.copy()
             else:
+                logger.warning(f"Passed binned data is already a {cls.__name__}. Returning the existing object.")
                 return binned_data
 
         # Now actually deal with conversion from other types.
