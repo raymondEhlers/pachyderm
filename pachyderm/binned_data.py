@@ -474,17 +474,17 @@ class BinnedData:
 
         """
         # All of these methods should excludes underflow and overflow bins
-        bin_edges = hist.bins
+        bin_edges = hist.edges
         values = hist.values
         variances = hist.variances
 
         metadata: Dict[str, Any] = {}
 
         return cls(
-            axes = bin_edges,
-            values = values,
-            variances = variances,
-            metadata = metadata
+            axes=bin_edges,
+            values=values,
+            variances=variances,
+            metadata=metadata
         )
 
     @classmethod
