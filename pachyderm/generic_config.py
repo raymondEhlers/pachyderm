@@ -298,7 +298,7 @@ def create_key_index_object(key_index_name: str, iterables: Mapping[str, Any]) -
         frozen = True
     )
     # Allow for iteration over the key index values
-    KeyIndex.__iter__ = _key_index_iter
+    KeyIndex.__iter__ = _key_index_iter  # type: ignore
 
     return KeyIndex
 
