@@ -661,7 +661,7 @@ class BinnedData:
 
         return h
 
-    def to_histogram_1D(self) -> Any:
+    def to_histogram1D(self) -> Any:
         """ Convert to a Histogram 1D.
 
         This is entirely a convenience function. Generally, it's best to stay with BinnedData, but
