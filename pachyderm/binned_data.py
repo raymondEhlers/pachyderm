@@ -286,7 +286,7 @@ class BinnedData:
             The axis.
         """
         if len(self.axes) != 1:
-            raise ValueError("Calling axis is only valid for one axis. There are {len(self.axes)} axes.")
+            raise ValueError(f"Calling axis is only valid for one axis. There are {len(self.axes)} axes.")
         return self.axes[0]
 
     @property
@@ -619,11 +619,13 @@ class BinnedData:
         except ImportError:
             raise RuntimeError("Unable to import ROOT. Please ensure that ROOT is installed and in your $PYTHONPATH.")
 
-        unique_name = uuid.uuid4()
+        unique_name = str(uuid.uuid4())
         name = self.metadata.get("name", unique_name)
         title = self.metadata.get("title", unique_name)
+        # Axes need to be of the form: n_bins, bin_edges
+        axes = list(itertools.chain.from_iterable((len(axis), axis.bin_edges) for axis in self.axes))
 
-        args = [name, title, *self.axes]
+        args = [name, title, *axes]
         if len(self.axes) <= 3:
             h = getattr(ROOT, f"TH{len(self.axes)}D")(*args)
         else:
@@ -658,3 +660,24 @@ class BinnedData:
         h[:] = self.values
 
         return h
+
+    def to_histogram_1D(self) -> Any:
+        """ Convert to a Histogram 1D.
+
+        This is entirely a convenience function. Generally, it's best to stay with BinnedData, but
+        a Histogram1D is required in some cases, such as for fitting.
+
+        Returns:
+            Histogram1D containing the data.
+        """
+        # Validation
+        if len(self.axes) > 1:
+            raise ValueError(f"Can only convert to 1D histogram. Given {len(self.axes)} axes")
+
+        from pachyderm import histogram
+
+        return histogram.Histogram1D(
+            bin_edges = self.axes[0].bin_edges,
+            y = self.values,
+            errors_squared = self.variances,
+        )
