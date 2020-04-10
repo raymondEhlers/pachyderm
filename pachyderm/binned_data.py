@@ -162,6 +162,10 @@ class AxesTuple(Tuple[Axis, ...]):
     def bin_centers(self) -> Tuple[np.ndarray, ...]:
         return tuple(a.bin_centers for a in self)
 
+    @property
+    def shape(self) -> Tuple[int, ...]:
+        return tuple(len(a) for a in self)
+
     @classmethod
     def from_axes(cls: Type["AxesTuple"], axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]) -> "AxesTuple":
         values = axes
@@ -269,11 +273,17 @@ def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, valu
             logger.warning(f"Object '{other_name}' shares memory with object '{attribute.name}'. Copying '{attribute}'!")
             setattr(instance, attribute.name, value.copy())
 
+def _shape_array(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
+    """ Ensure that the arrays are shaped the same as the shape expected from the axes.
+
+    """
+    setattr(instance, attribute.name, value.reshape(instance.axes.shape))
+
 @attr.s(eq=False)
 class BinnedData:
     axes: AxesTuple = attr.ib(converter=_axes_tuple_from_axes_sequence, validator=[_shared_memory_check, _validate_axes])
-    values: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _validate_arrays])
-    variances: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _validate_arrays])
+    values: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _validate_arrays, _shape_array])
+    variances: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _validate_arrays, _shape_array])
     metadata: Dict[str, Any] = attr.ib(factory = dict)
 
     @property
