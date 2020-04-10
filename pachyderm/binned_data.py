@@ -42,7 +42,8 @@ def _axis_bin_edges_converter(value: Any) -> np.ndarray:
     if isinstance(value, Axis):
         value = value.bin_edges
     # Ravel to ensure that we have a standard 1D array.
-    return np.ravel(np.array(value))
+    # We specify the dtype here just to be safe.
+    return np.ravel(np.array(value, dtype=np.float64))
 
 def _np_array_converter(value: Any) -> np.ndarray:
     """ Convert the given value to a numpy array.
@@ -273,17 +274,28 @@ def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, valu
             logger.warning(f"Object '{other_name}' shares memory with object '{attribute.name}'. Copying '{attribute}'!")
             setattr(instance, attribute.name, value.copy())
 
-def _shape_array(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
-    """ Ensure that the arrays are shaped the same as the shape expected from the axes.
+def _shape_array_check(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
+    """ Ensure that the arrays are shaped the same as the shape expected from the axes. """
+    # If we're passed a flattened array, reshape it to follow the shape of the axes.
+    # NOTE: One must be a bit careful with this to ensure that the it is formatted as expected.
+    #       Especially when converting between ROOT and numpy.
+    if value.ndim == 1:
+        setattr(instance, attribute.name, value.reshape(instance.axes.shape))
+    if instance.axes.shape != value.shape:
+        # Protection for if the shapes are reversed.
+        if instance.axes.shape == tuple(reversed(value.shape)):
+            logger.info(f"Shape of {attribute.name} appears to be reversed. Transposing the array.")
+            setattr(instance, attribute.name, value.T)
+        else:
+            # Otherwise, something is entirely wrong. Just let the user know.
+            raise ValueError(f"Shape of {attribute.name} mismatches axes. {attribute.name:}.shape: {value.shape}, axes.shape: {instance.axes.shape}")
 
-    """
-    setattr(instance, attribute.name, value.reshape(instance.axes.shape))
 
 @attr.s(eq=False)
 class BinnedData:
     axes: AxesTuple = attr.ib(converter=_axes_tuple_from_axes_sequence, validator=[_shared_memory_check, _validate_axes])
-    values: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _validate_arrays, _shape_array])
-    variances: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _validate_arrays, _shape_array])
+    values: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _shape_array_check, _validate_arrays])
+    variances: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _shape_array_check, _validate_arrays])
     metadata: Dict[str, Any] = attr.ib(factory = dict)
 
     @property
@@ -526,7 +538,7 @@ class BinnedData:
             hist.Sumw2(True)
         class_name = hist.ClassName()
         # TH*D
-        n_dim = class_name[2]
+        n_dim = int(class_name[2])
         axis_methods = [hist.GetXaxis, hist.GetYaxis, hist.GetZaxis]
         root_axes = axis_methods[:n_dim]
 
@@ -550,17 +562,24 @@ class BinnedData:
 
             return bin_edges
 
+        # Determine the main values
         # Exclude overflow
+        # Axes
         axes = [Axis(get_bin_edges_from_axis(axis())) for axis in root_axes]
-        # NOTE: The y value and bin error are stored with the hist, not the axis.
-        values = np.array([
-            hist.GetBinContent(i) for i in range(1, hist.GetNcells())
-            if not (hist.IsBinUnderflow(i) and hist.IsBinOverflow(i))
+        # Values and variances
+        # ROOT stores the values in a flat array including underflow and overflow bins,
+        # so we need to remove the flow bins, and then appropriately shape the arrays.
+        # Specifically, to get the appropriate shape for the arrays, we need to reshape in the opposite
+        # order of the axes, and then transpose.
+        # NOTE: These operations _do not_ commute.
+        shape = tuple((len(a) for a in reversed(axes)))
+        bins_without_flow_mask = np.array([
+            not (hist.IsBinUnderflow(i) or hist.IsBinOverflow(i)) for i in range(hist.GetNcells())
         ])
-        errors = np.array(
-            hist.GetSumw2())
-        # Exclude the under/overflow bins
-        errors = errors[[slice(1, len(axis) + 1) for axis in axes]]
+        values = np.array([hist.GetBinContent(i) for i in range(hist.GetNcells())])
+        values = values[bins_without_flow_mask].reshape(shape).T
+        variances = np.array(hist.GetSumw2())
+        variances = variances[bins_without_flow_mask].reshape(shape).T
 
         # Check for a TProfile.
         # In that case we need to retrieve the errors manually because the Sumw2() errors are
@@ -571,7 +590,7 @@ class BinnedData:
             variances = errors ** 2
         else:
             # Sanity check. If they don't match, something odd has almost certainly occurred.
-            if not np.isclose(errors[0], hist.GetBinError(1) ** 2):
+            if not np.isclose(variances.flatten()[0], hist.GetBinError(1) ** 2):
                 raise ValueError("Sumw2 errors don't seem to represent bin errors!")
 
         metadata: Dict[str, Any] = {}
@@ -615,12 +634,16 @@ class BinnedData:
         return cls._from_ROOT(binned_data)
 
     # Convert to other formats.
-    def to_ROOT(self) -> Any:
+    def to_ROOT(self, copy: bool = True) -> Any:
         """ Convert into a ROOT histogram.
 
         NOTE:
             This is a lossy operation because there is nowhere to store metadata is in the ROOT hist.
 
+        Args:
+            copy: Copy the arrays before assigning them. The ROOT hist may be able to view the array memory,
+                such that modifications in one would affect the other. Be extremely careful, as that can have
+                unexpected side effects! So only disable with a very good reason. Default: True.
         Returns:
             ROOT histogram containing the data.
         """
@@ -629,23 +652,50 @@ class BinnedData:
         except ImportError:
             raise RuntimeError("Unable to import ROOT. Please ensure that ROOT is installed and in your $PYTHONPATH.")
 
+        # Setup
+        # We usually want to be entirely certain that the ROOT arrays are not pointing at the same memory
+        # as the current hist, so we make a copy. We basically always want to copy.
+        if copy:
+            h = self.from_existing_data(self)
+        else:
+            h = self
+
         unique_name = str(uuid.uuid4())
-        name = self.metadata.get("name", unique_name)
-        title = self.metadata.get("title", unique_name)
+        name = h.metadata.get("name", unique_name)
+        title = h.metadata.get("title", unique_name)
         # Axes need to be of the form: n_bins, bin_edges
-        axes = list(itertools.chain.from_iterable((len(axis), axis.bin_edges) for axis in self.axes))
+        axes = list(itertools.chain.from_iterable((len(axis), axis.bin_edges) for axis in h.axes))
 
         args = [name, title, *axes]
-        if len(self.axes) <= 3:
-            h = getattr(ROOT, f"TH{len(self.axes)}D")(*args)
+        if len(h.axes) <= 3:
+            h_ROOT = getattr(ROOT, f"TH{len(h.axes)}D")(*args)
         else:
-            raise RuntimeError(f"Asking to create hist with {len(self.axes)} > 3 dimensions.")
+            raise RuntimeError(f"Asking to create hist with {len(h.axes)} > 3 dimensions.")
 
-        for i, (value, error) in enumerate(zip(self.values, self.errors), start=1):
-            h.SetBinContent(i, value)
-            h.SetBinError(i, error)
+        # We have to keep track on the bin index by hand, because ROOT.
+        # NOTE: The transpose is extremely import! Without it, the arrays aren't in the order
+        #       that ROOT expects! ROOT expects for the arrays to increment first through x bins,
+        #       then increment the y bin, and iterate over x again, etc. We cast the arrays this via
+        #       via a transpose.
+        i = 1
+        for value, error in zip(h.values.T.flatten(), h.errors.T.flatten()):
+            # Sanity check.
+            if i >= h_ROOT.GetNcells():
+                raise ValueError("Indexing is wrong...")
 
-        return h
+            # Need to advance to the next bin that we care about.
+            # We don't want to naively increment and continue because then we should histogram values.
+            while h_ROOT.IsBinUnderflow(i) or h_ROOT.IsBinOverflow(i):
+                h_ROOT.SetBinContent(i, 0)
+                h_ROOT.SetBinError(i, 0)
+                i += 1
+
+            # Set the content
+            h_ROOT.SetBinContent(i, value)
+            h_ROOT.SetBinError(i, error)
+            i += 1
+
+        return h_ROOT
 
     def to_boost_histogram(self) -> Any:
         """ Convert into a boost-histogram.
@@ -661,13 +711,19 @@ class BinnedData:
         except ImportError:
             raise RuntimeError("Unable to import boost histogram. Please install it to export to a boost histogram.")
 
+        # It seems to copy by default, so we don't need to do it ourselves.
+
         axes = []
         for axis in self.axes:
             # NOTE: We use Variable instead of Regular even if the bin edges are Regular because it allows us to
             #       construct the axes just from the bin edges.
-            axes.append(bh.axis.Variable(axis.bin_edges))
+            axes.append(bh.axis.Variable(axis.bin_edges, underflow=False, overflow=False))
         h = bh.Histogram(*axes, storage=bh.storage.Weight())
-        h[:] = self.values
+        # Need to shape the array properly so that it will actually be able to assign to the boost histogram.
+        arr = np.zeros(shape=h.view().shape, dtype=h.view().dtype)
+        arr["value"] = self.values
+        arr["variance"] = self.variances
+        h[...] = arr
 
         return h
 
