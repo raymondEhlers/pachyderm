@@ -44,7 +44,7 @@ def test_conversion_and_projection_with_boost_histogram(logging_mixin: Any, h: b
 
     if h.values.ndim > 1:
         # Check projection
-        bh_proj = bh_hist[:,::bh.sum]
+        bh_proj = bh_hist[:, ::bh.sum]
         h_proj = binned_data.BinnedData(
             axes=h.axes[0],
             values=np.sum(h.values, axis=1),
@@ -73,7 +73,7 @@ def test_conversion_and_projection_with_root_hist(logging_mixin: Any, h: binned_
     """ Test conversion of binned_data to boost-histogram (and back).
 
     """
-    ROOT = pytest.importorskip("ROOT")
+    ROOT = pytest.importorskip("ROOT")  # noqa: F841
     root_hist = h.to_ROOT()
     # First, check the ROOT conversion by hand.
     # Values
