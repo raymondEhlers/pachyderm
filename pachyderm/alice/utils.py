@@ -81,6 +81,37 @@ def grid_md5(gridfile: Union[Path, str]) -> str:
 
     return gb_out.split("\t")[0]
 
+def check_output_file(inputfile: Union[Path, str], outputfile: Union[Path, str], verbose: bool = True) -> bool:
+    """ Check if the output file exists and matches the input file.
+
+    Args:
+        inputfile: Path to the file to be copied.
+        outputfile: Path to where the file should be copied.
+    Returns:
+        True if the output file was copied successfully (exists and matches MD5 sum).
+    """
+    # Validation
+    inputfile = Path(inputfile)
+    outputfile = Path(outputfile)
+
+    if outputfile.exists():
+        localmd5 = local_md5(outputfile)
+        gridmd5 = grid_md5(inputfile)
+        #logger.debug(f"MD5local: {localmd5}, MD5grid {gridmd5}")
+        if localmd5 != gridmd5:
+            logger.error(f"Mismatch in MD5 sum for file {outputfile}. Need to recopy.")
+            # Incorrect MD5 sum - probably a corrupted output file.
+            outputfile.unlink()
+            return False
+        else:
+            if verbose:
+                logger.info(f"Output file {outputfile} (was) copied correctly")
+            return True
+
+    # Fall through if the output file doesn't exist.
+    logger.error(f"output file {outputfile} not found")
+    return False
+
 def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -> bool:
     """ Copy a file using alien_cp.
 
@@ -109,21 +140,7 @@ def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -
         return False
 
     # Check that the file was copied successfully.
-    if outputfile.exists():
-        localmd5 = local_md5(outputfile)
-        gridmd5 = grid_md5(inputfile)
-        #logger.debug(f"MD5local: {localmd5}, MD5grid {gridmd5}")
-        if localmd5 != gridmd5:
-            logger.error(f"Mismatch in MD5 sum for file {outputfile}")
-            # Incorrect MD5 sum - probably a corrupted output file.
-            outputfile.unlink()
-            return False
-        else:
-            logger.info(f"Output file {outputfile} copied correctly")
-            return True
-    else:
-        logger.error(f"output file {outputfile} not found")
-        return False
+    return check_output_file(inputfile=inputfile, outputfile=outputfile)
 
 def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
     """ List the files in a directory on AliEn.
