@@ -109,7 +109,8 @@ def check_output_file(inputfile: Union[Path, str], outputfile: Union[Path, str],
             return True
 
     # Fall through if the output file doesn't exist.
-    logger.error(f"output file {outputfile} not found")
+    if verbose:
+        logger.error(f"output file {outputfile} not found")
     return False
 
 def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -> bool:

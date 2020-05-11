@@ -415,7 +415,7 @@ class FileListDownloadFiller(QueueFiller):
             if utils.check_output_file(inputfile=file_pair.source, outputfile=file_pair.target, verbose=False):
                 logger.info(f"Output file {file_pair.target} already found - not copying again")
             else:
-                logger.debug(f"Adding input: {file_pair.source}, output: {file_pair.target}")
+                logger.info(f"Adding input: {file_pair.source}, output: {file_pair.target}")
                 # Add to the queue
                 self._queue.put(file_pair)
 
