@@ -409,9 +409,7 @@ class FileListDownloadFiller(QueueFiller):
 
     def _process(self) -> None:
         for file_pair in self._file_pairs:
-            # Determine output directory. It will be created if necessary when copying.
-            # Help out mypy...
-            output = Path(file_pair.target)
+            # Only download the file if it doesn't exist or the checksum is incorrect.
             if utils.check_output_file(inputfile=file_pair.source, outputfile=file_pair.target, verbose=False):
                 logger.info(f"Output file {file_pair.target} already found - not copying again")
             else:
