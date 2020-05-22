@@ -1,0 +1,20 @@
+---
+# LHC17p: 2017 pp data at 5.02 TeV.
+period: "lhc17p"
+parameters:
+    system: "pp"
+    year: 2017
+    file_types:
+        ESD:
+            search_path: "/alice/{data_type}/{year}/{period}/{run}/pass1"
+            filename: "root_archive.zip"
+        AOD:
+            # AOD208:
+            # /alice/data/2017/LHC17p/000282343/pass1_FAST/AOD208/0001/
+            search_path: "/alice/{data_type}/{year}/{period}/{run}/pass1_FAST/{file_type}"
+            filename: "AliAOD.root"
+selections:
+    n_files_per_selection: 8
+    file_type: AOD
+    production_number: 208
+    runs: [282343]

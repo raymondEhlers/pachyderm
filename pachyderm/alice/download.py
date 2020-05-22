@@ -554,11 +554,11 @@ def run_dataset_download() -> None:
     )
     parser.add_argument(
         "-f", "--fewerThreads", action="store_true", default=False,
-        help="Decrease the number of threads by half."
+        help="Decrease the number of threads by half. Default: using 4 threads."
     )
     parser.add_argument(
         "-d", "--datasets", type=str, default=None, metavar="PATH",
-        help="Path to the datasets directory."
+        help="Path to the datasets directory. Default: unset."
     )
     args = parser.parse_args()
     output = download_dataset(
