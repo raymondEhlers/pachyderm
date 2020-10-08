@@ -149,6 +149,8 @@ class Axis:
         """ Check for equality. """
         return cast(bool, np.allclose(self.bin_edges, other.bin_edges))
 
+    # TODO: Serialize more carefully...
+
 
 class AxesTuple(Tuple[Axis, ...]):
     @property
@@ -491,7 +493,7 @@ class BinnedData:
         raise NotImplementedError("Not yet implemented.")
 
     @classmethod
-    def _from_uproot(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
+    def _from_uproot3(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
         """ Convert from uproot read histogram to BinnedData.
 
         """
@@ -507,6 +509,28 @@ class BinnedData:
             values=values,
             variances=variances,
             metadata=metadata
+        )
+
+    @classmethod
+    def _from_uproot4(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
+        """ Convert from uproot4 to BinnedData.
+
+        Cannot just use the boost_histogram conversion because it includes flow bins.
+
+        """
+        # Explanation of otions:
+        # We want to exclude the overflow bins
+        # We want to receive the errors.
+        # dd returns the bin edges as tuple
+        (values, errors), bin_edges = hist.to_numpy(flow=False, errors=True, dd=True)
+
+        metadata: Dict[str, Any] = {}
+
+        return cls(
+            axes=bin_edges,
+            values=values,
+            variances=errors ** 2,
+            metadata=metadata,
         )
 
     @classmethod
@@ -589,9 +613,12 @@ class BinnedData:
             # We expected variances (errors squared)
             variances = errors ** 2
         else:
+            # TODO: This sanity check doesn't work for 2D hists because we drop the overflow bins...
+            #       Figure out how to get the first non-overflow bin for any dimension.
             # Sanity check. If they don't match, something odd has almost certainly occurred.
             if not np.isclose(variances.flatten()[0], hist.GetBinError(1) ** 2):
                 raise ValueError("Sumw2 errors don't seem to represent bin errors!")
+            ...
 
         metadata: Dict[str, Any] = {}
 
@@ -624,9 +651,12 @@ class BinnedData:
                 return binned_data
 
         # Now actually deal with conversion from other types.
-        # "values" is a proxy for if we have an uproot hist.
-        if hasattr(binned_data, "values"):
-            return cls._from_uproot(binned_data)
+        # Uproot3: "values" and "variances" is a proxy for an uproot3 hist. uproot4 doesn't have variances.
+        if hasattr(binned_data, "values") and hasattr(binned_data, "variances"):
+            return cls._from_uproot3(binned_data)
+        # Uproot4: has "values_errors"
+        if hasattr(binned_data, "values_errors"):
+            return cls._from_uproot4(binned_data)
         if hasattr(binned_data, "view"):
             return cls._from_boost_histogram(binned_data)
 
