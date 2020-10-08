@@ -113,19 +113,20 @@ def configure() -> None:
     #       why that might be preferable here.
 
     # Setup the LaTeX preamble
-    matplotlib.rcParams["text.latex.preamble"] = [
+    matplotlib.rcParams["text.latex.preamble"] = "\n".join([
         # Enable AMS math package (for among other things, "\text")
         r"\usepackage{amsmath}",
         # Add fonts that will be used below. See the `mathtext` fonts set below for further info.
         r"\usepackage{sfmath}",
         # Ensure that existing values are included.
         matplotlib.rcParams["text.latex.preamble"],
-    ]
+    ])
     params = {
         # Enable latex
         "text.usetex": True,
         # Enable tex preview, which improves the alignment of the baseline
-        "text.latex.preview": True,
+        # Not necessary anymore for matplotlib ^3.3
+        #"text.latex.preview": True,
         # Enable axis ticks (after they can be disabled by seaborn)
         "xtick.bottom": True,
         "ytick.left": True,
