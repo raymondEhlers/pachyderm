@@ -613,12 +613,21 @@ class BinnedData:
             # We expected variances (errors squared)
             variances = errors ** 2
         else:
-            # TODO: This sanity check doesn't work for 2D hists because we drop the overflow bins...
-            #       Figure out how to get the first non-overflow bin for any dimension.
-            # Sanity check. If they don't match, something odd has almost certainly occurred.
-            if not np.isclose(variances.flatten()[0], hist.GetBinError(1) ** 2):
+            # Cross check. If they don't match, something odd has almost certainly occurred.
+            # We use lambdas so we don't go beyond the length of the axis unless we're certain
+            # that we have that many dimensions.
+            first_non_overflow_bin_map = {
+                # Using 10 ((by 10) by 10) as an example, to derive the specific values below, and then generalizing.
+                # 1
+                1: lambda axes: 1,
+                # 12 + 1 = 13
+                2: lambda axes: (len(axes[0]) + 2) + 1,
+                # 12 * 12 + 12 + 1 = 157
+                3: lambda axes: (len(axes[0]) + 2) * (len(axes[1]) + 2) + (len(axes[0]) + 2) + 1,
+            }
+            first_non_overflow_bin = first_non_overflow_bin_map[len(axes)](axes)  # type: ignore
+            if not np.isclose(variances.flatten()[0], hist.GetBinError(first_non_overflow_bin) ** 2):
                 raise ValueError("Sumw2 errors don't seem to represent bin errors!")
-            ...
 
         metadata: Dict[str, Any] = {}
 
