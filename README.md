@@ -43,7 +43,7 @@ I recommend setting up the development environment as follows:
 
 ```bash
 # Setup
-$ pip install -e .[dev,tests,docs]
+$ pip install -e .[dev]
 # Setup git pre-commit hooks to reduce errors
 $ pre-commit install
 # develop develop develop...
@@ -57,7 +57,7 @@ also be built locally using:
 
 ```bash
 # Setup
-$ pip install -e .[dev,tests,docs]
+$ pip install -e .[dev]
 # Create the docs
 $ pushd doc && make html && popd
 # Open the created docs
