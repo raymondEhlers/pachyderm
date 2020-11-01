@@ -9,7 +9,7 @@ LABEL maintainer="Raymond Ehlers <raymond.ehlers@cern.ch>, Oak Ridge National La
 
 # Setup environment
 ENV ROOTSYS="/opt/root"
-ENV PATH="${ROOTSYS}/bin:/home/overwatch/.local/bin:${PATH}"
+ENV PATH="${ROOTSYS}/bin:/home/overwatch/.local/bin:/home/overwatch/.poetry/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${ROOTSYS}/lib:${LD_LIBRARY_PATH}"
 ENV PYTHONPATH="${ROOTSYS}/lib:${PYTHONPATH}"
 
@@ -26,5 +26,4 @@ COPY --chown=overwatch:overwatch . ${PACHYDERM_ROOT}
 # Install pachyderm. We need to install numpy first so that
 # probfit (which is only needed for tests!) will install properly.
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python - \
-        && source $HOME/.poetry/env \
         && poetry install
