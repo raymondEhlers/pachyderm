@@ -260,7 +260,7 @@ numpy = ">=1.11.3"
 name = "importlib-metadata"
 version = "2.0.0"
 description = "Read metadata from Python packages"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
@@ -890,7 +890,7 @@ testing = ["pytest (>=3.5,<3.7.3 || >3.7.3)", "pytest-checkdocs (>=1.2.3)", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.1"
-content-hash = "8d4ecae4a1a9d92679eb07c01c6d6c395da5a55176be338758dba15d7cda2388"
+content-hash = "328f93bf3cdb5bf98ff48bb053a580e17eb18bab78fe1b282f64a7ed426c58b5"
 
 [metadata.files]
 alabaster = [
