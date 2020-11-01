@@ -78,7 +78,7 @@ setup(
         "attrs>=19.3.0",
         "numpy",
         "scipy",
-        "uproot",
+        "uproot4",
         # Depends on ROOT, but that can't be installed through pip.
         # The dependence is only imported on demand, so it can actually be installed without it,
         # but some functionality depends on it being available.

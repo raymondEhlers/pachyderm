@@ -718,21 +718,22 @@ class Histogram1D:
                 errors are the sumw2 bin errors, and metadata is the extracted metadata.
         """
         # This excludes underflow and overflow
-        (y, bin_edges) = hist.numpy()
-
         # Also retrieve errors from sumw2.
-        # If more sophistication is needed, we can modify this to follow the approach to
+        # If more sophistication is needed for the errors, we can modify this to follow the approach to
         # calculating bin errors from TH1::GetBinError()
-        errors = hist.variances
+        (y, errors), (bin_edges,) = hist.to_numpy(flow=False, errors=True, dd=True)
+
+        print(dir(hist))
+        print(hist.member("fTsumw"))
 
         # Extract stats information. It will be stored in the metadata.
         metadata = {}
         ## We extract the values directly from the members.
         metadata.update(_create_stats_dict_from_values(
-            hist._fTsumw, hist._fTsumw2, hist._fTsumwx, hist._fTsumwx2
+            hist.member("fTsumw"), hist.member("fTsumw2"), hist.member("fTsumwx"), hist.member("fTsumwx2")
         ))
 
-        return (bin_edges, y, errors, metadata)
+        return (bin_edges, y, errors ** 2, metadata)
 
     @classmethod
     def from_hepdata(cls: Type[_T], hist: Mapping[str, Any],

@@ -9,11 +9,11 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Iterator, Tuple
 
 import numpy as np
 import pytest
-import uproot
+import uproot4 as uproot
 
 from pachyderm import histogram
 from pachyderm.typing_helpers import Hist
@@ -22,7 +22,7 @@ from pachyderm.typing_helpers import Hist
 logger = logging.getLogger(__name__)
 
 @pytest.fixture  # type: ignore
-def retrieve_root_list(test_root_hists: Any) -> Tuple[str, Any, Any]:
+def retrieve_root_list(test_root_hists: Any) -> Iterator[Tuple[str, Any, Any]]:
     """ Create an set of lists to load for a ROOT file.
 
     NOTE: Not using a mock since I'd like to the real objects and storing
