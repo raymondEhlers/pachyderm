@@ -8,17 +8,20 @@ _testScript: &testScript
     # Use cache with pip to save time.
     cache: pip
     install:
-        - pip install --upgrade .[dev]
+        # Install poetry
+        - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
+        # Install the package
+        - poetry install
     script:
         # Check code quality
-        - flake8 .
+        - poetry run flake8 .
         # Static type checking
         # no-incremental helps with a ruamel.ymal bug. See: https://sourceforge.net/p/ruamel-yaml/tickets/328/
-        - mypy pachyderm --no-incremental
+        - poetry run mypy pachyderm --no-incremental
         # Run the tests
-        - pytest -l -vv --cov=pachyderm --cov-branch -m "not ROOT" --durations=5 tests/
+        - poetry run pytest -l -vv --cov=pachyderm --cov-branch -m "not ROOT" --durations=5 tests/
         # Check that the docs build successfully
-        - pushd docs && make html && popd
+        - pushd docs && poetry run make html && popd
         # Skip sending the coverage here because it will be rather low due to skipping the ROOT tests.
         # We will instead send that coverage report.
 _dockerTestScript: &dockerTestScript
@@ -34,7 +37,7 @@ _dockerTestScript: &dockerTestScript
         - ci_env=`bash <(curl -s https://codecov.io/env)`
         # Run tests and upload coverage
         # Pachyderm was installed when the image was created above, so we don't need to install it again.
-        - docker run $ci_env "${DOCKER_USERNAME}/pachyderm:${TRAVIS_TAG:-latest}-py${PYTHON_VERSION}" /bin/bash -c "pytest -l -vv --cov=pachyderm --cov-branch --durations=5 tests/ && bash <(curl -s https://codecov.io/bash)"
+        - docker run $ci_env "${DOCKER_USERNAME}/pachyderm:${TRAVIS_TAG:-latest}-py${PYTHON_VERSION}" /bin/bash -c "poetry run pytest -l -vv --cov=pachyderm --cov-branch --durations=5 tests/ && bash <(curl -s https://codecov.io/bash)"
         # We could now push the image to docker hub. However, we don't really need it for anything, so
         # we skip this step for now.
         - bash docker/pushToDockerHub.sh

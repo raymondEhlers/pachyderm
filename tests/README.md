@@ -23,6 +23,6 @@ Beyond ROOT (which is required for tests marked as "ROOT"), the package test dep
 with:
 
 ```bash
-$ pip install -e .[tests]
+$ poetry install
 ```
 
