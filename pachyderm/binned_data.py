@@ -777,3 +777,12 @@ class BinnedData:
             y = self.values,
             errors_squared = self.variances,
         )
+
+    def to_numpy(self) -> Tuple[np.ndarray, ...]:
+        """ Convert to a numpy histogram.
+
+        Returns:
+            Tuple of values, and then axes bin edges.
+        """
+        # TODO: Check that the values don't need to be transposed or similar.
+        return (self.values, *self.axes.bin_edges)
