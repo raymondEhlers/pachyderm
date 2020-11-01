@@ -53,6 +53,7 @@ Sphinx = "^3.2.1"
 recommonmark = "^0.6.0"
 sphinx-markdown-tables = "^0.0.15"
 importlib-metadata = {version = "^2.0.0", python="^3.6, <3.8"}
+boost-histogram = {version = "^0.11.1", optional = true}
 
 [tool.isort]
 known_standard_library = ["setuptools", "typing_extensions"]

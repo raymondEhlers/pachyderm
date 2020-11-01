@@ -59,6 +59,24 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 pytz = ">=2015.7"
 
 [[package]]
+name = "boost-histogram"
+version = "0.11.1"
+description = "The Boost::Histogram Python wrapper."
+category = "dev"
+optional = true
+python-versions = "!=3.0,!=3.1,!=3.2,!=3.3,!=3.4,>=2.7"
+
+[package.dependencies]
+numpy = ">=1.13.3"
+
+[package.extras]
+all = ["matplotlib", "xarray", "xhistogram", "netcdf4", "numba", "uproot", "pytest", "pytest-benchmark", "ipykernel", "cloudpickle", "Sphinx (>=3.0,<4.0)", "recommonmark (>=0.5.0)", "sphinx-book-theme (0.38.0)", "nbsphinx", "sphinx-copybutton"]
+dev = ["ipykernel", "cloudpickle", "pytest", "pytest-benchmark"]
+docs = ["Sphinx (>=3.0,<4.0)", "recommonmark (>=0.5.0)", "sphinx-book-theme (0.38.0)", "nbsphinx", "sphinx-copybutton"]
+examples = ["matplotlib", "xarray", "xhistogram", "netcdf4", "numba", "uproot"]
+test = ["pytest", "pytest-benchmark"]
+
+[[package]]
 name = "cached-property"
 version = "1.5.2"
 description = "A decorator for caching properties in classes."
@@ -872,7 +890,7 @@ testing = ["pytest (>=3.5,<3.7.3 || >3.7.3)", "pytest-checkdocs (>=1.2.3)", "pyt
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.1"
-content-hash = "8d4e310440960f31fd0a2b7873fbc657bdf7c8580b6fe7415ea167de5b76c300"
+content-hash = "8d4ecae4a1a9d92679eb07c01c6d6c395da5a55176be338758dba15d7cda2388"
 
 [metadata.files]
 alabaster = [
@@ -898,6 +916,72 @@ attrs = [
 babel = [
     {file = "Babel-2.8.0-py2.py3-none-any.whl", hash = "sha256:d670ea0b10f8b723672d3a6abeb87b565b244da220d76b4dba1b66269ec152d4"},
     {file = "Babel-2.8.0.tar.gz", hash = "sha256:1aac2ae2d0d8ea368fa90906567f5c08463d98ade155c0c4bfedd6a0f7160e38"},
+]
+boost-histogram = [
+    {file = "boost_histogram-0.11.1-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:5f5984e902bb96107dc251d25af197242c97c22d95d5f96a955b8ac61d288807"},
+    {file = "boost_histogram-0.11.1-cp27-cp27m-manylinux1_i686.whl", hash = "sha256:ebb6e06793a9f85e8daf92d8c5ca2c895291f19f9ca7f86931b82f4b87ffcb4f"},
+    {file = "boost_histogram-0.11.1-cp27-cp27m-manylinux1_x86_64.whl", hash = "sha256:a9a22d164e8313f747feb997796bd8f65efcbdbea7d237dc70ba69efdc130fd7"},
+    {file = "boost_histogram-0.11.1-cp27-cp27m-manylinux2010_i686.whl", hash = "sha256:4f50a07f1d4c489ed96765b1c20d4e9f3e4fc3952cafe77d2b365738439c3da6"},
+    {file = "boost_histogram-0.11.1-cp27-cp27m-manylinux2010_x86_64.whl", hash = "sha256:be483298d1cda9e9ad8822d14162d96ba9e4b508a6cbe8327976a79b0efe02a3"},
+    {file = "boost_histogram-0.11.1-cp27-cp27m-win32.whl", hash = "sha256:55bf2c59493d0cf02294f5a5fb4f9782cda7628d4565e64fc10f5c037058ed2d"},
+    {file = "boost_histogram-0.11.1-cp27-cp27m-win_amd64.whl", hash = "sha256:c7837743912f6fb9efe8161626abe008f10107257e05ba55f3dc53af91ada1d4"},
+    {file = "boost_histogram-0.11.1-cp27-cp27mu-manylinux1_i686.whl", hash = "sha256:5955d10ebf538064cdbdb391f3f65da4af887d689a21f13956c3d0c5a2f850b5"},
+    {file = "boost_histogram-0.11.1-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:2b99fe60bb4218e21d321b8a37c150627d154b077c5674480b3817e48de29e41"},
+    {file = "boost_histogram-0.11.1-cp27-cp27mu-manylinux2010_i686.whl", hash = "sha256:71ab8cf31b9830ebc1abf4a07ef647b9832954c9b3cec1b9572d7b1b663c9a51"},
+    {file = "boost_histogram-0.11.1-cp27-cp27mu-manylinux2010_x86_64.whl", hash = "sha256:1842f2dd1d2ddfff85ccc87c45b28dda348372766a1e3729b887d3866ed79724"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-macosx_10_9_x86_64.whl", hash = "sha256:de6118e36e870cf2d8d5185886203f2ba11eb99716346c5039420823ca04a128"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:0ecd0c54e942b1168163f04405366e88decf1e720ffb398001dea65d05640ab9"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:c18930805724ad4d7142ca8e0d13eb99cf4e155fe6f6a7109c3f565c9096d597"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-manylinux2010_i686.whl", hash = "sha256:3f0c194b8532df43232385319034baacf26f5bf27ac041db643de88963fc6580"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-manylinux2010_x86_64.whl", hash = "sha256:500981901060b16430aff3dfb7b061df491528167850454a6ad193f6c53badbf"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-manylinux2014_aarch64.whl", hash = "sha256:6f59d55da2a17b6252d9a0ec91748b425f1a6a5c74f0d9173404f9fe15270444"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-manylinux2014_ppc64le.whl", hash = "sha256:b866f01e9c5ef850849bca77f42f56cc16e01fe618ee0416eb910af954aa20ba"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-win32.whl", hash = "sha256:065d85d7b8470d0547df179193c2cc3c04d492a6fa026f0661d05d0c110687ce"},
+    {file = "boost_histogram-0.11.1-cp35-cp35m-win_amd64.whl", hash = "sha256:41ac629aabe1afa185599f53ee8a76f6a005b78b65244b3db3d9b50ef3d5c622"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:b0056c6df413c856282c0bfabb9c7bf100efe1e31f0e6989a214c238f106002f"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:ebe694ea1952ad95d7071794b8650cbba7b7f81754f820ff7c1b225b599aa5a9"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:98f28352bdb39f1a2d5bb8cfb6450804c48167dd44659a234a6f189d47a2edad"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-manylinux2010_i686.whl", hash = "sha256:e5b4886b37a46b6f1654bfb6349dabde36e66bd543e1738a1a8bd255ea136424"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:07f63a72ee04f9a11a2156900435db87fe65f7fc2f60270d857c472fd30d52f8"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:bb9f9d77ddc80fc307114f00efdabc6afb23f2f5acde091a2e81579aa50cf521"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-manylinux2014_ppc64le.whl", hash = "sha256:89d29b94984f1ebbd2436db4fdab4c32bbf9214fb2e374fb6915ada1c00ce01f"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-win32.whl", hash = "sha256:458a8890d2f604292150e63e88bc647562865b844a78d3eaa893ce0d2c6f875f"},
+    {file = "boost_histogram-0.11.1-cp36-cp36m-win_amd64.whl", hash = "sha256:a58c2a254a9df86f22552d15842114faaeb5093e4e2c5bfd3e496e38e8c2f733"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:9e7901b1f452bcf9c1909042a3ffea25a8dad3006fa4f2e9379f35060dd59ec1"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:f275c8e87eec8203f1e07343329391f9006658d36b9a3da1b134ab9575f18311"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:a91458397c5df7d7a35322e34a70fa60d09e720266f7a42a6f4c59fcf099f4a1"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-manylinux2010_i686.whl", hash = "sha256:6a6cca832fd662b9cdf2d9c5c3fc4b6e18b3e88276ca5dee98a6403cb363c337"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:116bafbfebd22335f4ec2e7acd9512577c3c34ecb717b310e913dec162ef2438"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-manylinux2014_aarch64.whl", hash = "sha256:45948484424449385c6ab744bf1050a1f952d2d7bd2cdc9e530f2eb2c22d1c5a"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-manylinux2014_ppc64le.whl", hash = "sha256:d9c0481054c779e9af67011e6a01b48a8b1e27b499ff3c48bfdaf9b2b0ca2730"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-win32.whl", hash = "sha256:6647dea592b85f96ec08ab187d3e122e0c4f1fe46a1b31d72659c847be20a9a7"},
+    {file = "boost_histogram-0.11.1-cp37-cp37m-win_amd64.whl", hash = "sha256:64f372e6db80c84edf9da86aadfca5c4c4a9c0ccb60c3f259588259428c9edb2"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:a04a9b179e0084fb517ca7d21a078df1dceaa87804854444411af42c3338393c"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-manylinux1_i686.whl", hash = "sha256:b7b4077ce3361f6cadc80c3285257c9d9738404c066e6af0867fbd4b639b5e70"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:ff169a886d9fe391b8cacf69ed271314f9356d20704a8dcc1579d789589d807b"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-manylinux2010_i686.whl", hash = "sha256:b28debc8e0f82ded855a2fa244b6c75b4a1306bb78e1631794acd2136eae37ac"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:86e4b2169ac5df6aaa4d5ab488576b2a4a8a157762bcb2a0c1008416eddc120d"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:5e04d5dcb28f1a4ab8247efcb9200e9be60cbdb35286e95c0a264c43fa9c11d1"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-manylinux2014_ppc64le.whl", hash = "sha256:80af31dec73da4925456b3923ba3db32ebc469048859e6fb5f291decb06de977"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-win32.whl", hash = "sha256:f5ecf38ab56afeab07e2df1cde4672a28065d83631716bd59bda00ef9810a77d"},
+    {file = "boost_histogram-0.11.1-cp38-cp38-win_amd64.whl", hash = "sha256:f8b60f4f8ede3393d369c13f77be50d39fd655a688e70a81be5ff4994fe6dc91"},
+    {file = "boost_histogram-0.11.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:ea21e364c460cccc435501afc50185d9615abafb6afed1067f2f2afbc984cb23"},
+    {file = "boost_histogram-0.11.1-cp39-cp39-manylinux1_i686.whl", hash = "sha256:8ed52aa9375fa95cb705afcb9f6ff8f5185d114bc8c410eab3085af54999b91b"},
+    {file = "boost_histogram-0.11.1-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:838e1bb88dc940fe531b0fe4b41b72723105cc669434d7008bebba5d76f07b3b"},
+    {file = "boost_histogram-0.11.1-cp39-cp39-manylinux2010_i686.whl", hash = "sha256:3512fa2151a667c6c60b66bf947a40cd7ede981dc4b2b2bf274dac320a079d32"},
+    {file = "boost_histogram-0.11.1-cp39-cp39-manylinux2010_x86_64.whl", hash = "sha256:6060edb3bfcd28a79b22185a55b2721e17ca0400cc35df768602712002f26245"},
+    {file = "boost_histogram-0.11.1-cp39-cp39-win32.whl", hash = "sha256:b861df64b8add4942a2e4502ae15fdab249a57e2bcf969e5aa4b62f3a6365b19"},
+    {file = "boost_histogram-0.11.1-cp39-cp39-win_amd64.whl", hash = "sha256:756c0dc2528eca60bfeb44ccf9b28c21618b4f9475ed89da3c861e4050f53971"},
+    {file = "boost_histogram-0.11.1-pp27-pypy_73-macosx_10_9_x86_64.whl", hash = "sha256:c1b1509f0c21571dc1dfaa6fe7522a7f72f4f2110677863bdd9cc8f6a75aeb87"},
+    {file = "boost_histogram-0.11.1-pp27-pypy_73-manylinux2010_x86_64.whl", hash = "sha256:c185bd6c79266cbf78d4a0c554ab011ce0eab5d95830214c4c989d77dbb5b604"},
+    {file = "boost_histogram-0.11.1-pp27-pypy_73-win32.whl", hash = "sha256:e2966ce3b9a6f294083bd2b9d6c8b18a6fe2b248564aa78e5df23d01c6f00ceb"},
+    {file = "boost_histogram-0.11.1-pp36-pypy36_pp73-macosx_10_9_x86_64.whl", hash = "sha256:9a1a234e2832920ac6908ce7439cb007e20cb4b025eee179c692d93e0d84fb19"},
+    {file = "boost_histogram-0.11.1-pp36-pypy36_pp73-manylinux2010_x86_64.whl", hash = "sha256:4f0c2e71991cd58d3728b2721dcabb80b8324c45085abf39952f20d8aaeb45a4"},
+    {file = "boost_histogram-0.11.1-pp36-pypy36_pp73-win32.whl", hash = "sha256:5cc7a2adb4b6ef44dfab3c868dc4cad25fccb37a322124145ebf04fecb52e481"},
+    {file = "boost_histogram-0.11.1-pp37-pypy37_pp73-macosx_10_9_x86_64.whl", hash = "sha256:610886dd0f1db42301fe0297e6a3e3e502bfe9c7025a226caa5ed6faf19d7c24"},
+    {file = "boost_histogram-0.11.1-pp37-pypy37_pp73-manylinux2010_x86_64.whl", hash = "sha256:bb6e254da69709419fd169dd46e5187b3fc10df92c91f9d4b153dfe415a9dcdc"},
+    {file = "boost_histogram-0.11.1-pp37-pypy37_pp73-win32.whl", hash = "sha256:28f97f4ca8f69641cfe7ac0adaf40219f3bcb8baf4900c76bb8247f0bb8b207a"},
+    {file = "boost_histogram-0.11.1.tar.gz", hash = "sha256:eb2205e7cac21c3742b19ea147359c588e07a4f3b719d58c6ad6009fee423fce"},
 ]
 cached-property = [
     {file = "cached-property-1.5.2.tar.gz", hash = "sha256:9fa5755838eecbb2d234c3aa390bd80fbd3ac6b6869109bfc1b499f7bd89a130"},
