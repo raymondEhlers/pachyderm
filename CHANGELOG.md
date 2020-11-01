@@ -2,6 +2,31 @@
 
 Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 
+## [3.0] - 1 November 2020
+
+### Added
+
+- `BinnedData` class to generalize the `Histogram1D` class to general sets of binned data. It supports
+  arbitrary number of axes, a substantially improved interface, and better maintainability. Note that
+  this class doesn't yet have every feature from `Histogram1D`, but many of them are not necessary with
+  `boost-histogram` available (some `BinnedData` features are inspired by bh). For example, we can convert to
+  a bh hist to project, and then convert back (or do the summing directly - it's usually not difficult, except
+  for profiles). As a notable new features, it has conversion to and from a wide variety of formats. This has
+  been the basis for most of my analysis work this year. Written and improved over a variety of commits,
+  starting with `d7e5bf8`.
+- Helper function for plotting error boxes (refactor from `alice-jet-hadron`). See: `77ae89e`.
+- A variety of ALICE datasets for download.
+
+### Changed
+
+- Move from `setup.py` to poetry. Starting from: `e7a9391`, with a ton of bug fixes.
+- Support JAlien for ALICE download scripts. This deprecates support for the older alien. See: `fba152a`.
+- General maintenance tasks for typing, TravisCI, etc.
+
+### Fixed
+
+- A ton of small bugs.
+
 ## [2.5] - 5 December 2019
 
 ### Added
