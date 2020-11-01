@@ -11,7 +11,7 @@ _testScript: &testScript
         # Install poetry
         - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python - && source $HOME/.poetry/env
         # Install the package
-        - poetry install
+        - poetry install --extras docs
     script:
         # Check code quality
         - poetry run flake8 .
