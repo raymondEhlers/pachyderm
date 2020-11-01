@@ -36,9 +36,16 @@ numdifftools = "^0.9.39"
 "ruamel.yaml" = "^0.16.12"
 dataclasses = {version = "^0.7", python="^3.6, <3.7"}
 importlib-resources = {version = "^3.3.0", python="^3.6, <3.7"}
-# Strictly speaking, this should be in the dev dependencies. However, pep517 won't install the dev dependencies.
+# These are the docs requirements. Ideally, I would put them into the dev docs.
+# However, pep517 won't install the dev dependencies.
 # So we move it here to enable building the docs, even though it's a bit of a waste...
-importlib-metadata = {version = "^2.0.0", python="^3.6, <3.8"}
+Sphinx = {version = "^3.2.1", optional = true}
+recommonmark = {version = "^0.6.0", optional = true}
+sphinx-markdown-tables = {version = "^0.0.15", optional = true}
+importlib-metadata = {version = "^2.0.0", python="^3.6, <3.8", optional = true}
+
+[tool.poetry.extras]
+docs = ["Sphinx", "recommonmark", "sphinx-markdown-tables", "importlib-metadata"]
 
 [tool.poetry.dev-dependencies]
 uproot4 = "^0.1.0"
@@ -52,9 +59,6 @@ pytest = "^6.1.2"
 pytest-cov = "^2.10.1"
 pytest-mock = "^3.3.1"
 codecov = "^2.1.10"
-Sphinx = "^3.2.1"
-recommonmark = "^0.6.0"
-sphinx-markdown-tables = "^0.0.15"
 boost-histogram = {version = "^0.11.1", optional = true}
 
 [tool.isort]
