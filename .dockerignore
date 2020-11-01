@@ -17,7 +17,10 @@ docs/_build
 .pachyderm/
 .env/
 .env3/
+.venv/
 # Other files
 *.swp
+# Data
+alice/
 
 
