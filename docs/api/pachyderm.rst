@@ -1,6 +1,15 @@
 pachyderm package
 =================
 
+pachyderm.binned_data module
+----------------------------
+
+.. automodule:: pachyderm.binned_data
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
 pachyderm.fit.base module
 -------------------------
 
