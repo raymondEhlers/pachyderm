@@ -5,21 +5,23 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+import ctypes
 import logging
+import numpy as np
 import os
+import pytest
+import uproot4 as uproot
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, Tuple
 
-import numpy as np
-import pytest
-import uproot4 as uproot
-
 from pachyderm import histogram
 from pachyderm.typing_helpers import Hist
 
+
 # Setup logger
 logger = logging.getLogger(__name__)
+
 
 @pytest.fixture  # type: ignore
 def retrieve_root_list(test_root_hists: Any) -> Iterator[Tuple[str, Any, Any]]:
@@ -99,6 +101,7 @@ def retrieve_root_list(test_root_hists: Any) -> Iterator[Tuple[str, Any, Any]]:
     # on the main list later.
     l1.Clear()
 
+
 @pytest.mark.ROOT
 class TestOpenRootFile:
     def test_open_file(self, logging_mixin: Any, retrieve_root_list: Any) -> None:
@@ -106,7 +109,7 @@ class TestOpenRootFile:
         filename, root_list, expected = retrieve_root_list
 
         output: Dict[str, Any] = {}
-        with histogram.RootOpen(filename = filename) as f:
+        with histogram.RootOpen(filename=filename) as f:
             for name in ["mainList", "secondList"]:
                 histogram._retrieve_object(output, f.Get(name))
 
@@ -119,7 +122,11 @@ class TestOpenRootFile:
         expected_inner_list = expected["mainList"].pop("innerList")
         output_second_list = output.pop("secondList")
         expected_second_list = expected.pop("secondList")
-        for (o, e) in [(output["mainList"], expected["mainList"]), (output_inner_list, expected_inner_list), (output_second_list, expected_second_list)]:
+        for (o, e) in [
+            (output["mainList"], expected["mainList"]),
+            (output_inner_list, expected_inner_list),
+            (output_second_list, expected_second_list),
+        ]:
             for oHist, eHist in zip(o.values(), e.values()):
                 logger.info(f"oHist: {oHist}, eHist: {eHist}")
                 oValues = [oHist.GetBinContent(i) for i in range(0, oHist.GetXaxis().GetNbins() + 2)]
@@ -130,10 +137,11 @@ class TestOpenRootFile:
         """ Test for raising the proper exception for a file that doesn't exist. """
         fake_filename = "fake_filename.root"
         with pytest.raises(IOError) as exception_info:
-            with histogram.RootOpen(filename = fake_filename):
+            with histogram.RootOpen(filename=fake_filename):
                 pass
         # Check that the right exception was thrown by proxy via the filename.
         assert "Failed" in exception_info.value.args[0] and f"{fake_filename}" in exception_info.value.args[0]
+
 
 @pytest.mark.ROOT
 class TestRetrievingHistgramsFromAList:
@@ -141,7 +149,7 @@ class TestRetrievingHistgramsFromAList:
         """ Test for retrieving all of the histograms in a ROOT file. """
         (filename, root_list, expected) = retrieve_root_list
 
-        output = histogram.get_histograms_in_file(filename = filename)
+        output = histogram.get_histograms_in_file(filename=filename)
         logger.info(f"{output}")
 
         # This isn't the most sophisticated way of comparison, but bin-by-bin is sufficient for here.
@@ -151,7 +159,11 @@ class TestRetrievingHistgramsFromAList:
         expected_inner_list = expected["mainList"].pop("innerList")
         output_second_list = output.pop("secondList")
         expected_second_list = expected.pop("secondList")
-        for (o, e) in [(output["mainList"], expected["mainList"]), (output_inner_list, expected_inner_list), (output_second_list, expected_second_list)]:
+        for (o, e) in [
+            (output["mainList"], expected["mainList"]),
+            (output_inner_list, expected_inner_list),
+            (output_second_list, expected_second_list),
+        ]:
             for oHist, eHist in zip(o.values(), e.values()):
                 logger.info(f"oHist: {oHist}, eHist: {eHist}")
                 oValues = [oHist.GetBinContent(i) for i in range(0, oHist.GetXaxis().GetNbins() + 2)]
@@ -207,6 +219,7 @@ class TestRetrievingHistgramsFromAList:
 
         assert output == expected
 
+
 @pytest.fixture  # type: ignore
 def setup_histogram_conversion() -> Tuple[str, str, histogram.Histogram1D]:
     """ Setup expected values for histogram conversion tests.
@@ -223,9 +236,11 @@ def setup_histogram_conversion() -> Tuple[str, str, histogram.Histogram1D]:
         The error on bin 9 (one-indexed) is just sqrt(counts), while the error on bin 4
         is sqrt(4) because we filled it with weight 2 (sumw2 squares this values).
     """
-    expected = histogram.Histogram1D(bin_edges = np.linspace(0, 10, 11),
-                                     y = np.array([0, 0, 0, 2, 0, 0, 0, 0, 3, 0]),
-                                     errors_squared = np.array([0, 0, 0, 4, 0, 0, 0, 0, 3, 0]))
+    expected = histogram.Histogram1D(
+        bin_edges=np.linspace(0, 10, 11),
+        y=np.array([0, 0, 0, 2, 0, 0, 0, 0, 3, 0]),
+        errors_squared=np.array([0, 0, 0, 4, 0, 0, 0, 0, 3, 0]),
+    )
 
     hist_name = "rootHist"
     filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testFiles", "convertHist.root")
@@ -233,6 +248,7 @@ def setup_histogram_conversion() -> Tuple[str, str, histogram.Histogram1D]:
         # Need to create the initial histogram.
         # This shouldn't happen very often, as the file is stored in the repository.
         import ROOT
+
         root_hist = ROOT.TH1F(hist_name, hist_name, 10, 0, 10)
         root_hist.Fill(3, 2)
         for _ in range(3):
@@ -244,6 +260,7 @@ def setup_histogram_conversion() -> Tuple[str, str, histogram.Histogram1D]:
         fOut.Close()
 
     return filename, hist_name, expected
+
 
 def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1D) -> bool:
     """ Helper function to compare a given Histogram against expected values.
@@ -271,6 +288,7 @@ def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1
 
     return True
 
+
 @pytest.mark.ROOT  # type: ignore
 def test_ROOT_hist_to_histogram(setup_histogram_conversion: Any) -> None:
     """ Check conversion of a read in ROOT file via ROOT to a Histogram object. """
@@ -278,6 +296,7 @@ def test_ROOT_hist_to_histogram(setup_histogram_conversion: Any) -> None:
 
     # Setup and read histogram
     import ROOT
+
     fIn = ROOT.TFile(filename, "READ")
     input_hist = fIn.Get(hist_name)
 
@@ -285,6 +304,7 @@ def test_ROOT_hist_to_histogram(setup_histogram_conversion: Any) -> None:
 
     # Cleanup
     fIn.Close()
+
 
 def test_uproot_hist_to_histogram(setup_histogram_conversion: Any) -> None:
     """ Check conversion of a read in ROOT file via uproot to a Histogram object. """
@@ -299,18 +319,18 @@ def test_uproot_hist_to_histogram(setup_histogram_conversion: Any) -> None:
     # Cleanup
     del uproot_file
 
+
 def test_histogram1D_to_from_existing_histogram(logging_mixin: Any) -> None:
     """ Test passing a Histogram1D to ``from_existing_histogram``. It should return the same object. """
     h_input = histogram.Histogram1D(
-        bin_edges = np.array([0, 1, 2]),
-        y = np.array([2.3, 5.4]),
-        errors_squared = np.array([2.3, 5.4]),
+        bin_edges=np.array([0, 1, 2]), y=np.array([2.3, 5.4]), errors_squared=np.array([2.3, 5.4]),
     )
 
     h_output = histogram.Histogram1D.from_existing_hist(h_input)
 
     # Use explict equality check because they really are the same histograms.
     assert h_output is h_input
+
 
 @pytest.mark.ROOT  # type: ignore
 def test_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
@@ -325,6 +345,7 @@ def test_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
     assert np.isclose(h.std_dev, h_root.GetStdDev())
     # Variance
     assert np.isclose(h.variance, h_root.GetStdDev() ** 2)
+
 
 @pytest.mark.ROOT  # type: ignore
 def test_recalculated_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
@@ -346,45 +367,60 @@ def test_recalculated_derived_properties(logging_mixin: Any, test_root_hists: An
     # Variance
     assert np.isclose(histogram.binned_variance(stats), h_root.GetStdDev() ** 2)
 
-@pytest.mark.parametrize("bin_edges, y, errors_squared", [  # type: ignore
-    (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2, 3])),
-    (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2])),
-    (np.array([1, 2, 3]), np.array([1, 2]), np.array([1, 2, 3])),
-], ids = ["Too short bin edges", "Too long y", "Too long errors squared"])
-def test_hist_input_length_validation(logging_mixin: Any, bin_edges: np.ndarray, y: np.ndarray, errors_squared: np.ndarray) -> None:
+
+@pytest.mark.parametrize(
+    "bin_edges, y, errors_squared",
+    [  # type: ignore
+        (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2, 3])),
+        (np.array([1, 2, 3]), np.array([1, 2, 3]), np.array([1, 2])),
+        (np.array([1, 2, 3]), np.array([1, 2]), np.array([1, 2, 3])),
+    ],
+    ids=["Too short bin edges", "Too long y", "Too long errors squared"],
+)
+def test_hist_input_length_validation(
+    logging_mixin: Any, bin_edges: np.ndarray, y: np.ndarray, errors_squared: np.ndarray
+) -> None:
     """ Check histogram input length validation. """
     with pytest.raises(ValueError) as exception_info:
-        histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+        histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=errors_squared)
     assert "Length of input arrays doesn't match!" in exception_info.value.args[0]
 
-@pytest.mark.parametrize("bin_edges, y, errors_squared, expect_corrected_types", [  # type: ignore
-    (np.array([1, 2, 3]), np.array([1, 2]), np.array([1, 2]), True),
-    ([1, 2, 3], np.array([1, 2]), np.array([1, 2]), True),
-    ([1, 2, 3], [1, 2], [1, 2], True),
-    # Apparently ``np.array`` can take pretty much anything I can throw at it. So we skip
-    # the nonconvertible test.
-    #(((12, 23), 12), ("something totally wrong", "wrong"), "for sure", False),
-], ids = ["All correct", "Mixed inputs", "All wrong (convertible)"])
-def test_hist_input_type_validation(logging_mixin: Any, bin_edges: np.ndarray, y: np.ndarray,
-                                    errors_squared: np.ndarray, expect_corrected_types: str) -> None:
+
+@pytest.mark.parametrize(
+    "bin_edges, y, errors_squared, expect_corrected_types",
+    [  # type: ignore
+        (np.array([1, 2, 3]), np.array([1, 2]), np.array([1, 2]), True),
+        ([1, 2, 3], np.array([1, 2]), np.array([1, 2]), True),
+        ([1, 2, 3], [1, 2], [1, 2], True),
+        # Apparently ``np.array`` can take pretty much anything I can throw at it. So we skip
+        # the nonconvertible test.
+        # (((12, 23), 12), ("something totally wrong", "wrong"), "for sure", False),
+    ],
+    ids=["All correct", "Mixed inputs", "All wrong (convertible)"],
+)
+def test_hist_input_type_validation(
+    logging_mixin: Any, bin_edges: np.ndarray, y: np.ndarray, errors_squared: np.ndarray, expect_corrected_types: str
+) -> None:
     """ Check histogram input type validation. """
     if expect_corrected_types:
-        h = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+        h = histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=errors_squared)
         for arr in [h.bin_edges, h.y, h.errors_squared]:
             assert isinstance(arr, np.ndarray)
     else:
         with pytest.raises(ValueError) as exception_info:
-            h = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+            h = histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=errors_squared)
         assert "Arrays must be numpy arrays" in exception_info.value.args[0]
+
 
 def test_hist_identical_arrays(logging_mixin: Any) -> None:
     """ Test handling receiving identical numpy arrays. """
     bin_edges = np.array([1, 2, 3])
     y = np.array([1, 2])
 
-    h = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = y)
+    h = histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=y)
     # Even through we passed the same array, they should be copied by the validation.
     assert np.may_share_memory(h.y, h.errors_squared) is False
+
 
 @pytest.mark.ROOT
 class TestWithRootHists:
@@ -404,9 +440,9 @@ class TestWithRootHists:
         expected_bin_edges[:-1] = [hist.GetXaxis().GetBinLowEdge(i) for i in x_bins]
         expected_bin_edges[-1] = hist.GetXaxis().GetBinUpEdge(hist.GetXaxis().GetNbins())
         expected_hist_array = histogram.Histogram1D(
-            bin_edges = expected_bin_edges,
-            y = np.array([hist.GetBinContent(i) for i in x_bins]),
-            errors_squared = np.array([hist.GetBinError(i) for i in x_bins])**2,
+            bin_edges=expected_bin_edges,
+            y=np.array([hist.GetBinContent(i) for i in x_bins]),
+            errors_squared=np.array([hist.GetBinError(i) for i in x_bins]) ** 2,
         )
 
         logger.debug(f"sumw2: {len(hist.GetSumw2())}")
@@ -448,6 +484,7 @@ class TestWithRootHists:
         """
         # Setup
         import ROOT
+
         profile = ROOT.TProfile("test", "test", 10, 0, 100)
         for x in range(1000):
             profile.Fill(x % 100, 3)
@@ -464,16 +501,14 @@ class TestWithRootHists:
         # Check that the errors aren't equal to the Sumw2 errors. They should not be for the TProfile
         assert not np.allclose(h.errors, sumw2[1:-1])
 
-    @pytest.mark.parametrize("use_bin_edges", [
-        False, True
-    ], ids = ["Use bin centers", "Use bin edges"])  # type: ignore
-    @pytest.mark.parametrize("set_zero_to_NaN", [
-        False, True
-    ], ids = ["Keep zeroes as zeroes", "Set zeroes to NaN"])
-    def test_get_array_from_hist2D(self, logging_mixin, use_bin_edges, set_zero_to_NaN, test_root_hists):
+    @pytest.mark.parametrize("use_bin_edges", [False, True], ids=["Use bin centers", "Use bin edges"])
+    @pytest.mark.parametrize("set_zero_to_NaN", [False, True], ids=["Keep zeroes as zeroes", "Set zeroes to NaN"])
+    def test_get_array_from_hist2D(self, logging_mixin, use_bin_edges, set_zero_to_NaN, test_root_hists):  # type: ignore
         """ Test getting numpy arrays from a 2D hist. """
         hist = test_root_hists.hist2D
-        x, y, hist_array = histogram.get_array_from_hist2D(hist = hist, set_zero_to_NaN = set_zero_to_NaN, return_bin_edges = use_bin_edges)
+        x, y, hist_array = histogram.get_array_from_hist2D(
+            hist=hist, set_zero_to_NaN=set_zero_to_NaN, return_bin_edges=use_bin_edges
+        )
 
         # Determine expected values
         if use_bin_edges:
@@ -492,17 +527,20 @@ class TestWithRootHists:
         x_range = x_mesh
         y_range = y_mesh
         expected_x, expected_y = np.meshgrid(x_range, y_range)
-        expected_hist_array = np.array([
-            hist.GetBinContent(x, y)
-            for x in range(1, hist.GetXaxis().GetNbins() + 1)
-            for y in range(1, hist.GetYaxis().GetNbins() + 1)], dtype=np.float32
+        expected_hist_array = np.array(
+            [
+                hist.GetBinContent(x, y)
+                for x in range(1, hist.GetXaxis().GetNbins() + 1)
+                for y in range(1, hist.GetYaxis().GetNbins() + 1)
+            ],
+            dtype=np.float32,
         ).reshape(hist.GetYaxis().GetNbins(), hist.GetXaxis().GetNbins())
         if set_zero_to_NaN:
             expected_hist_array[expected_hist_array == 0] = np.nan
 
         assert np.allclose(x, expected_x)
         assert np.allclose(y, expected_y)
-        assert np.allclose(hist_array, expected_hist_array, equal_nan = True)
+        assert np.allclose(hist_array, expected_hist_array, equal_nan=True)
 
         # Check particular values for good measure.
         assert np.isclose(hist_array[1][0], 1.0)
@@ -510,6 +548,7 @@ class TestWithRootHists:
             assert np.isnan(hist_array[0][1])
         else:
             assert np.isclose(hist_array[0][1], 0.0)
+
 
 @pytest.fixture  # type: ignore
 def setup_basic_hist(logging_mixin: Any) -> Tuple[histogram.Histogram1D, np.ndarray, np.ndarray, np.ndarray]:
@@ -538,24 +577,36 @@ def setup_basic_hist(logging_mixin: Any) -> Tuple[histogram.Histogram1D, np.ndar
     # As if the first bin was filled with weight of 2.
     errors_squared = np.array([4, 2, 3, 0])
 
-    h = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+    h = histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=errors_squared)
 
     return h, bin_edges, y, errors_squared
 
-@pytest.mark.parametrize("value, expected_bin", [
-    (0, 0),  # type: ignore
-    (0.5, 0),
-    (1, 1),
-    (1.0, 1),
-    (1.5, 1),
-    (1.99, 1),
-    (2, 2),
-    (3, 3),
-    (4.5, 3),
-], ids = ["start bin 0", "mid bin 0",
-          "start bin 1", "float start bin 1", "mid bin 1", "end bin 1",
-          "bin 2",
-          "bin 3", "upper bin 3"])
+
+@pytest.mark.parametrize(
+    "value, expected_bin",
+    [
+        (0, 0),  # type: ignore
+        (0.5, 0),
+        (1, 1),
+        (1.0, 1),
+        (1.5, 1),
+        (1.99, 1),
+        (2, 2),
+        (3, 3),
+        (4.5, 3),
+    ],
+    ids=[
+        "start bin 0",
+        "mid bin 0",
+        "start bin 1",
+        "float start bin 1",
+        "mid bin 1",
+        "end bin 1",
+        "bin 2",
+        "bin 3",
+        "upper bin 3",
+    ],
+)
 def test_find_bin(logging_mixin, setup_basic_hist, value, expected_bin):
     """ Test for finding the bin based on a given value. """
     h, _, _, _ = setup_basic_hist
@@ -563,20 +614,26 @@ def test_find_bin(logging_mixin, setup_basic_hist, value, expected_bin):
 
     assert found_bin == expected_bin
 
-@pytest.mark.parametrize("test_equality", [
-    False,
-    True,  # type: ignore
-], ids = ["Test inequality", "Test equality"])
-@pytest.mark.parametrize("access_attributes_which_are_stored", [
-    False,
-    True,
-], ids = ["Do not access other attributes", "Access other attributes which are stored"])
+
+@pytest.mark.parametrize(
+    "test_equality",
+    [
+        False,
+        True,  # type: ignore
+    ],
+    ids=["Test inequality", "Test equality"],
+)
+@pytest.mark.parametrize(
+    "access_attributes_which_are_stored",
+    [False, True],
+    ids=["Do not access other attributes", "Access other attributes which are stored"],
+)
 def test_histogram1D_equality(logging_mixin, setup_basic_hist, test_equality, access_attributes_which_are_stored):
     """ Test for Histogram1D equality. """
     h, bin_edges, y, errors_squared = setup_basic_hist
 
-    h1 = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
-    h2 = histogram.Histogram1D(bin_edges = bin_edges, y = y, errors_squared = errors_squared)
+    h1 = histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=errors_squared)
+    h2 = histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=errors_squared)
 
     if access_attributes_which_are_stored:
         # This attribute will be stored (but under "_x"), so we want to make sure that it
@@ -591,6 +648,7 @@ def test_histogram1D_equality(logging_mixin, setup_basic_hist, test_equality, ac
     else:
         assert h1 != h2
 
+
 @dataclass
 class HistInfo:
     """ Convenience for storing hist testing information.
@@ -598,16 +656,13 @@ class HistInfo:
     Could reuse the ``Histogram1D`` object, but since we're testing it here, it seems better to use
     a separate object.
     """
+
     y: np.array
     errors_squared: np.array
 
     def convert_to_histogram_1D(self, bin_edges: np.array) -> histogram.Histogram1D:
         """ Convert these stored values into a ``Histogram1D``. """
-        return histogram.Histogram1D(
-            bin_edges = bin_edges,
-            y = self.y,
-            errors_squared = self.errors_squared,
-        )
+        return histogram.Histogram1D(bin_edges=bin_edges, y=self.y, errors_squared=self.errors_squared,)
 
     def convert_to_ROOT_hist(self, bin_edges: np.array) -> Hist:
         """ Convert these stored values in a ROOT.TH1F.
@@ -616,16 +671,18 @@ class HistInfo:
         something simple is sufficient for our purposes here.
         """
         import ROOT
+
         hist = ROOT.TH1F("tempHist", "tempHist", len(bin_edges) - 1, bin_edges.astype(float))
         hist.Sumw2()
 
         # Exclude under- and overflow
-        for i, (val, error_squared) in enumerate(zip(self.y, self.errors_squared), start = 1):
+        for i, (val, error_squared) in enumerate(zip(self.y, self.errors_squared), start=1):
             # ROOT hists are 1-indexed.
             hist.SetBinContent(i, val)
             hist.SetBinError(i, np.sqrt(error_squared))
 
         return hist
+
 
 class TestHistogramOperators:
     """ Test ``Histogram1D`` operators.
@@ -634,24 +691,39 @@ class TestHistogramOperators:
     the functions. But since the expected values are different for each test,
     and the test code itself is very simple, there doesn't seem to be much point.
     """
-    _bin_edges = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    _filled_two_times = HistInfo(np.array([0, 0, 2., 0, 0, 0, 0, 0, 0, 0]),
-                                 np.array([0, 0, 2., 0, 0, 0, 0, 0, 0, 0]))
-    _filled_four_times = HistInfo(np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]),
-                                  np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]))
-    _filled_once_with_weight_of_2 = HistInfo(np.array([0, 0, 2., 0, 0, 0, 0, 0, 0, 0]),
-                                             np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]))
-    _filled_twice_with_weight_of_2 = HistInfo(np.array([0, 0, 4., 0, 0, 0, 0, 0, 0, 0]),
-                                              np.array([0, 0, 8., 0, 0, 0, 0, 0, 0, 0]))
 
-    @pytest.fixture(params = [  # type: ignore
-        (_filled_two_times, _filled_four_times,
-            HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_two_times, _filled_twice_with_weight_of_2,
-            HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 10, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
-            HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]))),
-    ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
+    _bin_edges = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    _filled_two_times = HistInfo(np.array([0, 0, 2.0, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 2.0, 0, 0, 0, 0, 0, 0, 0]))
+    _filled_four_times = HistInfo(
+        np.array([0, 0, 4.0, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 4.0, 0, 0, 0, 0, 0, 0, 0])
+    )
+    _filled_once_with_weight_of_2 = HistInfo(
+        np.array([0, 0, 2.0, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 4.0, 0, 0, 0, 0, 0, 0, 0])
+    )
+    _filled_twice_with_weight_of_2 = HistInfo(
+        np.array([0, 0, 4.0, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 8.0, 0, 0, 0, 0, 0, 0, 0])
+    )
+
+    @pytest.fixture(
+        params=[  # type: ignore
+            (
+                _filled_two_times,
+                _filled_four_times,
+                HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_two_times,
+                _filled_twice_with_weight_of_2,
+                HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 10, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_once_with_weight_of_2,
+                _filled_twice_with_weight_of_2,
+                HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+        ],
+        ids=["Standard filled", "One standard, one weighted", "Two weighted"],
+    )
     def setup_addition(self, request: Any, logging_mixin: Any) -> Tuple[Any, ...]:
         """ We want to share this parametrization between multiple tests, so we define it as a fixture.
 
@@ -662,8 +734,8 @@ class TestHistogramOperators:
             because mypy struggles with the typing information here.
         """
         # Setup
-        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
-        h2 = request.param[1].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges=self._bin_edges)
+        h2 = request.param[1].convert_to_histogram_1D(bin_edges=self._bin_edges)
         return (*request.param, h1, h2)
 
     def test_addition(self, setup_addition: Any) -> None:
@@ -684,8 +756,8 @@ class TestHistogramOperators:
         """ Compare the result of ``Histogram1D`` addition vs ROOT. """
         # Setup
         h1_info, h2_info, expected, h1, h2 = setup_addition
-        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
-        h2_root = h2_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
+        h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
         # Operation
         h3 = h1 + h2
@@ -709,22 +781,34 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.fixture(params = [  # type: ignore
-        (_filled_two_times, _filled_four_times,
-            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_two_times, _filled_twice_with_weight_of_2,
-            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 10, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
-            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]))),
-    ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
+    @pytest.fixture(
+        params=[  # type: ignore
+            (
+                _filled_two_times,
+                _filled_four_times,
+                HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_two_times,
+                _filled_twice_with_weight_of_2,
+                HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 10, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_once_with_weight_of_2,
+                _filled_twice_with_weight_of_2,
+                HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+        ],
+        ids=["Standard filled", "One standard, one weighted", "Two weighted"],
+    )
     def setup_subtraction(self, request: Any, logging_mixin: Any) -> Tuple[Any, ...]:
         """ We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
         # Setup
-        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
-        h2 = request.param[1].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges=self._bin_edges)
+        h2 = request.param[1].convert_to_histogram_1D(bin_edges=self._bin_edges)
         return (*request.param, h1, h2)
 
     def test_subtraction(self, setup_subtraction: Any) -> None:
@@ -745,8 +829,8 @@ class TestHistogramOperators:
         """ Compare the result of ``Histogram1D`` subtraction vs ROOT. """
         # Setup
         h1_info, h2_info, expected, h1, h2 = setup_subtraction
-        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
-        h2_root = h2_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
+        h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
         # Operation
         h3 = h2 - h1
@@ -755,22 +839,34 @@ class TestHistogramOperators:
         # Check result
         assert check_hist(h2_root, h3)
 
-    @pytest.fixture(params = [  # type: ignore
-        (_filled_two_times, _filled_four_times,
-            HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 48, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_two_times, _filled_twice_with_weight_of_2,
-            HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 64, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
-            HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 96, 0, 0, 0, 0, 0, 0, 0]))),
-    ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
+    @pytest.fixture(
+        params=[  # type: ignore
+            (
+                _filled_two_times,
+                _filled_four_times,
+                HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 48, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_two_times,
+                _filled_twice_with_weight_of_2,
+                HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 64, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_once_with_weight_of_2,
+                _filled_twice_with_weight_of_2,
+                HistInfo(np.array([0, 0, 8, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 96, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+        ],
+        ids=["Standard filled", "One standard, one weighted", "Two weighted"],
+    )
     def setup_multiplication(self, request: Any, logging_mixin: Any) -> Tuple[Any, ...]:
         """ We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
         # Setup
-        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
-        h2 = request.param[1].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges=self._bin_edges)
+        h2 = request.param[1].convert_to_histogram_1D(bin_edges=self._bin_edges)
         return (*request.param, h1, h2)
 
     def test_multiplication(self, setup_multiplication: Any) -> None:
@@ -791,8 +887,8 @@ class TestHistogramOperators:
         """ Compare the result of ``Histogram1D`` multiplication vs ROOT. """
         # Setup
         h1_info, h2_info, expected, h1, h2 = setup_multiplication
-        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
-        h2_root = h2_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
+        h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
         # Operation
         h3 = h2 * h1
@@ -801,19 +897,28 @@ class TestHistogramOperators:
         # Check result
         assert check_hist(h2_root, h3)
 
-    @pytest.fixture(params = [  # type: ignore
-        (_filled_two_times, 3,
-            HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 18, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_twice_with_weight_of_2, 3,
-            HistInfo(np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 72, 0, 0, 0, 0, 0, 0, 0]))),
-    ], ids = ["Standard filled", "Weighing filled"])
+    @pytest.fixture(
+        params=[  # type: ignore
+            (
+                _filled_two_times,
+                3,
+                HistInfo(np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 18, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_twice_with_weight_of_2,
+                3,
+                HistInfo(np.array([0, 0, 12, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 72, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+        ],
+        ids=["Standard filled", "Weighing filled"],
+    )
     def setup_scalar_multiplication(self, logging_mixin: Any, request: Any) -> Tuple[Any, ...]:
         """ We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
         # Setup
-        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges=self._bin_edges)
         return (*request.param, h1)
 
     def test_scalar_multiplication(self, setup_scalar_multiplication: Any) -> None:
@@ -834,7 +939,7 @@ class TestHistogramOperators:
         """ Compare the results of ``Histogram1D`` multiplication vs ROOT. """
         # Setup
         h1_info, scalar, expected, h1 = setup_scalar_multiplication
-        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
         # Operation
         h3 = h1 * scalar
@@ -843,22 +948,34 @@ class TestHistogramOperators:
         # Check result
         assert check_hist(h1_root, h3)
 
-    @pytest.fixture(params = [  # type: ignore
-        (_filled_two_times, _filled_four_times,
-            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 3, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_two_times, _filled_twice_with_weight_of_2,
-            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 4, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_once_with_weight_of_2, _filled_twice_with_weight_of_2,
-            HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0]))),
-    ], ids = ["Standard filled", "One standard, one weighted", "Two weighted"])
+    @pytest.fixture(
+        params=[  # type: ignore
+            (
+                _filled_two_times,
+                _filled_four_times,
+                HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 3, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_two_times,
+                _filled_twice_with_weight_of_2,
+                HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 4, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_once_with_weight_of_2,
+                _filled_twice_with_weight_of_2,
+                HistInfo(np.array([0, 0, 2, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 6, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+        ],
+        ids=["Standard filled", "One standard, one weighted", "Two weighted"],
+    )
     def setup_division(self, request: Any, logging_mixin: Any) -> Tuple[Any, ...]:
         """ We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
         # Setup
-        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
-        h2 = request.param[1].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges=self._bin_edges)
+        h2 = request.param[1].convert_to_histogram_1D(bin_edges=self._bin_edges)
         return (*request.param, h1, h2)
 
     def test_division(self, setup_division: Any) -> None:
@@ -879,8 +996,8 @@ class TestHistogramOperators:
         """ Compare the result of ``Histogram1D`` division vs ROOT. """
         # Setup
         h1_info, h2_info, expected, h1, h2 = setup_division
-        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
-        h2_root = h2_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
+        h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
         # Operation
         h3 = h2 / h1
@@ -889,19 +1006,28 @@ class TestHistogramOperators:
         # Check result
         assert check_hist(h2_root, h3)
 
-    @pytest.fixture(params = [  # type: ignore
-        (_filled_two_times, 2,
-            HistInfo(np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 0.5, 0, 0, 0, 0, 0, 0, 0]))),
-        (_filled_twice_with_weight_of_2, 3,
-            HistInfo(np.array([0, 0, 4. / 3, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 8 / 9, 0, 0, 0, 0, 0, 0, 0]))),
-    ], ids = ["Standard filled", "Weighing filled"])
+    @pytest.fixture(
+        params=[  # type: ignore
+            (
+                _filled_two_times,
+                2,
+                HistInfo(np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 0.5, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+            (
+                _filled_twice_with_weight_of_2,
+                3,
+                HistInfo(np.array([0, 0, 4.0 / 3, 0, 0, 0, 0, 0, 0, 0]), np.array([0, 0, 8 / 9, 0, 0, 0, 0, 0, 0, 0])),
+            ),
+        ],
+        ids=["Standard filled", "Weighing filled"],
+    )
     def setup_scalar_division(self, logging_mixin: Any, request: Any) -> Tuple[Any, ...]:
         """ We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
         # Setup
-        h1 = request.param[0].convert_to_histogram_1D(bin_edges = self._bin_edges)
+        h1 = request.param[0].convert_to_histogram_1D(bin_edges=self._bin_edges)
         return (*request.param, h1)
 
     def test_scalar_division(self, setup_scalar_division: Any) -> None:
@@ -922,14 +1048,15 @@ class TestHistogramOperators:
         """ Compare the results of ``Histogram1D`` division vs ROOT. """
         # Setup
         h1_info, scalar, expected, h1 = setup_scalar_division
-        h1_root = h1_info.convert_to_ROOT_hist(bin_edges = self._bin_edges)
+        h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
         # Operation
         h3 = h1 / scalar
-        h1_root.Scale(1. / scalar)
+        h1_root.Scale(1.0 / scalar)
 
         # Check result
         assert check_hist(h1_root, h3)
+
 
 @pytest.mark.ROOT
 class TestIntegrateHistogram1D:
@@ -938,12 +1065,17 @@ class TestIntegrateHistogram1D:
     These tests require ROOT because we compare against ROOT to check that the values
     are correct.
     """
-    @pytest.fixture(params = [  # type: ignore
-        (0, 3, False),  # Specified in the form of the 0-indexed `Histogram1D` bins.
-        (1.2, 4.3, True),
-    ], ids = ["Bins", "Values"])
-    def setup_hists_and_args(self, request: Any, logging_mixin: Any) -> Tuple[Dict[str, float], histogram.Histogram1D,
-                                                                              float, float, Any]:
+
+    @pytest.fixture(
+        params=[  # type: ignore
+            (0, 3, False),  # Specified in the form of the 0-indexed `Histogram1D` bins.
+            (1.2, 4.3, True),
+        ],
+        ids=["Bins", "Values"],
+    )
+    def setup_hists_and_args(
+        self, request: Any, logging_mixin: Any
+    ) -> Tuple[Dict[str, float], histogram.Histogram1D, float, float, Any]:
         """ Setup hist for testing integration.
 
         Note:
@@ -952,7 +1084,8 @@ class TestIntegrateHistogram1D:
         # Setup
         min_arg, max_arg, using_values = request.param
         import ROOT
-        bins = np.array([1, 2, 3, 4, 6], dtype = np.float64)
+
+        bins = np.array([1, 2, 3, 4, 6], dtype=np.float64)
         values = np.array([5, 6, 7, 8])
 
         h_root = ROOT.TH1F("test", "test", 4, bins)
@@ -990,11 +1123,10 @@ class TestIntegrateHistogram1D:
     def test_integrate(self, setup_hists_and_args: Any) -> None:
         """ Test integration of bins. """
         # Setup
-        import ROOT
         args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
 
         # Integrate
-        expected_error = ROOT.Double(0)
+        expected_error = ctypes.c_double(0)
         expected_result = h_root.IntegralAndError(root_min_arg, root_max_arg, expected_error, "width")
         res, res_error = h.integral(**args)
 
@@ -1005,11 +1137,10 @@ class TestIntegrateHistogram1D:
     def test_counts_in_interval(self, setup_hists_and_args: Any) -> None:
         """ Test the counting of values stored within bins in an interval. """
         # Setup
-        import ROOT
         args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
 
         # Count
-        expected_error = ROOT.Double(0)
+        expected_error = ctypes.c_double(0)
         expected_result = h_root.IntegralAndError(root_min_arg, root_max_arg, expected_error, "")
         res, res_error = h.counts_in_interval(**args)
 
@@ -1020,7 +1151,6 @@ class TestIntegrateHistogram1D:
     def test_integral_validation_for_mixed_bins_and_values(self, setup_hists_and_args: Any) -> None:
         """ Test mixed arguments of bins and values. """
         # Setup
-        import ROOT
         args, h, root_min_arg, root_max_arg, h_root = setup_hists_and_args
 
         # Mix the arguments so  that we pass "min_bin" with "max_value" or "min_value" with "max_bin"
@@ -1030,7 +1160,7 @@ class TestIntegrateHistogram1D:
             args["min_value"] = h.bin_edges[args.pop("min_bin")]
 
         # Integrate
-        expected_error = ROOT.Double(0)
+        expected_error = ctypes.c_double(0)
         expected_result = h_root.IntegralAndError(root_min_arg, root_max_arg, expected_error, "width")
         res, res_error = h.integral(**args)
 
@@ -1038,15 +1168,17 @@ class TestIntegrateHistogram1D:
         assert np.isclose(res, expected_result)
         assert np.isclose(res_error, expected_error)
 
+
 class TestHistogramIntegralValidation:
     """ Tests histogram integral validation. These tests don't require ROOT, so they are separate. """
+
     def test_integral_validation_for_min_values(self, setup_basic_hist: Any) -> None:
         """ Should fail when passed both min value and min bin. """
         # Setup
         h, _, _, _ = setup_basic_hist
 
         with pytest.raises(ValueError) as exception_info:
-            h.integral(min_value = 3, min_bin = 4)
+            h.integral(min_value=3, min_bin=4)
         assert "Only specify one" in exception_info.value.args[0]
 
     def test_integral_validation_for_max_values(self, setup_basic_hist: Any) -> None:
@@ -1055,7 +1187,7 @@ class TestHistogramIntegralValidation:
         h, _, _, _ = setup_basic_hist
 
         with pytest.raises(ValueError) as exception_info:
-            h.integral(max_value = 3, max_bin = 4)
+            h.integral(max_value=3, max_bin=4)
         assert "Only specify one" in exception_info.value.args[0]
 
     def test_integral_validation_for_inverted_values(self, setup_basic_hist: Any) -> None:
@@ -1064,8 +1196,9 @@ class TestHistogramIntegralValidation:
         h, _, _, _ = setup_basic_hist
 
         with pytest.raises(ValueError) as exception_info:
-            h.integral(min_value = 3, max_value = 1)
+            h.integral(min_value=3, max_value=1)
         assert "greater than" in exception_info.value.args[0]
+
 
 def test_convert_HEPdata_hist(logging_mixin: Any) -> None:
     """ Test converting HEPdata into Histogram1D objects.
@@ -1077,6 +1210,7 @@ def test_convert_HEPdata_hist(logging_mixin: Any) -> None:
 
     # Load the HEP data.
     from pachyderm import yaml
+
     y = yaml.yaml()
     with open(hepdata_path, "r") as f:
         hepdata = y.load(f)

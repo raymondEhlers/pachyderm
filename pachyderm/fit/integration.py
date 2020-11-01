@@ -6,15 +6,15 @@
 """
 
 import abc
-import logging
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union, cast
-
 import iminuit
+import logging
 import numpy as np
 import ruamel.yaml
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union, cast
 
 from pachyderm import generic_class
 from pachyderm.fit import base, cost_function
+
 
 if TYPE_CHECKING:
     from pachyderm import histogram
@@ -24,7 +24,8 @@ logger = logging.getLogger(__name__)
 # Typing
 T_FitArguments = Dict[str, Union[bool, float, Tuple[float, float]]]
 
-_T_Fit = TypeVar("_T_Fit", bound = "Fit")
+_T_Fit = TypeVar("_T_Fit", bound="Fit")
+
 
 class Fit(abc.ABC, generic_class.EqualityMixin):
     """ Class to direct fitting a histogram to a fit function.
@@ -45,8 +46,13 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         fit_function: Function to be fit.
         fit_result: Result of the fit. Only valid after the fit has been performed.
     """
-    def __init__(self, use_log_likelihood: bool, fit_options: Optional[Dict[str, Any]] = None,
-                 user_arguments: Optional[T_FitArguments] = None):
+
+    def __init__(
+        self,
+        use_log_likelihood: bool,
+        fit_options: Optional[Dict[str, Any]] = None,
+        user_arguments: Optional[T_FitArguments] = None,
+    ):
         # Validation
         if user_arguments is None:
             user_arguments = {}
@@ -104,7 +110,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         Returns:
             The created cost function.
         """
-        return self._cost_func(f = self.fit_function, data = h)
+        return self._cost_func(f=self.fit_function, data=h)
 
     def __call__(self, *args: float, **kwargs: float) -> float:
         """ Call the fit function.
@@ -131,11 +137,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         """
         if x is None:
             x = self.fit_result.x
-        return base.calculate_function_errors(
-            func = self.fit_function,
-            fit_result = self.fit_result,
-            x = x,
-        )
+        return base.calculate_function_errors(func=self.fit_function, fit_result=self.fit_result, x=x,)
 
     def fit(self, h: "histogram.Histogram1D", user_arguments: Optional[T_FitArguments] = None) -> base.FitResult:
         """ Fit the given histogram to the stored fit function using iminuit.
@@ -155,19 +157,21 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
             user_arguments = {}
 
         # Setup the fit and the cost function
-        hist_for_fit, user_fit_arguments = self._setup(h = h)
+        hist_for_fit, user_fit_arguments = self._setup(h=h)
         # Update the default user arguments provided in setup by...
         # ... The stored user arguments when the object was created.
         user_fit_arguments.update(self.user_arguments)
         # ... The user arguments passed to the fit function.
         user_fit_arguments.update(user_arguments)
         # Then create the cost function according to the parameters and (potentially restricted) data.
-        cost_func = self._create_cost_function(h = hist_for_fit)
+        cost_func = self._create_cost_function(h=hist_for_fit)
 
         # Perform the fit by minimizing the chi squared
         fit_result, _ = fit_with_minuit(
-            cost_func = cost_func, minuit_args = user_fit_arguments, x = hist_for_fit.x,
-            use_minos = self.fit_options.get("minos", False),
+            cost_func=cost_func,
+            minuit_args=user_fit_arguments,
+            x=hist_for_fit.x,
+            use_minos=self.fit_options.get("minos", False),
         )
 
         # Calculate the fit result only if requested.
@@ -177,8 +181,9 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         return fit_result
 
     @classmethod
-    def to_yaml(cls: Type[_T_Fit], representer: ruamel.yaml.representer.BaseRepresenter,
-                obj: _T_Fit) -> ruamel.yaml.nodes.SequenceNode:
+    def to_yaml(
+        cls: Type[_T_Fit], representer: ruamel.yaml.representer.BaseRepresenter, obj: _T_Fit
+    ) -> ruamel.yaml.nodes.SequenceNode:
         """ Encode YAML representation.
 
         Since YAML won't handle function very nicely, we convert them to strings and then check them
@@ -200,16 +205,15 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         # but it's useful to store what was used, and we can at least warn if it changed).
         members["fit_function"] = obj.fit_function.__name__
         members["_cost_func"] = obj._cost_func.__name__
-        representation = representer.represent_mapping(
-            f"!{cls.__name__}", members
-        )
+        representation = representer.represent_mapping(f"!{cls.__name__}", members)
 
         # Finally, return the represented object.
         return cast(ruamel.yaml.nodes.SequenceNode, representation)
 
     @classmethod
-    def from_yaml(cls: Type[_T_Fit], constructor: ruamel.yaml.constructor.BaseConstructor,
-                  data: ruamel.yaml.nodes.MappingNode) -> _T_Fit:
+    def from_yaml(
+        cls: Type[_T_Fit], constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.MappingNode
+    ) -> _T_Fit:
         """ Decode YAML representation.
 
         Args:
@@ -255,8 +259,10 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         # Now that the object is fully constructed, we can return it.
         return obj
 
-def _validate_minuit_args(cost_func: Union[cost_function.CostFunctionBase, cost_function.SimultaneousFit],
-                          minuit_args: T_FitArguments) -> None:
+
+def _validate_minuit_args(
+    cost_func: Union[cost_function.CostFunctionBase, cost_function.SimultaneousFit], minuit_args: T_FitArguments
+) -> None:
     """ Validate the arguments provided for Minuit.
 
     Checks that there are sufficient and valid arguments for each parameter in the fit function.
@@ -286,9 +292,13 @@ def _validate_minuit_args(cost_func: Union[cost_function.CostFunctionBase, cost_
             # The parameter wasn't specified.
             raise ValueError(f"Parameter '{p}' must be specified in the fit arguments.")
 
-def fit_with_minuit(cost_func: Union[cost_function.CostFunctionBase, cost_function.SimultaneousFit],
-                    minuit_args: T_FitArguments, x: np.ndarray,
-                    use_minos: Optional[bool] = False) -> Tuple[base.FitResult, iminuit.Minuit]:
+
+def fit_with_minuit(
+    cost_func: Union[cost_function.CostFunctionBase, cost_function.SimultaneousFit],
+    minuit_args: T_FitArguments,
+    x: np.ndarray,
+    use_minos: Optional[bool] = False,
+) -> Tuple[base.FitResult, iminuit.Minuit]:
     """ Perform a fit using the given cost function with Minuit.
 
     Args:
@@ -303,7 +313,7 @@ def fit_with_minuit(cost_func: Union[cost_function.CostFunctionBase, cost_functi
     """
     # Validation
     # Will raise an exception if there are invalid arguments.
-    _validate_minuit_args(cost_func = cost_func, minuit_args = minuit_args)
+    _validate_minuit_args(cost_func=cost_func, minuit_args=minuit_args)
     # Set the error definition.
     # We check if it's set to the allow the user to override if they are so inclined.
     # (Overriding it should be pretty rare).
@@ -319,7 +329,7 @@ def fit_with_minuit(cost_func: Union[cost_function.CostFunctionBase, cost_functi
     # Perform the fit
     minuit = iminuit.Minuit(cost_func, **minuit_args)
     # Improve minimization reliability.
-    minuit.set_strategy(2)
+    minuit.strategy = 2
     minuit.migrad()
     # Just in case (doesn't hurt anything, but may help in a few cases).
     minuit.hesse()
@@ -327,11 +337,11 @@ def fit_with_minuit(cost_func: Union[cost_function.CostFunctionBase, cost_functi
         minuit.minos()
 
     # Check that the fit is actually good
-    if not minuit.migrad_ok():
+    if not minuit.valid:
         raise base.FitFailed("Minimization failed! The fit is invalid!")
     # Check covariance matrix accuracy. We need to check it explicitly because It appears that it is not
     # included in the migrad_ok status check.
-    if not minuit.matrix_accurate():
+    if not minuit.accurate:
         raise base.FitFailed("Covariance matrix is inaccurate! The fit is invalid!")
 
     # Create the fit result and calculate the errors.

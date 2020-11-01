@@ -1,4 +1,4 @@
-#1/usr/bin/env python3
+# 1/usr/bin/env python3
 
 """ Base module for performing fits with Minuit.
 
@@ -6,19 +6,31 @@
 """
 
 import functools
+import iminuit
 import itertools
 import logging
+import numdifftools as nd
+import numpy as np
 import time
 from dataclasses import dataclass
 from typing import (
-    TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Type, TypeVar, Union, cast
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
 )
 
-import iminuit
-import numdifftools as nd
-import numpy as np
-
 from pachyderm import generic_class
+
 
 if TYPE_CHECKING:
     from pachyderm.fit import cost_function
@@ -26,13 +38,16 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Typing
-T_FuncCode = TypeVar("T_FuncCode", bound = "FuncCode")
+T_FuncCode = TypeVar("T_FuncCode", bound="FuncCode")
 T_ArgumentPositions = List[List[int]]
-_T_FitResult = TypeVar("_T_FitResult", bound = "FitResult")
+_T_FitResult = TypeVar("_T_FitResult", bound="FitResult")
+
 
 class FitFailed(Exception):
     """ Raised if the fit failed. The message will include further details. """
+
     pass
+
 
 @dataclass
 class BaseFitResult:
@@ -53,6 +68,7 @@ class BaseFitResult:
             Note that fixed parameters are _not_ included in this matrix.
         errors: Store the errors associated with the component fit function.
     """
+
     parameters: List[str]
     free_parameters: List[str]
     fixed_parameters: List[str]
@@ -79,13 +95,14 @@ class BaseFitResult:
             # We attempt to cache the covariance matrix, so first try to return that.
             return self._correlation_matrix
         except AttributeError:
+
             def corr(i_name: str, j_name: str) -> float:
                 """ Calculate the correlation matrix (definition from iminuit) from the covariance matrix. """
                 # The + 1e-100 is just to ensure that we don't divide by 0.
-                value = (self.covariance_matrix[(i_name, j_name)]
-                         / (np.sqrt(self.covariance_matrix[(i_name, i_name)]
-                            * self.covariance_matrix[(j_name, j_name)]) + 1e-100)
-                         )
+                value = self.covariance_matrix[(i_name, j_name)] / (
+                    np.sqrt(self.covariance_matrix[(i_name, i_name)] * self.covariance_matrix[(j_name, j_name)])
+                    + 1e-100
+                )
                 # Need to explicitly cast to float. Otherwise, it will return a np.float64, which will cause problems
                 # for YAML...
                 return float(value)
@@ -98,6 +115,7 @@ class BaseFitResult:
             self._correlation_matrix = matrix
 
         return self._correlation_matrix
+
 
 @dataclass
 class FitResult(BaseFitResult):
@@ -123,6 +141,7 @@ class FitResult(BaseFitResult):
         minimum_val: Minimum value of the fit when it coverages. This is the chi squared value for a
             chi squared minimization fit.
     """
+
     x: np.ndarray
     n_fit_data_points: int
     minimum_val: float
@@ -153,8 +172,8 @@ class FitResult(BaseFitResult):
             return self._chi_squared
         except AttributeError:
             # Setup
-            from pachyderm.fit import cost_function
             from pachyderm import histogram
+            from pachyderm.fit import cost_function
 
             # Calculate the chi_squared
             self._chi_squared: float
@@ -170,10 +189,12 @@ class FitResult(BaseFitResult):
                 )
             elif isinstance(cost_func, cost_function.SimultaneousFit):
                 chi_squared = 0
-                for cf, function_args in zip(cost_function.unravel_simultaneous_fits(cost_func.cost_functions),
-                                             _function_arguments_from_argument_positions(
-                                                 cost_func.argument_positions, *self.values_at_minimum.values())
-                                             ):
+                for cf, function_args in zip(
+                    cost_function.unravel_simultaneous_fits(cost_func.cost_functions),
+                    _function_arguments_from_argument_positions(
+                        cost_func.argument_positions, *self.values_at_minimum.values()
+                    ),
+                ):
                     data = cf.data
                     # Help out mypy...
                     assert isinstance(data, histogram.Histogram1D)
@@ -185,18 +206,19 @@ class FitResult(BaseFitResult):
                 self._chi_squared = chi_squared
             else:
                 raise NotImplementedError("Needs to be implement for unbinned data.")
-                #data = cost_func.data
+                # data = cost_func.data
                 ## Help out mypy...
-                #assert isinstance(data, histogram.Histogram1D)
-                #self._chi_squared = cost_function._chi_squared(
+                # assert isinstance(data, histogram.Histogram1D)
+                # self._chi_squared = cost_function._chi_squared(
                 #    data.x, data.y, data.errors, data.bin_edges, cost_func.f, *self.values_at_minimum.values()
-                #)
+                # )
 
         return self._chi_squared
 
     @classmethod
-    def from_minuit(cls: Type[_T_FitResult], minuit: iminuit.Minuit,
-                    cost_func: Callable[..., float], x: np.ndarray) -> _T_FitResult:
+    def from_minuit(
+        cls: Type[_T_FitResult], minuit: iminuit.Minuit, cost_func: Callable[..., float], x: np.ndarray
+    ) -> _T_FitResult:
         """ Create a fit result form the Minuit fit object.
 
         Args:
@@ -204,7 +226,7 @@ class FitResult(BaseFitResult):
             cost_func: Cost function used to perform the fit.
         """
         # Validation
-        if not minuit.migrad_ok():
+        if not minuit.valid:
             raise RuntimeError("The fit is invalid - unable to extract result!")
 
         # Determine the relevant fit parameters.
@@ -215,13 +237,18 @@ class FitResult(BaseFitResult):
         free_parameters = [p for p in parameters if p not in set(fixed_parameters)]
         # Store the result
         return cls(
-            parameters = parameters, free_parameters = free_parameters, fixed_parameters = fixed_parameters,
-            values_at_minimum = dict(minuit.values), errors_on_parameters = dict(minuit.errors),
-            covariance_matrix = minuit.covariance,
-            x = x,
-            n_fit_data_points = len(x), minimum_val = minuit.fval,
-            errors = [],
+            parameters=parameters,
+            free_parameters=free_parameters,
+            fixed_parameters=fixed_parameters,
+            values_at_minimum=dict(minuit.values),
+            errors_on_parameters=dict(minuit.errors),
+            covariance_matrix=minuit.covariance,
+            x=x,
+            n_fit_data_points=len(x),
+            minimum_val=minuit.fval,
+            errors=[],
         )
+
 
 def extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> Tuple[Dict[str, Any], List[str]]:
     """ Extract the parameters relevant to the given function from a fit result.
@@ -250,6 +277,7 @@ def extract_function_values(func: Callable[..., float], fit_result: BaseFitResul
 
     return args_at_minimum, free_parameters
 
+
 def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
     """ Calculate the errors of the given function based on values from the fit.
 
@@ -277,14 +305,14 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
     logger.debug(f"name_to_index: {name_to_index}")
 
     # Evaluate the gradient
-    partial_derivative_result = evaluate_gradient(func = func, fit_result = fit_result, x = x)
+    partial_derivative_result = evaluate_gradient(func=func, fit_result=fit_result, x=x)
 
     # Finally, calculate the error by multiplying the matrix of gradient values by the covariance matrix values.
     error_vals = np.zeros(len(x))
     for i_name in free_parameters:
         for j_name in free_parameters:
             # Determine the error value
-            #logger.debug(f"Calculating error for i_name: {i_name}, j_name: {j_name}")
+            # logger.debug(f"Calculating error for i_name: {i_name}, j_name: {j_name}")
             # Add error to overall error value
             # NOTE: This is a vector operation for the partial_derivative_result values.
             error_vals += (
@@ -292,10 +320,11 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
                 * partial_derivative_result[:, name_to_index[j_name]]
                 * fit_result.covariance_matrix[(i_name, j_name)]
             )
-    #logger.debug("error_val: shape: {error_val.shape}, error_val: {error_val}")
+    # logger.debug("error_val: shape: {error_val.shape}, error_val: {error_val}")
 
     # We want the error itself, so we take the square root.
     return np.sqrt(error_vals)
+
 
 def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
     """ Evaluate the gradient of the given function based on the fit values.
@@ -336,6 +365,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
         """
         # Need to expand the arguments
         return func(x, *args_to_vary)
+
     # Setup to compute the derivative
     partial_derivative_func = nd.Gradient(func_wrap)
 
@@ -363,6 +393,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
 
     return partial_derivative_result
 
+
 class FuncCode(generic_class.EqualityMixin):
     """ Minimal class to describe function arguments.
 
@@ -375,6 +406,7 @@ class FuncCode(generic_class.EqualityMixin):
         co_varnames: Name of the function arguments.
         co_argcount: Number of function arguments.
     """
+
     __slots__ = ("co_varnames", "co_argcount")
 
     def __init__(self, args: List[str]):
@@ -385,8 +417,9 @@ class FuncCode(generic_class.EqualityMixin):
         return f"FuncCode({self.co_varnames})"
 
     @classmethod
-    def from_function(cls: Type[T_FuncCode], func: Callable[..., float],
-                      leading_parameters_to_remove: int = 1) -> T_FuncCode:
+    def from_function(
+        cls: Type[T_FuncCode], func: Callable[..., float], leading_parameters_to_remove: int = 1
+    ) -> T_FuncCode:
         """ Create a func_code from a function.
 
         Args:
@@ -396,8 +429,12 @@ class FuncCode(generic_class.EqualityMixin):
         """
         return cls(iminuit.util.describe(func)[leading_parameters_to_remove:])
 
-def merge_func_codes(functions: Iterable[Callable[..., float]], prefixes: Optional[Sequence[str]] = None,
-                     skip_prefixes: Optional[Sequence[str]] = None) -> Tuple[List[str], List[List[int]]]:
+
+def merge_func_codes(
+    functions: Iterable[Callable[..., float]],
+    prefixes: Optional[Sequence[str]] = None,
+    skip_prefixes: Optional[Sequence[str]] = None,
+) -> Tuple[List[str], List[List[int]]]:
     """ Merge the arguments of the given functions into one func_code.
 
     Note:
@@ -451,9 +488,10 @@ def merge_func_codes(functions: Iterable[Callable[..., float]], prefixes: Option
 
     return merged_args, argument_positions
 
-def _function_arguments_from_argument_positions(argument_positions: T_ArgumentPositions,
-                                                *args: Union[float, np.ndarray]
-                                                ) -> Iterable[List[Union[float, np.ndarray]]]:
+
+def _function_arguments_from_argument_positions(
+    argument_positions: T_ArgumentPositions, *args: Union[float, np.ndarray]
+) -> Iterable[List[Union[float, np.ndarray]]]:
     """ Extract the function arguments from a larger set of arguments given the argument positions.
 
     It determines the arguments for calling functions stored in ``SimultaneousFit`` or ``AddPDF`` classes. Use it
@@ -474,19 +512,22 @@ def _function_arguments_from_argument_positions(argument_positions: T_ArgumentPo
         List of arguments for the function that is described by the maps in argument_positions.
     """
     for arg_positions in argument_positions:
-        #logger.debug(f"arg_positions: {arg_positions}, full args: {args}")
+        # logger.debug(f"arg_positions: {arg_positions}, full args: {args}")
         # Determine the arguments for the given function using the arg positions map.
         function_args = []
         for v in arg_positions:
             # We don't skip over the x argument because it's expected to be supplied in the args.
             function_args.append(args[v])
-        #logger.debug(f"arg_positions: {arg_positions}, function_args: {function_args}")
+        # logger.debug(f"arg_positions: {arg_positions}, function_args: {function_args}")
         yield function_args
 
-def call_list_of_callables_with_operation(operation: Callable[[float, float], float],
-                                          functions: Iterable[Callable[..., float]],
-                                          argument_positions: T_ArgumentPositions,
-                                          *args: Union[float, np.ndarray]) -> float:
+
+def call_list_of_callables_with_operation(
+    operation: Callable[[float, float], float],
+    functions: Iterable[Callable[..., float]],
+    argument_positions: T_ArgumentPositions,
+    *args: Union[float, np.ndarray],
+) -> float:
     """ Call and add a list of callables with the given args.
 
     Args:
@@ -503,6 +544,7 @@ def call_list_of_callables_with_operation(operation: Callable[[float, float], fl
         values.append(func(*function_args))
     return functools.reduce(operation, values)
 
+
 def chi_squared_probability(chi_2: float, ndf: float) -> float:
     """ Calculate the probability that the
 
@@ -515,4 +557,5 @@ def chi_squared_probability(chi_2: float, ndf: float) -> float:
         Probability that the fit is consistent with the data.
     """
     import scipy.stats
+
     return cast(float, 1 - scipy.stats.chi2.cdf(chi_2, ndf))
