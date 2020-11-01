@@ -25,5 +25,6 @@ COPY --chown=overwatch:overwatch . ${PACHYDERM_ROOT}
 
 # Install pachyderm. We need to install numpy first so that
 # probfit (which is only needed for tests!) will install properly.
-RUN pip install --user --upgrade --no-cache-dir numpy \
-        && pip install --user --upgrade --no-cache-dir -e .[tests,dev,docs]
+RUN pip install --upgrade pip \
+        && pip install --user --upgrade --no-cache-dir numpy \
+        && pip install --user --upgrade --no-cache-dir -e .[dev]
