@@ -5,7 +5,7 @@
 # Set the python version here so that we can use it to set the base image.
 ARG PYTHON_VERSION=3.7.1
 FROM rehlers/overwatch-base:py${PYTHON_VERSION}
-LABEL maintainer="Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University"
+LABEL maintainer="Raymond Ehlers <raymond.ehlers@cern.ch>, Oak Ridge National Lab"
 
 # Setup environment
 ENV ROOTSYS="/opt/root"
@@ -25,6 +25,6 @@ COPY --chown=overwatch:overwatch . ${PACHYDERM_ROOT}
 
 # Install pachyderm. We need to install numpy first so that
 # probfit (which is only needed for tests!) will install properly.
-RUN pip install --upgrade pip \
+RUN pip install --user --upgrade pip \
         && pip install --user --upgrade --no-cache-dir numpy \
         && pip install --user --upgrade --no-cache-dir -e .[dev]
