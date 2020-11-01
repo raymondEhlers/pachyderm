@@ -26,4 +26,5 @@ COPY --chown=overwatch:overwatch . ${PACHYDERM_ROOT}
 # Install pachyderm. We need to install numpy first so that
 # probfit (which is only needed for tests!) will install properly.
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python - \
+        && poetry debug \
         && poetry install
