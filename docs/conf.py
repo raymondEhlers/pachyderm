@@ -20,21 +20,21 @@ sys.path.insert(0, os.path.abspath("../pachyderm"))
 # -- Project information -----------------------------------------------------
 
 project = 'Pachyderm'
-copyright = '2018, Raymond Ehlers'
+copyright = '2018-2020, Raymond Ehlers'
 author = 'Raymond Ehlers'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-def get_version():
-    version_module = {}
-    with open(os.path.join("..", "pachyderm", "version.py")) as f:
-        exec(f.read(), version_module)
-    return version_module["__version__"]
+try:
+    import importlib.metadata as importlib_metadata
+except ImportError:
+    # Use the backport if the standard version isn't available.
+    import importlib_metadata
 # The short X.Y version
-version = get_version()
+version = importlib_metadata.version("pachyderm")
 # The full version, including alpha/beta/rc tags
-release = get_version()
+release = version
 
 
 # -- General configuration ---------------------------------------------------
