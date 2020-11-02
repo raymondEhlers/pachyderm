@@ -28,7 +28,7 @@ _T_Fit = TypeVar("_T_Fit", bound="Fit")
 
 
 class Fit(abc.ABC, generic_class.EqualityMixin):
-    """ Class to direct fitting a histogram to a fit function.
+    """Class to direct fitting a histogram to a fit function.
 
     This allows us to easily store the fit function right alongside the minimization.
 
@@ -78,7 +78,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
 
     @abc.abstractmethod
     def _post_init_validation(self) -> None:
-        """ Validate that the fit object was setup properly.
+        """Validate that the fit object was setup properly.
 
         This can be any method that the user devises to ensure that
         all of the information needed for the fit is available.
@@ -92,7 +92,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
 
     @abc.abstractmethod
     def _setup(self, h: "histogram.Histogram1D") -> Tuple["histogram.Histogram1D", T_FitArguments]:
-        """ Setup the histogram and arguments for the fit.
+        """Setup the histogram and arguments for the fit.
 
         Args:
             h: Background subtracted histogram to be fit.
@@ -103,7 +103,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         ...
 
     def _create_cost_function(self, h: "histogram.Histogram1D") -> cost_function.DataComparisonCostFunction:
-        """ Create the cost function from the data and stored parameters.
+        """Create the cost function from the data and stored parameters.
 
         Args:
             h: Data to be used for the fit.
@@ -113,7 +113,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         return self._cost_func(f=self.fit_function, data=h)
 
     def __call__(self, *args: float, **kwargs: float) -> float:
-        """ Call the fit function.
+        """Call the fit function.
 
         This is provided for convenience. This way, we can easily evaluate the function while
         still storing the information necessary to perform the entire fit.
@@ -127,7 +127,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         return self.fit_function(*args, **kwargs)
 
     def calculate_errors(self, x: Optional[np.ndarray] = None) -> np.ndarray:
-        """ Calculate the errors on the fit function for the given x values.
+        """Calculate the errors on the fit function for the given x values.
 
         Args:
             x: x values where the fit function error should be evaluated. If not specified,
@@ -140,7 +140,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         return base.calculate_function_errors(func=self.fit_function, fit_result=self.fit_result, x=x,)
 
     def fit(self, h: "histogram.Histogram1D", user_arguments: Optional[T_FitArguments] = None) -> base.FitResult:
-        """ Fit the given histogram to the stored fit function using iminuit.
+        """Fit the given histogram to the stored fit function using iminuit.
 
         The fit errors will be automatically calculated if possible. It is possible if the fit function
         accessible through the cost function is not an added PDF.
@@ -184,7 +184,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
     def to_yaml(
         cls: Type[_T_Fit], representer: ruamel.yaml.representer.BaseRepresenter, obj: _T_Fit
     ) -> ruamel.yaml.nodes.SequenceNode:
-        """ Encode YAML representation.
+        """Encode YAML representation.
 
         Since YAML won't handle function very nicely, we convert them to strings and then check them
         on conversion from YAML as a cross check that recreating the object hasn't gone wrong. This
@@ -214,7 +214,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
     def from_yaml(
         cls: Type[_T_Fit], constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.MappingNode
     ) -> _T_Fit:
-        """ Decode YAML representation.
+        """Decode YAML representation.
 
         Args:
             constructor: Constructor from the YAML object.
@@ -263,7 +263,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
 def _validate_minuit_args(
     cost_func: Union[cost_function.CostFunctionBase, cost_function.SimultaneousFit], minuit_args: T_FitArguments
 ) -> None:
-    """ Validate the arguments provided for Minuit.
+    """Validate the arguments provided for Minuit.
 
     Checks that there are sufficient and valid arguments for each parameter in the fit function.
 
@@ -299,7 +299,7 @@ def fit_with_minuit(
     x: np.ndarray,
     use_minos: Optional[bool] = False,
 ) -> Tuple[base.FitResult, iminuit.Minuit]:
-    """ Perform a fit using the given cost function with Minuit.
+    """Perform a fit using the given cost function with Minuit.
 
     Args:
         cost_func: Cost function to be used with Minuit.

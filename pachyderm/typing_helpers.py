@@ -7,8 +7,10 @@
 
 from typing import Any, Union
 
+
 try:
     import ROOT
+
     # Tell ROOT to ignore command line options so args are passed to python
     # NOTE: Must be immediately after import ROOT and it must be called the first time ROOT is imported!
     #       We do this here (even though it is unrelated to typing helpers) because it is the most common

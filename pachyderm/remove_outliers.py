@@ -8,21 +8,22 @@
 import ctypes
 import enum
 import logging
+import numpy as np
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
-import numpy as np
-
 from pachyderm import histogram, projectors, utils
 from pachyderm.typing_helpers import Hist
+
 
 logger = logging.getLogger(__name__)
 
 # Typing helper
 OutliersRemovalAxis = Union[projectors.TH1AxisType, enum.Enum]
 
+
 def _get_mean_and_median(hist: Hist) -> Tuple[float, float]:
-    """ Retrieve the mean and median from a ROOT histogram.
+    """Retrieve the mean and median from a ROOT histogram.
 
     Note:
         These values are not so trivial to calculate without ROOT, as they are the bin values
@@ -45,13 +46,16 @@ def _get_mean_and_median(hist: Hist) -> Tuple[float, float]:
 
     return (mean, x.value)
 
+
 @dataclass
 class _OutputObject:
     """ Helper object to retrieve the result of a projector. """
+
     output: Hist
 
+
 def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxis) -> Hist:
-    """ Project the input histogram to the particle level axis.
+    """Project the input histogram to the particle level axis.
 
     Args:
         hist: Histogram to check for outliers.
@@ -62,24 +66,25 @@ def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxi
     """
     # Setup the projector
     import ROOT
+
     if isinstance(hist, (ROOT.TH2, ROOT.TH3)):
         projection_information: Dict[str, Any] = {}
         output_object = _OutputObject(None)
         projector = projectors.HistProjector(
-            observable_to_project_from = hist,
-            output_observable = output_object,
-            output_attribute_name = "output",
-            projection_name_format = "outliers_removal_hist",
-            projection_information = projection_information,
+            observable_to_project_from=hist,
+            output_observable=output_object,
+            output_attribute_name="output",
+            projection_name_format="outliers_removal_hist",
+            projection_information=projection_information,
         )
         # No additional_axis_cuts or projection_dependent_cut_axes
         # Projection axis
         projector.projection_axes.append(
             projectors.HistAxisRange(
-                axis_type = outliers_removal_axis,
-                axis_range_name = "outliers_removal_axis",
-                min_val = projectors.HistAxisRange.apply_func_to_find_bin(None, 1),
-                max_val = projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.GetNbins),
+                axis_type=outliers_removal_axis,
+                axis_range_name="outliers_removal_axis",
+                min_val=projectors.HistAxisRange.apply_func_to_find_bin(None, 1),
+                max_val=projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.GetNbins),
             )
         )
 
@@ -90,11 +95,14 @@ def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxi
     # If we already have a 1D hist, just return that existing hist.
     return hist
 
-def _determine_outliers_index(hist: Hist,
-                              moving_average_threshold: float = 1.0,
-                              number_of_values_to_search_ahead: int = 5,
-                              limit_of_number_of_values_below_threshold: Optional[int] = None) -> int:
-    """ Determine the location of where outliers begin in a 1D histogram.
+
+def _determine_outliers_index(
+    hist: Hist,
+    moving_average_threshold: float = 1.0,
+    number_of_values_to_search_ahead: int = 5,
+    limit_of_number_of_values_below_threshold: Optional[int] = None,
+) -> int:
+    """Determine the location of where outliers begin in a 1D histogram.
 
     When the moving average falls below the limit, we consider the outliers to have begun.
 
@@ -126,6 +134,7 @@ def _determine_outliers_index(hist: Hist,
     """
     # Validation
     import ROOT
+
     if isinstance(hist, (ROOT.TH2, ROOT.TH3, ROOT.THnBase)):
         raise ValueError(
             f"Given histogram '{hist.GetName()}' of type {type(hist)}, but can only"
@@ -143,16 +152,16 @@ def _determine_outliers_index(hist: Hist,
 
     # Calculate the moving average for the entire axis, looking ahead including the current bin + 4 = 5 ahead.
     number_of_values_to_search_ahead = 5
-    moving_average = utils.moving_average(hist_to_check.y, n = number_of_values_to_search_ahead)
+    moving_average = utils.moving_average(hist_to_check.y, n=number_of_values_to_search_ahead)
 
-    #logger.debug(f"y: {hist_to_check.y}")
-    #logger.debug(f"moving_average: {moving_average}")
+    # logger.debug(f"y: {hist_to_check.y}")
+    # logger.debug(f"moving_average: {moving_average}")
 
     cut_index = _determine_outliers_for_moving_average(
-        moving_average = moving_average,
-        moving_average_threshold = moving_average_threshold,
-        number_of_values_to_search_ahead = number_of_values_to_search_ahead,
-        limit_of_number_of_values_below_threshold = limit_of_number_of_values_below_threshold,
+        moving_average=moving_average,
+        moving_average_threshold=moving_average_threshold,
+        number_of_values_to_search_ahead=number_of_values_to_search_ahead,
+        limit_of_number_of_values_below_threshold=limit_of_number_of_values_below_threshold,
     )
 
     if cut_index != -1:
@@ -161,11 +170,14 @@ def _determine_outliers_index(hist: Hist,
 
     return cut_index
 
-def _determine_outliers_for_moving_average(moving_average: np.ndarray,
-                                           moving_average_threshold: float,
-                                           number_of_values_to_search_ahead: int,
-                                           limit_of_number_of_values_below_threshold: int) -> int:
-    """ Determine outliers to remove from a given moving average.
+
+def _determine_outliers_for_moving_average(
+    moving_average: np.ndarray,
+    moving_average_threshold: float,
+    number_of_values_to_search_ahead: int,
+    limit_of_number_of_values_below_threshold: int,
+) -> int:
+    """Determine outliers to remove from a given moving average.
 
     Note:
         The index returned is when the moving average first drops below the threshold for a moving average
@@ -191,13 +203,11 @@ def _determine_outliers_for_moving_average(moving_average: np.ndarray,
     for i in range(limit_of_number_of_values_below_threshold):
         # Basically, this gives us (for limit_of_number_of_values_below_threshold = 4):
         # below_threshold[0:-3], below_threshold[1:-2], below_threshold[2:-1], below_threshold[3:None]
-        values_to_check.append(
-            below_threshold[i:-(limit_of_number_of_values_below_threshold - 1 - i) or None]
-        )
+        values_to_check.append(below_threshold[i : -(limit_of_number_of_values_below_threshold - 1 - i) or None])
 
     # Some helpful logging information.
-    #logger.debug(f"values_to_check: {values_to_check}")
-    #logger.debug(f"moving avg length: {len(moving_average)}, length of values_to_check entries: {[len(v) for v in values_to_check]}")
+    # logger.debug(f"values_to_check: {values_to_check}")
+    # logger.debug(f"moving avg length: {len(moving_average)}, length of values_to_check entries: {[len(v) for v in values_to_check]}")
 
     # Must have at least one bin above the specified threshold.
     found_at_least_one_bin_above_threshold = False
@@ -217,7 +227,7 @@ def _determine_outliers_for_moving_average(moving_average: np.ndarray,
         above_threshold = [not value for value in values]
         # We require the values to go above the moving average threshold at least once.
         if any(above_threshold):
-            #logger.debug(f"Found bin i {i} above threshold with moving average: {moving_average[i]}")
+            # logger.debug(f"Found bin i {i} above threshold with moving average: {moving_average[i]}")
             found_at_least_one_bin_above_threshold = True
 
         # All values from which we are looking ahead must be below the threshold to consider the index
@@ -233,8 +243,11 @@ def _determine_outliers_for_moving_average(moving_average: np.ndarray,
 
     return cut_index
 
-def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, outliers_removal_axis: OutliersRemovalAxis) -> None:
-    """ Remove outliers from a given histogram.
+
+def _remove_outliers_from_hist(
+    hist: Hist, outliers_start_index: int, outliers_removal_axis: OutliersRemovalAxis
+) -> None:
+    """Remove outliers from a given histogram.
 
     Args:
         hist: Histogram to check for outliers.
@@ -246,7 +259,7 @@ def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, outliers_r
     """
     # Use on TH1, TH2, and TH3 since we don't start removing immediately, but instead only after the limit
     if outliers_start_index > 0:
-        #logger.debug("Removing outliers")
+        # logger.debug("Removing outliers")
         # Check for values above which they should be removed by translating the global index
         x = ctypes.c_int(0)
         y = ctypes.c_int(0)
@@ -263,23 +276,30 @@ def _remove_outliers_from_hist(hist: Hist, outliers_start_index: int, outliers_r
             hist.GetBinXYZ(index, x, y, z)
             # Watch out for any problems
             if hist.GetBinContent(index) < hist.GetBinError(index):
-                logger.warning(f"Bin content < error. Name: {hist.GetName()}, Bin content: {hist.GetBinContent(index)}, Bin error: {hist.GetBinError(index)}, index: {index}, ({x.value}, {y.value})")
+                logger.warning(
+                    f"Bin content < error. Name: {hist.GetName()}, Bin content: {hist.GetBinContent(index)}, Bin error: {hist.GetBinError(index)}, index: {index}, ({x.value}, {y.value})"
+                )
             if outliers_removal_axis_values[outliers_removal_axis].value >= outliers_start_index:
-                #logger.debug("Cutting for index {}. x bin {}. Cut index: {}".format(index, x, cutIndex))
+                # logger.debug("Cutting for index {}. x bin {}. Cut index: {}".format(index, x, cutIndex))
                 hist.SetBinContent(index, 0)
                 hist.SetBinError(index, 0)
     else:
         logger.info(f"Hist {hist.GetName()} did not have any outliers to cut")
 
+
 @dataclass
 class OutliersRemovalManager:
-    moving_average_threshold: float = field(default = 1.0)
+    moving_average_threshold: float = field(default=1.0)
 
-    def run(self, outliers_removal_axis: OutliersRemovalAxis,
-            hist: Optional[Hist] = None, hists: Optional[Mapping[str, Hist]] = None,
-            mean_fractional_difference_limit: float = 0.01,
-            median_fractional_difference_limit: float = 0.01,) -> int:
-        """ Remove outliers from the given histogram(s).
+    def run(
+        self,
+        outliers_removal_axis: OutliersRemovalAxis,
+        hist: Optional[Hist] = None,
+        hists: Optional[Mapping[str, Hist]] = None,
+        mean_fractional_difference_limit: float = 0.01,
+        median_fractional_difference_limit: float = 0.01,
+    ) -> int:
+        """Remove outliers from the given histogram(s).
 
         Args:
             outliers_removal_axis: Axis along which outliers removal will be performed. Usually
@@ -319,17 +339,14 @@ class OutliersRemovalManager:
 
         for hist_name, hist in hists.items():
             # Setup
-            hist_to_check = _project_to_part_level(hist = hist, outliers_removal_axis = outliers_removal_axis)
+            hist_to_check = _project_to_part_level(hist=hist, outliers_removal_axis=outliers_removal_axis)
 
             # Check these values before and after outlier removal.
             (pre_removal_mean[hist_name], pre_removal_median[hist_name]) = _get_mean_and_median(hist_to_check)
 
             # Determine the index where the outliers begin and then remove them.
             outliers_indices.append(
-                _determine_outliers_index(
-                    hist = hist_to_check,
-                    moving_average_threshold = self.moving_average_threshold,
-                )
+                _determine_outliers_index(hist=hist_to_check, moving_average_threshold=self.moving_average_threshold,)
             )
 
         outliers_start_index: int = np.max(outliers_indices)
@@ -338,16 +355,18 @@ class OutliersRemovalManager:
         for hist_name, hist in hists.items():
             # Then do the actual outliers removal.
             _remove_outliers_from_hist(
-                hist = hist,
-                outliers_start_index = outliers_start_index,
-                outliers_removal_axis = outliers_removal_axis,
+                hist=hist, outliers_start_index=outliers_start_index, outliers_removal_axis=outliers_removal_axis,
             )
 
             # Now check the mean and median to see how much they've changed.
-            hist_to_check = _project_to_part_level(hist = hist, outliers_removal_axis = outliers_removal_axis)
+            hist_to_check = _project_to_part_level(hist=hist, outliers_removal_axis=outliers_removal_axis)
             (post_removal_mean[hist_name], post_removal_median[hist_name]) = _get_mean_and_median(hist_to_check)
-            mean_fractional_difference = (post_removal_mean[hist_name] - pre_removal_mean[hist_name]) / post_removal_mean[hist_name]
-            median_fractional_difference = (post_removal_median[hist_name] - pre_removal_median[hist_name]) / post_removal_median[hist_name]
+            mean_fractional_difference = (
+                post_removal_mean[hist_name] - pre_removal_mean[hist_name]
+            ) / post_removal_mean[hist_name]
+            median_fractional_difference = (
+                post_removal_median[hist_name] - pre_removal_median[hist_name]
+            ) / post_removal_median[hist_name]
             logger.info(
                 f"Hist {hist_name}: pre- vs post- outliers removal mean fractional difference:"
                 f" {mean_fractional_difference}, median fractional difference: {median_fractional_difference}"

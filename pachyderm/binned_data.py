@@ -5,17 +5,17 @@
 .. codeauthor:: Ramyond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
+import attr
 import collections
 import itertools
 import logging
+import numpy as np
 import operator
+import ruamel.yaml
 import uuid
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Sequence, Tuple, Type, Union, cast
 
-import attr
-import numpy as np
-import ruamel.yaml
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +28,9 @@ else:
     AxesTupleAttribute = attr.Attribute
     NumpyAttribute = attr.Attribute
 
+
 def _axis_bin_edges_converter(value: Any) -> np.ndarray:
-    """ Convert the bin edges input to a numpy array.
+    """Convert the bin edges input to a numpy array.
 
     If an `Axis` is passed, we grab its bin edges.
 
@@ -45,8 +46,9 @@ def _axis_bin_edges_converter(value: Any) -> np.ndarray:
     # We specify the dtype here just to be safe.
     return np.ravel(np.array(value, dtype=np.float64))
 
+
 def _np_array_converter(value: Any) -> np.ndarray:
-    """ Convert the given value to a numpy array.
+    """Convert the given value to a numpy array.
 
     Normally, we would just use np.array directly as the converter function. However, mypy will complain if
     the converter is untyped. So we add (trivial) typing here.  See: https://github.com/python/mypy/issues/6172.
@@ -58,8 +60,9 @@ def _np_array_converter(value: Any) -> np.ndarray:
     """
     return np.array(value)
 
+
 def find_bin(bin_edges: np.ndarray, value: float) -> int:
-    """ Determine the index position where the value should be inserted.
+    """Determine the index position where the value should be inserted.
 
     This is basically ``ROOT.TH1.FindBin(value)``, but it can used for any set of bin_edges.
 
@@ -77,10 +80,8 @@ def find_bin(bin_edges: np.ndarray, value: float) -> int:
     # index 2, but we want to return bin 1, so we subtract one from the result.
     # NOTE: By specifying that ``side = "right"``, it find values as arr[i] <= value < arr[i - 1],
     #       which matches the ROOT convention.
-    return cast(
-        int,
-        np.searchsorted(bin_edges, value, side = "right") - 1
-    )
+    return cast(int, np.searchsorted(bin_edges, value, side="right") - 1)
+
 
 @attr.s(eq=False)
 class Axis:
@@ -92,7 +93,7 @@ class Axis:
 
     @property
     def bin_widths(self) -> np.ndarray:
-        """ Bin widths calculated from the bin edges.
+        """Bin widths calculated from the bin edges.
 
         Returns:
             Array of the bin widths.
@@ -101,7 +102,7 @@ class Axis:
 
     @property
     def bin_centers(self) -> np.ndarray:
-        """ The axis bin centers (``x`` for 1D).
+        """The axis bin centers (``x`` for 1D).
 
         This property caches the values so we don't have to calculate it every time.
 
@@ -120,7 +121,7 @@ class Axis:
         return self._bin_centers
 
     def find_bin(self, value: float) -> int:
-        """ Find the bin corresponding to the specified value.
+        """Find the bin corresponding to the specified value.
 
         For further information, see ``find_bin(...)`` in this module.
 
@@ -135,15 +136,13 @@ class Axis:
         return find_bin(self.bin_edges, value)
 
     def copy(self: "Axis") -> "Axis":
-        """ Copies the object.
+        """Copies the object.
 
         In principle, this should be the same as ``copy.deepcopy(...)``, at least when this was written in
         Feb 2020. But ``deepcopy(...)`` often seems to have very bad performance (and perhaps does additional
         implicit copying), so we copy these numpy arrays by hand.
         """
-        return type(self)(
-            bin_edges = np.array(self.bin_edges, copy=True)
-        )
+        return type(self)(bin_edges=np.array(self.bin_edges, copy=True))
 
     def __eq__(self, other: Any) -> bool:
         """ Check for equality. """
@@ -170,7 +169,9 @@ class AxesTuple(Tuple[Axis, ...]):
         return tuple(len(a) for a in self)
 
     @classmethod
-    def from_axes(cls: Type["AxesTuple"], axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]) -> "AxesTuple":
+    def from_axes(
+        cls: Type["AxesTuple"], axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]
+    ) -> "AxesTuple":
         values = axes
         # Convert to a list if necessary
         # Ideally, we want to check for anything that isn't a collection, and convert it to one if it's not.
@@ -191,9 +192,10 @@ class AxesTuple(Tuple[Axis, ...]):
         return False
 
     @classmethod
-    def to_yaml(cls: Type["AxesTuple"], representer: ruamel.yaml.representer.BaseRepresenter,
-                obj: "AxesTuple") -> ruamel.yaml.nodes.SequenceNode:
-        """ Encode YAML representation.
+    def to_yaml(
+        cls: Type["AxesTuple"], representer: ruamel.yaml.representer.BaseRepresenter, obj: "AxesTuple"
+    ) -> ruamel.yaml.nodes.SequenceNode:
+        """Encode YAML representation.
 
         For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
 
@@ -203,20 +205,18 @@ class AxesTuple(Tuple[Axis, ...]):
         Returns:
             YAML representation of the AxesTuple object.
         """
-        representation = representer.represent_sequence(
-            f"!{cls.__name__}", obj
-        )
+        representation = representer.represent_sequence(f"!{cls.__name__}", obj)
 
         # Finally, return the represented object.
-        return cast(
-            ruamel.yaml.nodes.SequenceNode,
-            representation,
-        )
+        return cast(ruamel.yaml.nodes.SequenceNode, representation,)
 
     @classmethod
-    def from_yaml(cls: Type["AxesTuple"], constructor: ruamel.yaml.constructor.BaseConstructor,
-                  data: ruamel.yaml.nodes.SequenceNode) -> "AxesTuple":
-        """ Decode YAML representation.
+    def from_yaml(
+        cls: Type["AxesTuple"],
+        constructor: ruamel.yaml.constructor.BaseConstructor,
+        data: ruamel.yaml.nodes.SequenceNode,
+    ) -> "AxesTuple":
+        """Decode YAML representation.
 
         For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
 
@@ -231,7 +231,7 @@ class AxesTuple(Tuple[Axis, ...]):
 
 
 def _axes_tuple_from_axes_sequence(axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]) -> AxesTuple:
-    """ Workaround for mypy issue in creating an AxesTuple from axes.
+    """Workaround for mypy issue in creating an AxesTuple from axes.
 
     Converter class methods are currently not supported by mypy, so we ignore the typing here.
     See: https://github.com/python/mypy/issues/7912. So instead we wrap the call here.
@@ -243,8 +243,10 @@ def _axes_tuple_from_axes_sequence(axes: Union[Axis, Sequence[Axis], np.ndarray,
     """
     return AxesTuple.from_axes(axes)
 
+
 def _array_length_from_axes(axes: AxesTuple) -> int:
     return reduce(operator.mul, (len(a) for a in axes))
+
 
 def _validate_axes(instance: "BinnedData", attribute: AxesTupleAttribute, value: AxesTuple) -> None:
     array_length = _array_length_from_axes(value)
@@ -255,6 +257,7 @@ def _validate_axes(instance: "BinnedData", attribute: AxesTupleAttribute, value:
                 f" len({attribute.name}) = {array_length}, expected length from '{other_name}': {len(other_value)}."
             )
 
+
 def _validate_arrays(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
     expected_length = _array_length_from_axes(instance.axes)
     if value.size != expected_length:
@@ -263,18 +266,24 @@ def _validate_arrays(instance: "BinnedData", attribute: NumpyAttribute, value: n
             f" len({attribute}) = {len(value)}, expected length: {expected_length}."
         )
 
+
 def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
     # TODO: This trivially fails for axes.
     # Define this array for convenience in accessing the members. This way, we're less likely to miss
     # newly added members.
-    arrays = {k: v for k, v in vars(instance).items() if not k.startswith("_") and k != "metadata" and k != attribute.name}
+    arrays = {
+        k: v for k, v in vars(instance).items() if not k.startswith("_") and k != "metadata" and k != attribute.name
+    }
     # Ensure the members don't point to one another (which can cause issues when performing operations in place).
     # Check the other values.
     for other_name, other_value in arrays.items():
-        #logger.debug(f"{attribute.name}: Checking {other_name} for shared memory.")
+        # logger.debug(f"{attribute.name}: Checking {other_name} for shared memory.")
         if np.may_share_memory(value, other_value):
-            logger.warning(f"Object '{other_name}' shares memory with object '{attribute.name}'. Copying '{attribute}'!")
+            logger.warning(
+                f"Object '{other_name}' shares memory with object '{attribute.name}'. Copying '{attribute}'!"
+            )
             setattr(instance, attribute.name, value.copy())
+
 
 def _shape_array_check(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
     """ Ensure that the arrays are shaped the same as the shape expected from the axes. """
@@ -290,19 +299,27 @@ def _shape_array_check(instance: "BinnedData", attribute: NumpyAttribute, value:
             setattr(instance, attribute.name, value.T)
         else:
             # Otherwise, something is entirely wrong. Just let the user know.
-            raise ValueError(f"Shape of {attribute.name} mismatches axes. {attribute.name:}.shape: {value.shape}, axes.shape: {instance.axes.shape}")
+            raise ValueError(
+                f"Shape of {attribute.name} mismatches axes. {attribute.name:}.shape: {value.shape}, axes.shape: {instance.axes.shape}"
+            )
 
 
 @attr.s(eq=False)
 class BinnedData:
-    axes: AxesTuple = attr.ib(converter=_axes_tuple_from_axes_sequence, validator=[_shared_memory_check, _validate_axes])
-    values: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _shape_array_check, _validate_arrays])
-    variances: np.ndarray = attr.ib(converter=_np_array_converter, validator=[_shared_memory_check, _shape_array_check, _validate_arrays])
-    metadata: Dict[str, Any] = attr.ib(factory = dict)
+    axes: AxesTuple = attr.ib(
+        converter=_axes_tuple_from_axes_sequence, validator=[_shared_memory_check, _validate_axes]
+    )
+    values: np.ndarray = attr.ib(
+        converter=_np_array_converter, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
+    )
+    variances: np.ndarray = attr.ib(
+        converter=_np_array_converter, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
+    )
+    metadata: Dict[str, Any] = attr.ib(factory=dict)
 
     @property
     def axis(self) -> Axis:
-        """ Returns the single axis when the binned data is 1D.
+        """Returns the single axis when the binned data is 1D.
 
         This is just a helper function, but can be nice for one dimensional data.
 
@@ -318,17 +335,17 @@ class BinnedData:
         return np.sqrt(self.variances)
 
     def copy(self: "BinnedData") -> "BinnedData":
-        """ Copies the object.
+        """Copies the object.
 
         In principle, this should be the same as ``copy.deepcopy(...)``, at least when this was written in
         Feb 2020. But ``deepcopy(...)`` often seems to have very bad performance (and perhaps does additional
         implicit copying), so we copy these numpy arrays by hand.
         """
         return type(self)(
-            axes = AxesTuple(axis.copy() for axis in self.axes),
-            values = np.array(self.values, copy = True),
-            variances = np.array(self.variances, copy = True),
-            metadata = self.metadata.copy()
+            axes=AxesTuple(axis.copy() for axis in self.axes),
+            values=np.array(self.values, copy=True),
+            variances=np.array(self.variances, copy=True),
+            metadata=self.metadata.copy(),
         )
 
     # TODO: Add integral: Need to devise how best to pass axis limits.
@@ -390,7 +407,7 @@ class BinnedData:
             assert isinstance(other, (float, int, np.number, np.ndarray))
             # Scale data by a scalar
             self.values *= other
-            self.variances *= (other ** 2)
+            self.variances *= other ** 2
         else:
             # Help out mypy...
             assert isinstance(other, type(self))
@@ -420,7 +437,7 @@ class BinnedData:
             # Help out mypy...
             assert isinstance(other, (float, int, np.number, np.ndarray))
             # Scale data by a scalar
-            self *= 1. / other
+            self *= 1.0 / other
         else:
             # Help out mypy...
             assert isinstance(other, type(self))
@@ -441,10 +458,12 @@ class BinnedData:
             #       approach taken here basically replaces any divide by 0s with a 0 in the output hist.
             #       For more info, see: https://stackoverflow.com/a/37977222
             self.variances = np.divide(
-                variances_numerator, variances_denominator,
-                out = np.zeros_like(variances_numerator), where = variances_denominator != 0,
+                variances_numerator,
+                variances_denominator,
+                out=np.zeros_like(variances_numerator),
+                where=variances_denominator != 0,
             )
-            self.values = np.divide(self.values, other.values, out = np.zeros_like(self.values), where = other.values != 0)
+            self.values = np.divide(self.values, other.values, out=np.zeros_like(self.values), where=other.values != 0)
         return self
 
     def __eq__(self, other: Any) -> bool:
@@ -462,15 +481,15 @@ class BinnedData:
         keys_to_exclude = ["axes", "metadata"]
         agreement = [np.allclose(getattr(self, a), getattr(other, a)) for a in attributes if a not in keys_to_exclude]
         # Check axes
-        axes_agree = (self.axes == other.axes)
+        axes_agree = self.axes == other.axes
         # Check metadata
-        metadata_agree = (self.metadata == other.metadata)
+        metadata_agree = self.metadata == other.metadata
         # All arrays and the metadata must agree.
         return all(agreement) and axes_agree and metadata_agree
 
     @classmethod
     def from_hepdata(cls: Type["BinnedData"], hist: Mapping[str, Any]) -> List["BinnedData"]:
-        """ Convert (a set) of HEPdata histogram(s) to BinnedData objects.
+        """Convert (a set) of HEPdata histogram(s) to BinnedData objects.
 
         Will include any information that the extraction function extracts and returns.
 
@@ -494,9 +513,7 @@ class BinnedData:
 
     @classmethod
     def _from_uproot3(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
-        """ Convert from uproot read histogram to BinnedData.
-
-        """
+        """Convert from uproot read histogram to BinnedData."""
         # All of these methods should excludes underflow and overflow bins
         bin_edges = hist.edges
         values = hist.values
@@ -504,16 +521,11 @@ class BinnedData:
 
         metadata: Dict[str, Any] = {}
 
-        return cls(
-            axes=bin_edges,
-            values=values,
-            variances=variances,
-            metadata=metadata
-        )
+        return cls(axes=bin_edges, values=values, variances=variances, metadata=metadata)
 
     @classmethod
     def _from_uproot4(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
-        """ Convert from uproot4 to BinnedData.
+        """Convert from uproot4 to BinnedData.
 
         Cannot just use the boost_histogram conversion because it includes flow bins.
 
@@ -526,31 +538,19 @@ class BinnedData:
 
         metadata: Dict[str, Any] = {}
 
-        return cls(
-            axes=bin_edges,
-            values=values,
-            variances=errors ** 2,
-            metadata=metadata,
-        )
+        return cls(axes=bin_edges, values=values, variances=errors ** 2, metadata=metadata,)
 
     @classmethod
     def _from_boost_histogram(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
-        """ Convert from boost histogram to BinnedData.
-
-        """
+        """Convert from boost histogram to BinnedData."""
         view = hist.view()
         metadata: Dict[str, Any] = {}
 
-        return cls(
-            axes = hist.axes.edges,
-            values = view.value,
-            variances = np.copy(view.variance),
-            metadata = metadata,
-        )
+        return cls(axes=hist.axes.edges, values=view.value, variances=np.copy(view.variance), metadata=metadata,)
 
     @classmethod
     def _from_ROOT(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
-        """ Convert TH1, TH2, or TH3 histogram to BinnedData.
+        """Convert TH1, TH2, or TH3 histogram to BinnedData.
 
         Note:
             Under/Overflow bins are excluded.
@@ -567,7 +567,7 @@ class BinnedData:
         root_axes = axis_methods[:n_dim]
 
         def get_bin_edges_from_axis(axis: Any) -> np.ndarray:
-            """ Get bin edges from a ROOT hist axis.
+            """Get bin edges from a ROOT hist axis.
 
             Note:
                 Doesn't include over- or underflow bins!
@@ -597,9 +597,9 @@ class BinnedData:
         # order of the axes, and then transpose.
         # NOTE: These operations _do not_ commute.
         shape = tuple((len(a) for a in reversed(axes)))
-        bins_without_flow_mask = np.array([
-            not (hist.IsBinUnderflow(i) or hist.IsBinOverflow(i)) for i in range(hist.GetNcells())
-        ])
+        bins_without_flow_mask = np.array(
+            [not (hist.IsBinUnderflow(i) or hist.IsBinOverflow(i)) for i in range(hist.GetNcells())]
+        )
         values = np.array([hist.GetBinContent(i) for i in range(hist.GetNcells())])
         values = values[bins_without_flow_mask].reshape(shape).T
         variances = np.array(hist.GetSumw2())
@@ -631,16 +631,13 @@ class BinnedData:
 
         metadata: Dict[str, Any] = {}
 
-        return cls(
-            axes=axes,
-            values=values,
-            variances=variances,
-            metadata=metadata,
-        )
+        return cls(axes=axes, values=values, variances=variances, metadata=metadata,)
 
     @classmethod
-    def from_existing_data(cls: Type["BinnedData"], binned_data: Any, return_copy_if_already_converted: bool = True) -> "BinnedData":
-        """ Convert an existing histogram.
+    def from_existing_data(
+        cls: Type["BinnedData"], binned_data: Any, return_copy_if_already_converted: bool = True
+    ) -> "BinnedData":
+        """Convert an existing histogram.
 
         Note:
             Underflow and overflow bins are excluded!
@@ -674,7 +671,7 @@ class BinnedData:
 
     # Convert to other formats.
     def to_ROOT(self, copy: bool = True) -> Any:
-        """ Convert into a ROOT histogram.
+        """Convert into a ROOT histogram.
 
         NOTE:
             This is a lossy operation because there is nowhere to store metadata is in the ROOT hist.
@@ -737,7 +734,7 @@ class BinnedData:
         return h_ROOT
 
     def to_boost_histogram(self) -> Any:
-        """ Convert into a boost-histogram.
+        """Convert into a boost-histogram.
 
         NOTE:
             This is a lossy operation. The metadata is not preserved.
@@ -767,7 +764,7 @@ class BinnedData:
         return h
 
     def to_histogram1D(self) -> Any:
-        """ Convert to a Histogram 1D.
+        """Convert to a Histogram 1D.
 
         This is entirely a convenience function. Generally, it's best to stay with BinnedData, but
         a Histogram1D is required in some cases, such as for fitting.
@@ -781,14 +778,10 @@ class BinnedData:
 
         from pachyderm import histogram
 
-        return histogram.Histogram1D(
-            bin_edges = self.axes[0].bin_edges,
-            y = self.values,
-            errors_squared = self.variances,
-        )
+        return histogram.Histogram1D(bin_edges=self.axes[0].bin_edges, y=self.values, errors_squared=self.variances,)
 
     def to_numpy(self) -> Tuple[np.ndarray, ...]:
-        """ Convert to a numpy histogram.
+        """Convert to a numpy histogram.
 
         Returns:
             Tuple of values, and then axes bin edges.

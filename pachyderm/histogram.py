@@ -8,14 +8,14 @@
 import collections
 import itertools
 import logging
+import numpy as np
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Callable, ContextManager, Dict, List, Mapping, Optional, Tuple, Type, TypeVar, Union, cast
 
-import numpy as np
-
 from pachyderm.typing_helpers import Axis, Hist, TFile
+
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -23,10 +23,13 @@ logger = logging.getLogger(__name__)
 _T_ContextManager = TypeVar("_T_ContextManager")
 T_Extraction_Function = Tuple[Union[List[float], np.ndarray], Union[List[float], np.ndarray], Dict[str, Any]]
 
+
 class RootOpen(ContextManager[_T_ContextManager]):
     """ Very simple helper to open root files. """
+
     def __init__(self, filename: Union[Path, str], mode: str = "read"):
         import ROOT
+
         # Valdiate as a path
         self.filename = Path(filename)
         self.mode = mode
@@ -37,8 +40,12 @@ class RootOpen(ContextManager[_T_ContextManager]):
             raise IOError(f"Failed to open ROOT file '{self.filename}'.")
         return self.f
 
-    def __exit__(self, execption_type: Optional[Type[BaseException]],
-                 exception_value: Optional[BaseException], traceback: Optional[TracebackType]) -> None:
+    def __exit__(
+        self,
+        execption_type: Optional[Type[BaseException]],
+        exception_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
         """ We want to pass on all raised exceptions, but ensure that the file is always closed. """
         # The typing information is from here:
         # https://github.com/python/mypy/blob/master/docs/source/protocols.rst#context-manager-protocols
@@ -52,8 +59,9 @@ class RootOpen(ContextManager[_T_ContextManager]):
         # We don't return anything because we always want the exceptions to continue
         # to be raised.
 
+
 def get_histograms_in_file(filename: Union[Path, str]) -> Dict[str, Any]:
-    """ Helper function which gets all histograms in a file.
+    """Helper function which gets all histograms in a file.
 
     Args:
         filename: Filename of the ROOT file containing the list.
@@ -63,10 +71,11 @@ def get_histograms_in_file(filename: Union[Path, str]) -> Dict[str, Any]:
     """
     # Validation
     filename = Path(filename)
-    return get_histograms_in_list(filename = filename)
+    return get_histograms_in_list(filename=filename)
+
 
 def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] = None) -> Dict[str, Any]:
-    """ Get histograms from the file and make them available in a dict.
+    """Get histograms from the file and make them available in a dict.
 
     Lists are recursively explored, with all lists converted to dictionaries, such that the return
     dictionaries which only contains hists and dictionaries of hists (ie there are no ROOT ``TCollection``
@@ -85,7 +94,7 @@ def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] 
     filename = Path(filename)
 
     hists: Dict[str, Any] = {}
-    with RootOpen(filename = filename, mode = "READ") as fIn:
+    with RootOpen(filename=filename, mode="READ") as fIn:
         if list_name is not None:
             hist_list = fIn.Get(list_name)
         else:
@@ -96,7 +105,7 @@ def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] 
             # Closing this file appears (but is not entirely confirmed) to be extremely important! Otherwise,
             # the memory will leak, leading to ROOT memory issues!
             fIn.Close()
-            raise ValueError(f"Could not find list with name \"{list_name}\". Possible names are listed above.")
+            raise ValueError(f'Could not find list with name "{list_name}". Possible names are listed above.')
 
         # Retrieve objects in the hist list
         for obj in hist_list:
@@ -104,8 +113,9 @@ def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] 
 
     return hists
 
+
 def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
-    """ Function to recursively retrieve histograms from a list in a ROOT file.
+    """Function to recursively retrieve histograms from a list in a ROOT file.
 
     ``SetDirectory(True)`` is applied to TH1 derived hists and python is explicitly given
     ownership of the retrieved objects.
@@ -149,8 +159,9 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
         for obj_temp in obj.GetListOfKeys():
             _retrieve_object(output_dict[obj.GetName()], obj_temp.ReadObj())
 
+
 def _extract_values_from_hepdata_dependent_variable(var: Mapping[str, Any]) -> T_Extraction_Function:
-    """ Extract values from a HEPdata dependent variable.
+    """Extract values from a HEPdata dependent variable.
 
     As the simplest useful HEPdata extraction function possible, it retrieves y values, symmetric
     statical errors. Symmetric systematic errors are stored in the metadata.
@@ -176,8 +187,7 @@ def _extract_values_from_hepdata_dependent_variable(var: Mapping[str, Any]) -> T
     # Validate the collected values.
     if len(hist_stat_errors) == 0:
         raise ValueError(
-            f"Could not retrieve statistical errors for dependent var {var}.\n"
-            f" hist_stat_errors: {hist_stat_errors}"
+            f"Could not retrieve statistical errors for dependent var {var}.\n" f" hist_stat_errors: {hist_stat_errors}"
         )
     if len(hist_values) != len(hist_stat_errors):
         raise ValueError(
@@ -193,18 +203,18 @@ def _extract_values_from_hepdata_dependent_variable(var: Mapping[str, Any]) -> T
         )
 
     # Create the histogram
-    metadata: Dict[str, Any] = {
-        "sys_error": np.array(hist_sys_errors)
-    }
+    metadata: Dict[str, Any] = {"sys_error": np.array(hist_sys_errors)}
 
     return hist_values, hist_stat_errors, metadata
 
+
 # Typing helpers
-_T = TypeVar("_T", bound = "Histogram1D")
+_T = TypeVar("_T", bound="Histogram1D")
+
 
 @dataclass
 class Histogram1D:
-    """ Contains histogram data.
+    """Contains histogram data.
 
     Note:
         Underflow and overflow bins are excluded!
@@ -233,10 +243,11 @@ class Histogram1D:
         metadata (dict): Any additional metadata that should be stored with the histogram. Keys are expected to be
             strings, while the values can be anything. For example, could contain systematic errors, etc.
     """
+
     bin_edges: np.ndarray
     y: np.ndarray
     errors_squared: np.ndarray
-    metadata: Dict[str, Any] = field(default_factory = dict)
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """ Perform validation on the inputs. """
@@ -285,7 +296,7 @@ class Histogram1D:
 
     @property
     def bin_widths(self) -> np.ndarray:
-        """ Bin widths calculated from the bin edges.
+        """Bin widths calculated from the bin edges.
 
         Returns:
             Array of the bin widths.
@@ -294,7 +305,7 @@ class Histogram1D:
 
     @property
     def x(self) -> np.ndarray:
-        """ The histogram bin centers (``x``).
+        """The histogram bin centers (``x``).
 
         This property caches the x value so we don't have to calculate it every time.
 
@@ -314,7 +325,7 @@ class Histogram1D:
 
     @property
     def mean(self) -> float:
-        """ Mean of values filled into the histogram.
+        """Mean of values filled into the histogram.
 
         Calculated in the same way as ROOT and physt.
 
@@ -327,7 +338,7 @@ class Histogram1D:
 
     @property
     def std_dev(self) -> float:
-        """ Standard deviation of the values filled into the histogram.
+        """Standard deviation of the values filled into the histogram.
 
         Calculated in the same way as ROOT and physt.
 
@@ -340,7 +351,7 @@ class Histogram1D:
 
     @property
     def variance(self) -> float:
-        """ Variance of the values filled into the histogram.
+        """Variance of the values filled into the histogram.
 
         Calculated in the same way as ROOT and physt.
 
@@ -353,7 +364,7 @@ class Histogram1D:
 
     @property
     def n_entries(self) -> float:
-        """ The number of entries in the hist.
+        """The number of entries in the hist.
 
         Note:
             This value is dependent on the weight. We don't have a weight independent measure like a ROOT hist,
@@ -362,7 +373,7 @@ class Histogram1D:
         return cast(float, np.sum(self.y))
 
     def find_bin(self, value: float) -> int:
-        """ Find the bin corresponding to the specified value.
+        """Find the bin corresponding to the specified value.
 
         For further information, see ``find_bin(...)`` in this module.
 
@@ -377,7 +388,7 @@ class Histogram1D:
         return find_bin(self.bin_edges, value)
 
     def copy(self: _T) -> _T:
-        """ Copies the object.
+        """Copies the object.
 
         In principle, this should be the same as ``copy.deepcopy(...)``, at least when this was written in
         Feb 2019. But ``deepcopy(...)`` often seems to have very bad performance (and perhaps does additional
@@ -386,15 +397,19 @@ class Histogram1D:
         # We want to copy bin_edges, y, and errors_squared, but not anything else. Namely, we skip _x here.
         # In principle, it wouldn't really be a problem to copy, but there may be other "_" fields that we
         # want to skip later, so we do the right thing now.
-        kwargs = {k: np.array(v, copy = True) for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"}
+        kwargs = {k: np.array(v, copy=True) for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"}
         # We also want to make an explicit copy of the metadata
         kwargs["metadata"] = self.metadata.copy()
         return type(self)(**kwargs)
 
-    def counts_in_interval(self,
-                           min_value: Optional[float] = None, max_value: Optional[float] = None,
-                           min_bin: Optional[int] = None, max_bin: Optional[int] = None) -> Tuple[float, float]:
-        """ Count the number of counts within bins in an interval.
+    def counts_in_interval(
+        self,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        min_bin: Optional[int] = None,
+        max_bin: Optional[int] = None,
+    ) -> Tuple[float, float]:
+        """Count the number of counts within bins in an interval.
 
         Note:
             The integration limits could be described as inclusive. This matches the ROOT convention.
@@ -412,15 +427,17 @@ class Histogram1D:
             (value, error): Integral value, error
         """
         return self._integral(
-            min_value = min_value, max_value = max_value,
-            min_bin = min_bin, max_bin = max_bin,
-            multiply_by_bin_width = False,
+            min_value=min_value, max_value=max_value, min_bin=min_bin, max_bin=max_bin, multiply_by_bin_width=False,
         )
 
-    def integral(self,
-                 min_value: Optional[float] = None, max_value: Optional[float] = None,
-                 min_bin: Optional[int] = None, max_bin: Optional[int] = None) -> Tuple[float, float]:
-        """ Integrate the histogram over the given range.
+    def integral(
+        self,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        min_bin: Optional[int] = None,
+        max_bin: Optional[int] = None,
+    ) -> Tuple[float, float]:
+        """Integrate the histogram over the given range.
 
         Note:
             Be very careful here! The equivalent of `TH1::Integral(...)` is `counts_in_interval(..)`.
@@ -445,16 +462,18 @@ class Histogram1D:
             (value, error): Integral value, error
         """
         return self._integral(
-            min_value = min_value, max_value = max_value,
-            min_bin = min_bin, max_bin = max_bin,
-            multiply_by_bin_width = True,
+            min_value=min_value, max_value=max_value, min_bin=min_bin, max_bin=max_bin, multiply_by_bin_width=True,
         )
 
-    def _integral(self,
-                  min_value: Optional[float] = None, max_value: Optional[float] = None,
-                  min_bin: Optional[int] = None, max_bin: Optional[int] = None,
-                  multiply_by_bin_width: bool = False) -> Tuple[float, float]:
-        """ Integrate the histogram over the specified range.
+    def _integral(
+        self,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+        min_bin: Optional[int] = None,
+        max_bin: Optional[int] = None,
+        multiply_by_bin_width: bool = False,
+    ) -> Tuple[float, float]:
+        """Integrate the histogram over the specified range.
 
         This function provides the underlying implementation of the integral, giving the option to multiply
         by the bin with (in which case, one gets the integral), or not (in which case, one gets the number
@@ -512,8 +531,8 @@ class Histogram1D:
         #       where the upper limit resides. This matches the ROOT convention. Practically, this means
         #       that if the user wants to integrate over 1 bin, then the min bin and max bin should be the same.
         logger.debug(f"Integrating from {min_bin} - {max_bin + 1}")
-        value = np.sum(self.y[min_bin:max_bin + 1] * widths[min_bin:max_bin + 1])
-        error_squared = np.sum(self.errors_squared[min_bin:max_bin + 1] * widths[min_bin:max_bin + 1] ** 2)
+        value = np.sum(self.y[min_bin : max_bin + 1] * widths[min_bin : max_bin + 1])
+        error_squared = np.sum(self.errors_squared[min_bin : max_bin + 1] * widths[min_bin : max_bin + 1] ** 2)
 
         # We explicitly cast the final result to float to ensure that it doesn't cause any problems
         # with saving the final values to YAML.
@@ -521,9 +540,9 @@ class Histogram1D:
 
     def _recalculate_stats(self: _T) -> None:
         """ Recalculate the hist stats. """
-        self.metadata.update(calculate_binned_stats(
-            bin_edges=self.bin_edges, y = self.y, weights_squared = self.errors_squared
-        ))
+        self.metadata.update(
+            calculate_binned_stats(bin_edges=self.bin_edges, y=self.y, weights_squared=self.errors_squared)
+        )
 
     def __add__(self: _T, other: _T) -> _T:
         """ Handles ``a = b + c.`` """
@@ -604,10 +623,10 @@ class Histogram1D:
             assert isinstance(other, (float, int, np.number, np.ndarray))
             # Scale histogram by a scalar
             self.y *= other
-            self.errors_squared *= (other ** 2)
+            self.errors_squared *= other ** 2
             # Scale stats accordingly. We can only preserve the stats if using a scalar (according to ROOT).
             if np.isscalar(other):
-                self._scale_stats(scale_factor = other)
+                self._scale_stats(scale_factor=other)
             else:
                 self._recalculate_stats()
         else:
@@ -643,10 +662,10 @@ class Histogram1D:
             # Help out mypy...
             assert isinstance(other, (float, int, np.number, np.ndarray))
             # Scale histogram by a scalar
-            self *= 1. / other
+            self *= 1.0 / other
             # Scale stats accordingly. We can only preserve the stats if using a scalar (according to ROOT).
             if np.isscalar(other):
-                self._scale_stats(scale_factor = 1. / other)
+                self._scale_stats(scale_factor=1.0 / other)
             else:
                 self._recalculate_stats()
         else:
@@ -669,10 +688,12 @@ class Histogram1D:
             #       approach taken here basically replaces any divide by 0s with a 0 in the output hist.
             #       For more info, see: https://stackoverflow.com/a/37977222
             self.errors_squared = np.divide(
-                errors_squared_numerator, errors_squared_denominator,
-                out = np.zeros_like(errors_squared_numerator), where = errors_squared_denominator != 0,
+                errors_squared_numerator,
+                errors_squared_denominator,
+                out=np.zeros_like(errors_squared_numerator),
+                where=errors_squared_denominator != 0,
             )
-            self.y = np.divide(self.y, other.y, out = np.zeros_like(self.y), where = other.y != 0)
+            self.y = np.divide(self.y, other.y, out=np.zeros_like(self.y), where=other.y != 0)
 
             # Recalculate the stats (same as ROOT)
             self._recalculate_stats()
@@ -706,7 +727,7 @@ class Histogram1D:
 
     @staticmethod
     def _from_uproot(hist: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
-        """ Convert a uproot histogram to a set of array for creating a Histogram.
+        """Convert a uproot histogram to a set of array for creating a Histogram.
 
         Note:
             Underflow and overflow bins are excluded!
@@ -729,17 +750,23 @@ class Histogram1D:
         # Extract stats information. It will be stored in the metadata.
         metadata = {}
         ## We extract the values directly from the members.
-        metadata.update(_create_stats_dict_from_values(
-            hist.member("fTsumw"), hist.member("fTsumw2"), hist.member("fTsumwx"), hist.member("fTsumwx2")
-        ))
+        metadata.update(
+            _create_stats_dict_from_values(
+                hist.member("fTsumw"), hist.member("fTsumw2"), hist.member("fTsumwx"), hist.member("fTsumwx2")
+            )
+        )
 
         return (bin_edges, y, errors ** 2, metadata)
 
     @classmethod
-    def from_hepdata(cls: Type[_T], hist: Mapping[str, Any],
-                     extraction_function: Callable[[Mapping[str, Any]], T_Extraction_Function] = _extract_values_from_hepdata_dependent_variable
-                     ) -> List[_T]:
-        """ Convert (a set) of HEPdata histogram(s) to a Histogram1D.
+    def from_hepdata(
+        cls: Type[_T],
+        hist: Mapping[str, Any],
+        extraction_function: Callable[
+            [Mapping[str, Any]], T_Extraction_Function
+        ] = _extract_values_from_hepdata_dependent_variable,
+    ) -> List[_T]:
+        """Convert (a set) of HEPdata histogram(s) to a Histogram1D.
 
         Will include any information that the extraction function extracts and returns.
 
@@ -779,10 +806,10 @@ class Histogram1D:
                 y, errors_squared, metadata = extraction_function(var)
                 histograms.append(
                     cls(
-                        bin_edges = bin_edges,
-                        y = y,
-                        errors_squared = [err ** 2 for err in errors_squared],
-                        metadata = metadata,
+                        bin_edges=bin_edges,
+                        y=y,
+                        errors_squared=[err ** 2 for err in errors_squared],
+                        metadata=metadata,
                     )
                 )
 
@@ -797,7 +824,7 @@ class Histogram1D:
 
     @staticmethod
     def _from_th1(hist: Hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
-        """ Convert a TH1 histogram to a Histogram.
+        """Convert a TH1 histogram to a Histogram.
 
         Note:
             Underflow and overflow bins are excluded!
@@ -835,7 +862,7 @@ class Histogram1D:
 
             # Retrieve the stats and store them in the metadata.
             # They are useful for calculating histogram properties (mean, variance, etc).
-            stats = np.array([0, 0, 0, 0], dtype = np.float64)
+            stats = np.array([0, 0, 0, 0], dtype=np.float64)
             hist.GetStats(np.ctypeslib.as_ctypes(stats))
             # Return values are (each one is a single float):
             # [1], [2], [3], [4]
@@ -849,7 +876,7 @@ class Histogram1D:
 
     @classmethod
     def from_existing_hist(cls: Type[_T], hist: Union[Hist, Any]) -> _T:
-        """ Convert an existing histogram.
+        """Convert an existing histogram.
 
         Note:
             Underflow and overflow bins are excluded! Bins are assumed to be fixed
@@ -863,7 +890,7 @@ class Histogram1D:
         try:
             # Convert a histogram containing object -> TH1 or uproot hist.
             # It goes "HistogramContainer".hist -> TH1 or uproot hist
-            #logger.debug("Converting HistogramContainer to standard hist")
+            # logger.debug("Converting HistogramContainer to standard hist")
             hist = hist.hist
         except AttributeError:
             # Just use the existing histogram
@@ -883,10 +910,13 @@ class Histogram1D:
             # Handle traditional ROOT hists
             (bin_edges, y, errors_squared, metadata) = cls._from_th1(hist)
 
-        return cls(bin_edges = bin_edges, y = y, errors_squared = errors_squared, metadata = metadata)
+        return cls(bin_edges=bin_edges, y=y, errors_squared=errors_squared, metadata=metadata)
 
-def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_edges: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """ Extract x, y, and bin values from a 2D ROOT histogram.
+
+def get_array_from_hist2D(
+    hist: Hist, set_zero_to_NaN: bool = True, return_bin_edges: bool = False
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Extract x, y, and bin values from a 2D ROOT histogram.
 
     Converts the histogram into a numpy array, and suitably processes it for a surface plot
     by removing 0s (which can cause problems when taking logs), and returning a set of (x, y) mesh
@@ -910,7 +940,13 @@ def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_e
     shape = (hist.GetYaxis().GetNbins(), hist.GetXaxis().GetNbins())
     # To keep consistency with the root_numpy 2D hist format, we transpose the final result
     # This format has x values as columns.
-    hist_array = np.array([hist.GetBinContent(x) for x in range(1, hist.GetNcells()) if not hist.IsBinUnderflow(x) and not hist.IsBinOverflow(x)])
+    hist_array = np.array(
+        [
+            hist.GetBinContent(x)
+            for x in range(1, hist.GetNcells())
+            if not hist.IsBinUnderflow(x) and not hist.IsBinOverflow(x)
+        ]
+    )
     # The hist_array was linear, so we need to shape it into our expected 2D values.
     hist_array = hist_array.reshape(shape)
     # Transpose the array to better match expectations
@@ -941,16 +977,8 @@ def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_e
         # NOTE: This should be identical to taking the min and max of the axis using
         #       ``TAxis.GetXmin()`` and ``TAxis.GetXmax()``, but I prefer this approach.
         epsilon = 1e-9
-        x_range = np.arange(
-            np.amin(x_bin_edges),
-            np.amax(x_bin_edges) + epsilon,
-            hist.GetXaxis().GetBinWidth(1)
-        )
-        y_range = np.arange(
-            np.amin(y_bin_edges),
-            np.amax(y_bin_edges) + epsilon,
-            hist.GetYaxis().GetBinWidth(1)
-        )
+        x_range = np.arange(np.amin(x_bin_edges), np.amax(x_bin_edges) + epsilon, hist.GetXaxis().GetBinWidth(1))
+        y_range = np.arange(np.amin(y_bin_edges), np.amax(y_bin_edges) + epsilon, hist.GetYaxis().GetBinWidth(1))
     else:
         # We want an array of bin centers
         x_range = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
@@ -960,8 +988,9 @@ def get_array_from_hist2D(hist: Hist, set_zero_to_NaN: bool = True, return_bin_e
 
     return (X, Y, hist_array)
 
+
 def get_bin_edges_from_axis(axis: Axis) -> np.ndarray:
-    """ Get bin edges from a ROOT hist axis.
+    """Get bin edges from a ROOT hist axis.
 
     Note:
         Doesn't include over- or underflow bins!
@@ -980,8 +1009,9 @@ def get_bin_edges_from_axis(axis: Axis) -> np.ndarray:
 
     return bin_edges
 
+
 def find_bin(bin_edges: np.ndarray, value: float) -> int:
-    """ Determine the index position where the value should be inserted.
+    """Determine the index position where the value should be inserted.
 
     This is basically ``ROOT.TH1.FindBin(value)``, but it can used for any set of bin_edges.
 
@@ -999,18 +1029,21 @@ def find_bin(bin_edges: np.ndarray, value: float) -> int:
     # index 2, but we want to return bin 1, so we subtract one from the result.
     # NOTE: By specifying that ``side = "right"``, it find values as arr[i] <= value < arr[i - 1],
     #       which matches the ROOT convention.
-    return cast(
-        int,
-        np.searchsorted(bin_edges, value, side = "right") - 1
-    )
+    return cast(int, np.searchsorted(bin_edges, value, side="right") - 1)
+
 
 _stats_keys = [
-    "_total_sum_w", "_total_sum_w2", "_total_sum_wx", "_total_sum_wx2",
+    "_total_sum_w",
+    "_total_sum_w2",
+    "_total_sum_wx",
+    "_total_sum_wx2",
 ]
 
-def _create_stats_dict_from_values(total_sum_w: float, total_sum_w2: float,
-                                   total_sum_wx: float, total_sum_wx2: float) -> Dict[str, float]:
-    """ Create a statistics dictionary from the provided set of values.
+
+def _create_stats_dict_from_values(
+    total_sum_w: float, total_sum_w2: float, total_sum_wx: float, total_sum_wx2: float
+) -> Dict[str, float]:
+    """Create a statistics dictionary from the provided set of values.
 
     This is particularly useful for ensuring that the dictionary values are created uniformly.
 
@@ -1023,12 +1056,15 @@ def _create_stats_dict_from_values(total_sum_w: float, total_sum_w2: float,
         Statistics dict suitable for storing in the metadata.
     """
     return {
-        "_total_sum_w": total_sum_w, "_total_sum_w2": total_sum_w2,
-        "_total_sum_wx": total_sum_wx, "_total_sum_wx2": total_sum_wx2,
+        "_total_sum_w": total_sum_w,
+        "_total_sum_w2": total_sum_w2,
+        "_total_sum_wx": total_sum_wx,
+        "_total_sum_wx2": total_sum_wx2,
     }
 
+
 def calculate_binned_stats(bin_edges: np.array, y: np.array, weights_squared: np.array) -> Dict[str, float]:
-    """ Calculate the stats needed to fully determine histogram properties.
+    """Calculate the stats needed to fully determine histogram properties.
 
     The values are calculated the same way as in ``ROOT.TH1.GetStats(...)``. Recalculating the statistics
     is not ideal because information is lost compared to the information available when filling the histogram.
@@ -1061,8 +1097,9 @@ def calculate_binned_stats(bin_edges: np.array, y: np.array, weights_squared: np
     total_sum_wx2 = np.sum(y * x ** 2)
     return _create_stats_dict_from_values(total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2)
 
+
 def binned_mean(stats: Dict[str, float]) -> float:
-    """ Mean of values stored in the histogram.
+    """Mean of values stored in the histogram.
 
     Calculated in the same way as ROOT and physt.
 
@@ -1083,8 +1120,9 @@ def binned_mean(stats: Dict[str, float]) -> float:
     # Can't divide, so return NaN
     return np.nan  # type: ignore
 
+
 def binned_standard_deviation(stats: Dict[str, float]) -> float:
-    """ Standard deviation of the values filled into the histogram.
+    """Standard deviation of the values filled into the histogram.
 
     Calculated in the same way as ROOT and physt.
 
@@ -1095,8 +1133,9 @@ def binned_standard_deviation(stats: Dict[str, float]) -> float:
     """
     return cast(float, np.sqrt(binned_variance(stats)))
 
+
 def binned_variance(stats: Dict[str, float]) -> float:
-    """ Variance of the values filled into the histogram.
+    """Variance of the values filled into the histogram.
 
     Calculated in the same way as ROOT and physt.
 

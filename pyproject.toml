@@ -60,18 +60,19 @@ pytest-cov = "^2.10.1"
 pytest-mock = "^3.3.1"
 codecov = "^2.1.10"
 boost-histogram = {version = "^0.11.1", optional = true}
+black = "^20.8b1"
 
 [tool.isort]
 known_standard_library = ["setuptools", "typing_extensions"]
 known_third_party = ["attr", "iminuit", "matplotlib", "numdifftools", "numpy", "pytest", "ruamel", "scipy", "uproot4"]
 known_first_party = []
 line_length = 120
-# Meaning a grouped grid of imports
 multi_line_output = 3
-lines_after_imports = 2
+include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
-include_trailing_comma = true
+ensure_newline_before_comments = true
+lines_after_imports = 2
 verbose = true
 skip = ["docs/conf.py"]
 skip_glob = ".*"

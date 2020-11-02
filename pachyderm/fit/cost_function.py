@@ -6,23 +6,24 @@
 """
 
 import abc
-import logging
-import operator
-from typing import Any, Callable, Dict, Iterable, Iterator, TypeVar, Union
-
 import iminuit
+import logging
 import numpy as np
+import operator
 import scipy.integrate
+from typing import Any, Callable, Dict, Iterable, Iterator, TypeVar, Union
 
 from pachyderm import generic_class, histogram
 from pachyderm.fit import base as fit_base
 
+
 logger = logging.getLogger(__name__)
 
-T_CostFunction = TypeVar("T_CostFunction", bound = "CostFunctionBase")
+T_CostFunction = TypeVar("T_CostFunction", bound="CostFunctionBase")
+
 
 def _quad(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
-    """ Integrate over the given function using QUADPACK.
+    """Integrate over the given function using QUADPACK.
 
     Unfortunately, this option is fairly slow because we can't take advantage of vectorized numpy operations.
     Something like numba could speed this up if all functions and classes could be supported.
@@ -36,12 +37,13 @@ def _quad(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np
     """
     values = []
     for lower, upper in zip(bin_edges[:-1], bin_edges[1:]):
-        res, _ = scipy.integrate.quad(func = f, a = lower, b = upper, args = tuple(args))
+        res, _ = scipy.integrate.quad(func=f, a=lower, b=upper, args=tuple(args))
         values.append(res)
     return np.array(values)
 
+
 def _simpson_38(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
-    """ Integrate over each histogram bin with the Simpson 3/8 rule.
+    """Integrate over each histogram bin with the Simpson 3/8 rule.
 
     Implemented via the expression at https://en.wikipedia.org/wiki/Simpson%27s_rule#Simpson's_3/8_rule .
 
@@ -61,8 +63,9 @@ def _simpson_38(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[flo
     # Recall that bin_edges[1:] - bin_edges[:-1] is the bin widths
     return (b - a) / 8 * (f(a, *args) + 3 * f((2 * a + b) / 3, *args) + 3 * f((a + 2 * b) / 3, *args) + f(b, *args))
 
+
 def _integrate_1D(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
-    """ Integrate the given function over each bin in 1D.
+    """Integrate the given function over each bin in 1D.
 
     A number of options are available for integration, including a simple method evaluated on
     the bin edges, Simpson's 3/8 rule, and using QUADPACK.
@@ -79,15 +82,17 @@ def _integrate_1D(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[f
         Integral over each bin.
     """
     # Simplest case where we just evaluate on the edges.
-    #return (f(bin_edges[1:], *args) + f(bin_edges[:-1], *args)) / 2 * (bin_edges[1:] - bin_edges[:-1])
+    # return (f(bin_edges[1:], *args) + f(bin_edges[:-1], *args)) / 2 * (bin_edges[1:] - bin_edges[:-1])
     # QUADPACK is another option, but it's slow.
-    #return _quad(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])
+    # return _quad(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])
     # Simpson's 3/8 rule is better than the simple case, but faster than QUADPACK.
     return _simpson_38(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])
 
-def unravel_simultaneous_fits(functions: Iterable[Union["CostFunctionBase", "SimultaneousFit"]]
-                              ) -> Iterator["CostFunctionBase"]:
-    """ Unravel the cost functions from possible simultaneous fit objects.
+
+def unravel_simultaneous_fits(
+    functions: Iterable[Union["CostFunctionBase", "SimultaneousFit"]]
+) -> Iterator["CostFunctionBase"]:
+    """Unravel the cost functions from possible simultaneous fit objects.
 
     The functions are unravel by recursively retrieving the functions from existing ``SimultaneousFit`` objects
     that may be in the list of passed functions. The cost functions store their fit data, so they are fully
@@ -105,8 +110,9 @@ def unravel_simultaneous_fits(functions: Iterable[Union["CostFunctionBase", "Sim
         else:
             yield f
 
+
 class SimultaneousFit(generic_class.EqualityMixin):
-    """ Cost function for the simultaneous fit of the given cost functions.
+    """Cost function for the simultaneous fit of the given cost functions.
 
     Args:
         cost_functions: The cost functions.
@@ -117,6 +123,7 @@ class SimultaneousFit(generic_class.EqualityMixin):
             specified to allow iminuit to determine the proper arguments.
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
+
     def __init__(self, *cost_functions: Union[T_CostFunction, "SimultaneousFit"]):
         # Validation
         # Ensure that we unravel any SimultaneousFit objects to their base cost functions.
@@ -146,8 +153,9 @@ class SimultaneousFit(generic_class.EqualityMixin):
             operator.add, self.cost_functions, self.argument_positions, *args
         )
 
+
 class CostFunctionBase(abc.ABC):
-    """ Base cost function.
+    """Base cost function.
 
     Args:
         f: The fit function.
@@ -161,10 +169,12 @@ class CostFunctionBase(abc.ABC):
         additional_call_options: Additional keyword options to be passed when calling the cost function.
         _cost_function: Function to be used to calculate the actual cost function.
     """
+
     _cost_function: Callable[..., float]
 
-    def __init__(self, f: Callable[..., float], data: Union[np.ndarray, histogram.Histogram1D],
-                 **additional_call_options: Any):
+    def __init__(
+        self, f: Callable[..., float], data: Union[np.ndarray, histogram.Histogram1D], **additional_call_options: Any
+    ):
         # If using numba, we would need to JIT the function to be able to pass it to the cost function.
         self.f = f
         # We need to drop the leading x argument
@@ -189,9 +199,14 @@ class CostFunctionBase(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def _call_cost_function(cls, data: Union[np.ndarray, histogram.Histogram1D],
-                            f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any) -> float:
-        """ Wrapper to allow access to the method as if it's unbound.
+    def _call_cost_function(
+        cls,
+        data: Union[np.ndarray, histogram.Histogram1D],
+        f: Callable[..., float],
+        *args: Union[float, np.ndarray],
+        **kwargs: Any
+    ) -> float:
+        """Wrapper to allow access to the method as if it's unbound.
 
         This is needed for use with numba.
 
@@ -205,8 +220,9 @@ class CostFunctionBase(abc.ABC):
         """
         ...
 
+
 class StandaloneCostFunction(CostFunctionBase):
-    """ Cost function which only needs a list of input data.
+    """Cost function which only needs a list of input data.
 
     This is in contrast to those which need data to compare against at each point. One example of
     a cost function which only needs the input data is the unbinned log likelihood.
@@ -218,6 +234,7 @@ class StandaloneCostFunction(CostFunctionBase):
         data: Numpy array of all input values (not binned in any way). It's just a list of the values.
         _cost_function: Function to be used to calculate the actual cost function.
     """
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         # Check that we have the proper input data. This isn't very pythnoic, but it's
@@ -225,9 +242,10 @@ class StandaloneCostFunction(CostFunctionBase):
         assert isinstance(self.data, np.ndarray)
 
     @classmethod
-    def _call_cost_function(cls, data: np.ndarray,
-                            f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any) -> float:
-        """ Wrapper to allow access to the method as if it's unbound.
+    def _call_cost_function(
+        cls, data: np.ndarray, f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any
+    ) -> float:
+        """Wrapper to allow access to the method as if it's unbound.
 
         This is needed for use with numba.
 
@@ -238,8 +256,9 @@ class StandaloneCostFunction(CostFunctionBase):
         """
         return cls._cost_function(data, f, *args, **kwargs)
 
+
 class DataComparisonCostFunction(CostFunctionBase):
-    """ Cost function which needs comparison data, the points where it was evaluated, and the errors.
+    """Cost function which needs comparison data, the points where it was evaluated, and the errors.
 
     This is in contrast to those which only need the input data. Examples of cost functions needing
     input data included the chi squared (both unbinned and binned), as well as the binned log likelihood.
@@ -251,6 +270,7 @@ class DataComparisonCostFunction(CostFunctionBase):
         data: Numpy array of all input values (not binned in any way). It's just a list of the values.
         _cost_function: Function to be used to calculate the actual cost function.
     """
+
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         # Check that we have the proper input data. This isn't very pythnoic, but it's
@@ -258,9 +278,10 @@ class DataComparisonCostFunction(CostFunctionBase):
         assert isinstance(self.data, histogram.Histogram1D)
 
     @classmethod
-    def _call_cost_function(cls, data: Any,
-                            f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any) -> float:
-        """ Wrapper to allow access to the method as if it's unbound.
+    def _call_cost_function(
+        cls, data: Any, f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any
+    ) -> float:
+        """Wrapper to allow access to the method as if it's unbound.
 
         This is needed for use with numba.
 
@@ -275,10 +296,11 @@ class DataComparisonCostFunction(CostFunctionBase):
         """
         return cls._cost_function(data.x, data.y, data.errors, data.bin_edges, f, *args, **kwargs)
 
-def _chi_squared(x: np.ndarray, y: np.ndarray,
-                 errors: np.ndarray, _: np.ndarray,
-                 f: Callable[..., float], *args: float) -> Any:
-    r""" Actual implementation of the chi squared.
+
+def _chi_squared(
+    x: np.ndarray, y: np.ndarray, errors: np.ndarray, _: np.ndarray, f: Callable[..., float], *args: float
+) -> Any:
+    r"""Actual implementation of the chi squared.
 
     Implemented with some help from the iminuit advanced tutorial. The chi squared is defined as:
 
@@ -301,8 +323,9 @@ def _chi_squared(x: np.ndarray, y: np.ndarray,
     """
     return np.sum(np.square((y - f(x, *args)) / errors))
 
+
 class ChiSquared(DataComparisonCostFunction):
-    """ chi^2 cost function.
+    """chi^2 cost function.
 
     Attributes:
         f: The fit function.
@@ -311,12 +334,14 @@ class ChiSquared(DataComparisonCostFunction):
         data: Data to be used for fitting.
         _cost_function: Function to be used to calculate the actual cost function.
     """
+
     _cost_function = _chi_squared
 
-def _binned_chi_squared(x: np.ndarray, y: np.ndarray,
-                        errors: np.ndarray, bin_edges: np.ndarray,
-                        f: Callable[..., float], *args: float) -> Any:
-    r""" Actual implementation of the binned chi squared.
+
+def _binned_chi_squared(
+    x: np.ndarray, y: np.ndarray, errors: np.ndarray, bin_edges: np.ndarray, f: Callable[..., float], *args: float
+) -> Any:
+    r"""Actual implementation of the binned chi squared.
 
     The binned chi squared is defined as:
 
@@ -340,15 +365,16 @@ def _binned_chi_squared(x: np.ndarray, y: np.ndarray,
         Binned chi squared calculated for each x value.
     """
     # ROOT appears to use the unbinned chi squared, despite working with binned data
-    #return np.sum(np.square((y - f(x, *args)) / errors))
+    # return np.sum(np.square((y - f(x, *args)) / errors))
     # Evaluate the function value over the entire bin.
     expected_values = _integrate_1D(f, bin_edges, *args)
     return np.sum(np.square((y - expected_values) / errors))
 
-def binned_chi_squared_safe_for_zeros(x: np.ndarray, y: np.ndarray,
-                                      errors: np.ndarray, bin_edges: np.ndarray,
-                                      f: Callable[..., float], *args: float) -> Any:
-    """ Actual implementation of the binned chi squared.
+
+def binned_chi_squared_safe_for_zeros(
+    x: np.ndarray, y: np.ndarray, errors: np.ndarray, bin_edges: np.ndarray, f: Callable[..., float], *args: float
+) -> Any:
+    """Actual implementation of the binned chi squared.
 
     See `_binned_chi_squared` for further information. This function is just the standard binned chi squared,
     but the division is protected from divide by 0. This allows safe use when calculating a binned chi squared.
@@ -364,12 +390,11 @@ def binned_chi_squared_safe_for_zeros(x: np.ndarray, y: np.ndarray,
         Binned chi squared calculated for each x value.
     """
     expected_values = _integrate_1D(f, bin_edges, *args)
-    return np.sum(np.square(
-        np.divide((y - expected_values), errors, out = np.zeros_like(errors), where = errors != 0)
-    ))
+    return np.sum(np.square(np.divide((y - expected_values), errors, out=np.zeros_like(errors), where=errors != 0)))
+
 
 class BinnedChiSquared(DataComparisonCostFunction):
-    """ Binned chi^2 cost function.
+    """Binned chi^2 cost function.
 
     Calling this class will calculate the chi squared. Implemented with some help from ...
 
@@ -380,10 +405,12 @@ class BinnedChiSquared(DataComparisonCostFunction):
         data: Data to be used for fitting.
         _cost_function: Function to be used to calculate the actual cost function.
     """
+
     _cost_function = _binned_chi_squared
 
+
 def _log_likelihood(data: np.ndarray, f: Callable[..., float], *args: float) -> Any:
-    r""" Actual implementation of the log likelihood cost function.
+    r"""Actual implementation of the log likelihood cost function.
 
     The unbinned log likelihood is defined as:
 
@@ -403,8 +430,9 @@ def _log_likelihood(data: np.ndarray, f: Callable[..., float], *args: float) -> 
     """
     return np.log(f(data, *args))
 
+
 class LogLikelihood(StandaloneCostFunction):
-    """ Log likelihood cost function.
+    """Log likelihood cost function.
 
     Calling this class will calculate the chi squared. Implemented with some help from ...
 
@@ -415,12 +443,20 @@ class LogLikelihood(StandaloneCostFunction):
         data: Data to be used for fitting.
         _cost_function: Function to be used to calculate the actual cost function.
     """
+
     _cost_function = _log_likelihood
 
-def _extended_binned_log_likelihood(x: np.ndarray, y: np.ndarray,
-                                    errors: np.ndarray, bin_edges: np.ndarray,
-                                    f: Callable[..., float], *args: float, use_weights: bool = False) -> Any:
-    r""" Actual implementation of the extended binned log likelihood (cost function).
+
+def _extended_binned_log_likelihood(
+    x: np.ndarray,
+    y: np.ndarray,
+    errors: np.ndarray,
+    bin_edges: np.ndarray,
+    f: Callable[..., float],
+    *args: float,
+    use_weights: bool = False
+) -> Any:
+    r"""Actual implementation of the extended binned log likelihood (cost function).
 
     Based on Probfit's binned log likelihood implementation. I also looked at
     ROOT's ``FitUtil::EvaluatePoissonLogL(...)`` for evaluating the binned log likelihood,
@@ -470,8 +506,9 @@ def _extended_binned_log_likelihood(x: np.ndarray, y: np.ndarray,
     # In principle, I should be able to get it to match ROOT, but that doesn't seem so trivial in practice.
     return -1 * np.sum(scale * (y * (np.log1p(expected_values) - np.log1p(y)) + (y - expected_values)))
 
+
 class BinnedLogLikelihood(DataComparisonCostFunction):
-    """ Binned log likelihood cost function.
+    """Binned log likelihood cost function.
 
     Calling this class will calculate the chi squared. Implemented with some help from ...
 
@@ -488,6 +525,7 @@ class BinnedLogLikelihood(DataComparisonCostFunction):
         data: Data to be used for fitting.
         _cost_function: Function to be used to calculate the actual cost function.
     """
+
     def __init__(self, use_weights: bool = False, *args: Any, **kwargs: Any):
         kwargs["use_weights"] = use_weights
         super().__init__(*args, **kwargs)

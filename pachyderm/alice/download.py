@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Mapping, Optional, 
 from pachyderm import yaml
 from pachyderm.alice import utils
 
+
 try:
     import importlib.resources as resources
 except ImportError:
@@ -39,9 +40,10 @@ else:
 # Use 4 threads by default in order to keep number of network request at an acceptable level
 NTHREADS: int = 4
 
+
 @dataclass
 class FilePair:
-    """ Pair for file paths to copy from source to target.
+    """Pair for file paths to copy from source to target.
 
     This also a counter for the number of times that we've tried to copy this file.
 
@@ -50,6 +52,7 @@ class FilePair:
         target: Path to the target file.
         n_tries: Number of attempts to copy the source file.
     """
+
     source: Union[Path, str]
     target: Union[Path, str]
     n_tries: int = 0
@@ -59,18 +62,20 @@ class FilePair:
         self.source = Path(self.source)
         self.target = Path(self.target)
 
+
 class QueueFiller(threading.Thread, abc.ABC):
-    """ Fill file pairs into the queue.
+    """Fill file pairs into the queue.
 
     Args:
         q: Queue where the file pairs will be stored.
     """
+
     def __init__(self, q: FilePairQueue) -> None:
         super().__init__()
         self._queue = q
 
     def run(self) -> None:
-        """ Main entry point called when joining a thread.
+        """Main entry point called when joining a thread.
 
         The daughter class should implemented ``_process()`` instead of ``run()``
         so that we can control calls to the processing if necessary.
@@ -83,7 +88,7 @@ class QueueFiller(threading.Thread, abc.ABC):
         self._process()
 
     def _wait(self) -> None:
-        """ Determine whether to wait before filling into the queue.
+        """Determine whether to wait before filling into the queue.
 
         If the pool is full, it will wait until it starts to empty before filling further.
 
@@ -105,7 +110,7 @@ class QueueFiller(threading.Thread, abc.ABC):
             time.sleep(5)
 
     def _process(self) -> None:
-        """ Find and fill files into the queue.
+        """Find and fill files into the queue.
 
         To be implemented by the daughter classes.
 
@@ -116,8 +121,9 @@ class QueueFiller(threading.Thread, abc.ABC):
         """
         ...
 
+
 def does_period_contain_data(period: str) -> bool:
-    """ Does the given period contain data or simulation?
+    """Does the given period contain data or simulation?
 
     If the period is 6 characters long, then it's data.
 
@@ -130,11 +136,13 @@ def does_period_contain_data(period: str) -> bool:
         return True
     return False
 
-_T = TypeVar("_T", bound = "DataSet")
+
+_T = TypeVar("_T", bound="DataSet")
+
 
 @dataclass
 class DataSet:
-    """ Contains dataset information necessary to download the associated files.
+    """Contains dataset information necessary to download the associated files.
 
     Attributes:
         period: The run period.
@@ -147,17 +155,18 @@ class DataSet:
         is_data: True if the DataSet corresponds to real data or simulation.
         data_type: Data type - either "data" or "sim".
     """
+
     period: str
     system: str
     year: int
     file_type: str
     search_path: Path
     filename: str
-    selections: Dict[str, Any] = field(default_factory = dict)
+    selections: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def is_data(self) -> bool:
-        """ Check whether the DataSet provides real data or simulated data.
+        """Check whether the DataSet provides real data or simulated data.
 
         Args:
             None.
@@ -168,7 +177,7 @@ class DataSet:
 
     @property
     def data_type(self) -> str:
-        """ The data type of either "data" or "sim".
+        """The data type of either "data" or "sim".
 
         Args:
             None.
@@ -178,9 +187,10 @@ class DataSet:
         return "data" if self.is_data else "sim"
 
     @classmethod
-    def from_specification(cls: Type[_T], period: str, system: str, year: int,
-                           file_types: Dict[str, Dict[str, str]], **selections: Any) -> _T:
-        """ Initializes the DataSet from a specification stored in a YAML file.
+    def from_specification(
+        cls: Type[_T], period: str, system: str, year: int, file_types: Dict[str, Dict[str, str]], **selections: Any
+    ) -> _T:
+        """Initializes the DataSet from a specification stored in a YAML file.
 
         Args:
             period: The run period.
@@ -216,13 +226,18 @@ class DataSet:
 
         # Create the object
         return cls(
-            period = period, system = system, year = year, file_type = file_type,
-            search_path = path, filename = filename,
-            selections = selections
+            period=period,
+            system=system,
+            year=year,
+            file_type=file_type,
+            search_path=path,
+            filename=filename,
+            selections=selections,
         )
 
+
 def _extract_dataset_from_yaml(period: str, datasets_path: Optional[Union[Path, str]] = None) -> DataSet:
-    """ Extract the datasets from YAML.
+    """Extract the datasets from YAML.
 
     Args:
         period: Run period which we should load.
@@ -248,13 +263,14 @@ def _extract_dataset_from_yaml(period: str, datasets_path: Optional[Union[Path, 
     logger.debug(f"parameters: {list(dataset_information['parameters'].keys())}")
     logger.debug(f"selections: {list(dataset_information['selections'].keys())}")
     dataset = DataSet.from_specification(
-        period = period, **dataset_information["parameters"], **dataset_information["selections"]
+        period=period, **dataset_information["parameters"], **dataset_information["selections"]
     )
 
     return dataset
 
+
 def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[str, Any]]:
-    """ Find all permutations of combinations of selections.
+    """Find all permutations of combinations of selections.
 
     This is useful for passing the selections as kwargs to a function (perhaps for formatting).
     As a concrete example,
@@ -282,6 +298,7 @@ def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[
     # See: https://stackoverflow.com/a/15211805
     return (dict(zip(sels, v)) for v in itertools.product(*sels.values()))
 
+
 class CopyHandler(threading.Thread):
     def __init__(self, q: FilePairQueue):
         threading.Thread.__init__(self)
@@ -289,11 +306,11 @@ class CopyHandler(threading.Thread):
         self.max_tries = 5
         self._copy_function = utils.copy_from_alien
         # If we want to test, make below the copy function.
-        #def random_choice(source: Path, target: Path) -> bool:
+        # def random_choice(source: Path, target: Path) -> bool:
         #    import random
         #    logging.debug("Random choice for debugging!")
         #    return random.choice([False, True])
-        #self._copy_function = random_choice
+        # self._copy_function = random_choice
 
     def run(self) -> None:
         """ Copy the files stored into the data pool. """
@@ -324,8 +341,10 @@ class CopyHandler(threading.Thread):
                 if n_tries >= self.max_tries:
                     logger.error(f"File {next_file.source} failed copying in {self.max_tries} tries - giving up")
                 else:
-                    logger.error(f"File {next_file.source} failed copying ({n_tries}/{self.max_tries}) "
-                                 "- re-inserting into the pool ...")
+                    logger.error(
+                        f"File {next_file.source} failed copying ({n_tries}/{self.max_tries}) "
+                        "- re-inserting into the pool ..."
+                    )
                     # Although this copying failed and we're going to reinsert this into queue, from
                     # the perspective of the queue, the task was "completed", so we have to note that
                     # the task is done in order for us to be able to join the queue.
@@ -340,8 +359,9 @@ class CopyHandler(threading.Thread):
                 # Notify that the file was copied successfully.
                 self._queue.task_done()
 
+
 def download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool = False) -> bool:
-    """ Actually utilize the queue filler and copy the files.
+    """Actually utilize the queue filler and copy the files.
 
     Args:
         queue_filler: Class to handle filling the queue.
@@ -362,7 +382,7 @@ def download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool = 
     n_threads = int(NTHREADS / 2) if fewer_threads else NTHREADS
     logger.info(f"Using {n_threads} threads to download files.")
     for i in range(0, n_threads):
-        worker = CopyHandler(q = q)
+        worker = CopyHandler(q=q)
         worker.start()
         workers.append(worker)
 
@@ -379,8 +399,9 @@ def download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool = 
 
     return True
 
+
 class FileListDownloadFiller(QueueFiller):
-    """ Download list of file pairs already provided to the task.
+    """Download list of file pairs already provided to the task.
 
     This is a basic task for simple cases when it's easier to just enumerate the list of files to download by hand.
 
@@ -403,6 +424,7 @@ class FileListDownloadFiller(QueueFiller):
     Args:
         pairs: File pairs that are externally generated. It's up to the user to determine the input and output paths.
     """
+
     def __init__(self, pairs: Sequence[FilePair], *args: FilePairQueue, **kwargs: FilePairQueue) -> None:
         super().__init__(*args, **kwargs)
         self._file_pairs = pairs
@@ -417,8 +439,9 @@ class FileListDownloadFiller(QueueFiller):
                 # Add to the queue
                 self._queue.put(file_pair)
 
+
 class DatasetDownloadFiller(QueueFiller):
-    """ Fill in files to download from a given DataSet.
+    """Fill in files to download from a given DataSet.
 
     Args:
         dataset: DataSet which provides the properties of the dataset.
@@ -433,14 +456,16 @@ class DatasetDownloadFiller(QueueFiller):
             Rather, the grid path (except for "alice") is appended to this directory. Maintaining this directory
             structure yields better compatibility with the analysis manager.
     """
-    def __init__(self, dataset: DataSet, output_dir: Union[Path, str],
-                 *args: FilePairQueue, **kwargs: FilePairQueue) -> None:
+
+    def __init__(
+        self, dataset: DataSet, output_dir: Union[Path, str], *args: FilePairQueue, **kwargs: FilePairQueue
+    ) -> None:
         super().__init__(*args, **kwargs)
         self.dataset = dataset
         self.output_dir = Path(output_dir)
 
     def _process(self) -> None:
-        """ Determine and fill in the filenames of the dataset.
+        """Determine and fill in the filenames of the dataset.
 
         Args:
             None.
@@ -454,10 +479,10 @@ class DatasetDownloadFiller(QueueFiller):
             kwargs = self.dataset.__dict__.copy()
             kwargs["data_type"] = self.dataset.data_type
             kwargs.update(properties)
-            #search_path = Path(str(self.dataset.search_path).format(**self.dataset.__dict__, **properties))
-            #output_dir = Path(str(self.output_dir).format(**self.dataset.__dict__, **properties))
+            # search_path = Path(str(self.dataset.search_path).format(**self.dataset.__dict__, **properties))
+            # output_dir = Path(str(self.output_dir).format(**self.dataset.__dict__, **properties))
             search_path = Path(str(self.dataset.search_path).format(**kwargs))
-            #output_dir = Path(str(self.output_dir).format(**kwargs))
+            # output_dir = Path(str(self.output_dir).format(**kwargs))
             # We want the output_dir to emulate the path on the grid. We just want to change where it's stored.
             output_dir = self.output_dir / str(search_path).replace("/alice/", "")
             logger.debug(f"search_path: {search_path}, output_dir: {output_dir}")
@@ -481,13 +506,13 @@ class DatasetDownloadFiller(QueueFiller):
                 else:
                     logger.debug(f"Adding input: {search_path / directory / self.dataset.filename}, output: {output}")
                     # Add to the queue
-                    self._queue.put(FilePair(
-                        search_path / directory / self.dataset.filename, output
-                    ))
+                    self._queue.put(FilePair(search_path / directory / self.dataset.filename, output))
 
-def download_dataset(period: str, output_dir: Union[Path, str], fewer_threads: bool,
-                     datasets_path: Optional[Union[Path, str]] = None) -> List[Path]:
-    """ Download files from the given dataset with the provided selections.
+
+def download_dataset(
+    period: str, output_dir: Union[Path, str], fewer_threads: bool, datasets_path: Optional[Union[Path, str]] = None
+) -> List[Path]:
+    """Download files from the given dataset with the provided selections.
 
     Args:
         period: Name of the period to be downloaded.
@@ -504,15 +529,12 @@ def download_dataset(period: str, output_dir: Union[Path, str], fewer_threads: b
         datasets_path = Path(datasets_path)
 
     # Setup the dataset
-    dataset = _extract_dataset_from_yaml(period = period, datasets_path = datasets_path)
+    dataset = _extract_dataset_from_yaml(period=period, datasets_path=datasets_path)
 
     # Setup
     q: FilePairQueue = queue.Queue()
-    queue_filler = DatasetDownloadFiller(
-        dataset = dataset, output_dir = output_dir,
-        q = q,
-    )
-    download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
+    queue_filler = DatasetDownloadFiller(dataset=dataset, output_dir=output_dir, q=q,)
+    download(queue_filler=queue_filler, q=q, fewer_threads=fewer_threads)
 
     # Return the files that are stored corresponding to this period.
     period_specific_dir = output_dir / dataset.data_type / str(dataset.year) / dataset.period
@@ -530,8 +552,9 @@ def download_dataset(period: str, output_dir: Union[Path, str], fewer_threads: b
         f.write("\n".join([f"{p}{suffix}" for p in period_files]))
     return period_files
 
+
 def run_dataset_download() -> None:
-    """ Entry point for download a dataset.
+    """Entry point for download a dataset.
 
     Example invocation:
 
@@ -540,37 +563,37 @@ def run_dataset_download() -> None:
     ```
     """
     logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-    parser = argparse.ArgumentParser(
-        prog="downloadALICEDataset",
-        description="Download an ALICE dataset in parallel",
+    parser = argparse.ArgumentParser(prog="downloadALICEDataset", description="Download an ALICE dataset in parallel",)
+    parser.add_argument(
+        "-p", "--period", type=str, default="", help="Run period (i.e. dataset) to download. For example, lhc16j5.",
     )
     parser.add_argument(
-        "-p", "--period", type=str, default="",
-        help="Run period (i.e. dataset) to download. For example, lhc16j5.",
+        "-o", "--outputdir", type=str, default="alice", help="Base output directory. [default: 'alice']",
     )
     parser.add_argument(
-        "-o", "--outputdir", type=str, default="alice",
-        help="Base output directory. [default: 'alice']",
+        "-f",
+        "--fewerThreads",
+        action="store_true",
+        default=False,
+        help="Decrease the number of threads by half. Default: using 4 threads.",
     )
     parser.add_argument(
-        "-f", "--fewerThreads", action="store_true", default=False,
-        help="Decrease the number of threads by half. Default: using 4 threads."
-    )
-    parser.add_argument(
-        "-d", "--datasets", type=str, default=None, metavar="PATH",
-        help="Path to the datasets directory. Default: unset."
+        "-d",
+        "--datasets",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help="Path to the datasets directory. Default: unset.",
     )
     args = parser.parse_args()
     output = download_dataset(
-        period = args.period,
-        output_dir = args.outputdir,
-        fewer_threads = args.fewerThreads,
-        datasets_path = args.datasets,
+        period=args.period, output_dir=args.outputdir, fewer_threads=args.fewerThreads, datasets_path=args.datasets,
     )
     print(output)
 
+
 class RunByRunTrainOutputFiller(QueueFiller):
-    """ Fill in files to download run-by-run train output.
+    """Fill in files to download run-by-run train output.
 
     Args:
         output_dir: Path to where the train output should be stored.
@@ -580,8 +603,19 @@ class RunByRunTrainOutputFiller(QueueFiller):
         recpass: Name of the reconstruction pass, such as "pass1" or "pass1_FAST".
         aodprod: Name of the AOD production, such as "AOD208".
     """
-    def __init__(self, output_dir: Union[Path, str], train_run: int, legotrain: str, dataset: str,
-                 pt_hard_bin: int, recpass: str, aodprod: str, *args: Any, **kwargs: Any) -> None:
+
+    def __init__(
+        self,
+        output_dir: Union[Path, str],
+        train_run: int,
+        legotrain: str,
+        dataset: str,
+        pt_hard_bin: int,
+        recpass: str,
+        aodprod: str,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(*args, **kwargs)
         # We want the output to be stored inside a directory labeled by the train number.
         self._output_dir = Path(output_dir) / str(train_run)
@@ -640,16 +674,12 @@ class RunByRunTrainOutputFiller(QueueFiller):
             lego_trains_dir = run_dir / self._lego_train.split("/")[0]
             lego_trains = utils.list_alien_dir(lego_trains_dir)
             if not self._lego_train.split("/")[1] in lego_trains:
-                logger.error(
-                    f"Train {self._lego_train.split('/')[1]} not found in PWG directory for run {r}"
-                )
+                logger.error(f"Train {self._lego_train.split('/')[1]} not found in PWG directory for run {r}")
                 continue
 
             train_base = run_dir / self._lego_train
             train_runs = utils.list_alien_dir(train_base)
-            train_dir = [
-                x for x in train_runs if self._extract_train_ID(x) == self._train_run
-            ]
+            train_dir = [x for x in train_runs if self._extract_train_ID(x) == self._train_run]
             if not len(train_dir):
                 logger.error(f"Train run {self._train_run} not found for run {r}")
                 continue
@@ -670,10 +700,18 @@ class RunByRunTrainOutputFiller(QueueFiller):
                     self._wait()
                     self._queue.put(FilePair(inputfile, outputfile))
 
-def download_run_by_run_train_output(outputpath: Union[Path, str],
-                                     trainrun: int, legotrain: str, dataset: str, pt_hard_bin: int,
-                                     recpass: str, aodprod: str, fewer_threads: bool) -> None:
-    """ Download run-by-run train output for the given arguments.
+
+def download_run_by_run_train_output(
+    outputpath: Union[Path, str],
+    trainrun: int,
+    legotrain: str,
+    dataset: str,
+    pt_hard_bin: int,
+    recpass: str,
+    aodprod: str,
+    fewer_threads: bool,
+) -> None:
+    """Download run-by-run train output for the given arguments.
 
     Args:
         output_dir: Path to where the train output should be stored.
@@ -687,19 +725,17 @@ def download_run_by_run_train_output(outputpath: Union[Path, str],
     Returns:
         None.
     """
-    q: FilePairQueue = queue.Queue(maxsize = 1000)
+    q: FilePairQueue = queue.Queue(maxsize=1000)
     logger.info(f"Checking dataset {dataset} for train with ID {trainrun} ({legotrain})")
 
     queue_filler = RunByRunTrainOutputFiller(
-        outputpath, trainrun,
-        legotrain, dataset, pt_hard_bin,
-        recpass, aodprod if len(aodprod) > 0 else "",
-        q = q,
+        outputpath, trainrun, legotrain, dataset, pt_hard_bin, recpass, aodprod if len(aodprod) > 0 else "", q=q,
     )
-    download(queue_filler = queue_filler, q = q, fewer_threads = fewer_threads)
+    download(queue_filler=queue_filler, q=q, fewer_threads=fewer_threads)
+
 
 def run_download_run_by_run_train_output() -> None:
-    """ Entry point for download run-by-run train output.
+    """Entry point for download run-by-run train output.
 
     Example invocation:
 
@@ -709,42 +745,46 @@ def run_download_run_by_run_train_output() -> None:
     """
     logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
     parser = argparse.ArgumentParser(
-        prog="downloadAliceRunByRun",
-        description="Download run-by-run LEGO train outputs",
+        prog="downloadAliceRunByRun", description="Download run-by-run LEGO train outputs",
     )
     parser.add_argument(
-        "-o", "--outputdir", metavar="OUTPUTDIR",
-        help="Path where to store the output files run-by-run",
+        "-o", "--outputdir", metavar="OUTPUTDIR", help="Path where to store the output files run-by-run",
     )
     parser.add_argument(
-        "-t", "--trainrun", metavar="TRAINRUN", type=int,
+        "-t",
+        "--trainrun",
+        metavar="TRAINRUN",
+        type=int,
         help="ID of the train run (number is sufficient, time stamp not necessary)",
     )
     parser.add_argument(
-        "-l", "--legotrain", metavar="LEGOTRAIN",
-        help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
+        "-l", "--legotrain", metavar="LEGOTRAIN", help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
     )
     parser.add_argument("-d", "--dataset", metavar="DATASET", help="Name of the dataset")
     parser.add_argument(
-        "--ptHardBin", metavar="BIN",
-        help="Pt hard bin (only meaningful in the case of pt-hard binned MC)"
+        "--ptHardBin", metavar="BIN", help="Pt hard bin (only meaningful in the case of pt-hard binned MC)"
     )
     parser.add_argument(
-        "-p", "--recpass", type=str, default="pass1",
+        "-p",
+        "--recpass",
+        type=str,
+        default="pass1",
         help="Reconstruction pass (only meaningful in case of data) [default: pass1]",
     )
     parser.add_argument(
-        "-a", "--aod", type=str, default="",
-        help="Dedicated AOD production (if requested) [default: not set]",
+        "-a", "--aod", type=str, default="", help="Dedicated AOD production (if requested) [default: not set]",
     )
     parser.add_argument(
-        "-f", "--fewerThreads", action="store_true", default=False,
-        help="Decrease the number of threads by half."
+        "-f", "--fewerThreads", action="store_true", default=False, help="Decrease the number of threads by half."
     )
     args = parser.parse_args()
     download_run_by_run_train_output(
         args.outputdir,
-        args.trainrun, args.legotrain,
-        args.dataset, args.ptHardBin, args.recpass, args.aod,
+        args.trainrun,
+        args.legotrain,
+        args.dataset,
+        args.ptHardBin,
+        args.recpass,
+        args.aod,
         args.fewerThreads,
     )

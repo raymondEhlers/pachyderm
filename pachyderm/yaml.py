@@ -38,11 +38,11 @@ import base64
 import enum
 import inspect
 import logging
+import numpy as np
+import ruamel.yaml
 from io import BytesIO
 from typing import Any, Iterable, Optional, Type, TypeVar, cast
 
-import numpy as np
-import ruamel.yaml
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +51,14 @@ logger = logging.getLogger(__name__)
 DictLike = ruamel.yaml.comments.CommentedMap
 Representer = ruamel.yaml.representer.BaseRepresenter
 Constructor = ruamel.yaml.constructor.BaseConstructor
-T_EnumToYAML = TypeVar("T_EnumToYAML", bound = enum.Enum)
-T_EnumFromYAML = TypeVar("T_EnumFromYAML", bound = enum.Enum)
+T_EnumToYAML = TypeVar("T_EnumToYAML", bound=enum.Enum)
+T_EnumFromYAML = TypeVar("T_EnumFromYAML", bound=enum.Enum)
 
-def yaml(modules_to_register: Optional[Iterable[Any]] = None,
-         classes_to_register: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
-    """ Create a YAML object for loading a YAML configuration.
+
+def yaml(
+    modules_to_register: Optional[Iterable[Any]] = None, classes_to_register: Optional[Iterable[Any]] = None
+) -> ruamel.yaml.YAML:
+    """Create a YAML object for loading a YAML configuration.
 
     Args:
         modules_to_register: Modules containing classes to be registered with the YAML object. Default: None.
@@ -66,7 +68,7 @@ def yaml(modules_to_register: Optional[Iterable[Any]] = None,
     """
     # Define a round-trip YAML object for us to work with. This object should be imported by other modules
     # NOTE: "typ" is a not a typo. It stands for "type"
-    yaml = ruamel.yaml.YAML(typ = "rt")
+    yaml = ruamel.yaml.YAML(typ="rt")
 
     # Register representers and constructors
     # Numpy array
@@ -76,10 +78,11 @@ def yaml(modules_to_register: Optional[Iterable[Any]] = None,
     yaml.representer.add_representer(np.float64, numpy_float64_to_yaml)
     yaml.constructor.add_constructor("!numpy_float64", numpy_float64_from_yaml)
     # Register external classes
-    yaml = register_module_classes(yaml = yaml, modules = modules_to_register)
-    yaml = register_classes(yaml = yaml, classes = classes_to_register)
+    yaml = register_module_classes(yaml=yaml, modules=modules_to_register)
+    yaml = register_classes(yaml=yaml, classes=classes_to_register)
 
     return yaml
+
 
 def register_classes(yaml: ruamel.yaml.YAML, classes: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
     """ Register externally defined classes. """
@@ -94,8 +97,9 @@ def register_classes(yaml: ruamel.yaml.YAML, classes: Optional[Iterable[Any]] = 
 
     return yaml
 
+
 def register_module_classes(yaml: ruamel.yaml.YAML, modules: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
-    """ Register all classes in the given modules with the YAML object.
+    """Register all classes in the given modules with the YAML object.
 
     This is a simple helper function.
     """
@@ -110,14 +114,16 @@ def register_module_classes(yaml: ruamel.yaml.YAML, modules: Optional[Iterable[A
         classes_to_register.update(module_classes)
 
     # Register the extracted classes
-    return register_classes(yaml = yaml, classes = classes_to_register)
+    return register_classes(yaml=yaml, classes=classes_to_register)
+
 
 #
 # Representers and constructors for individual classes.
 #
 
+
 def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, data: np.ndarray) -> str:
-    """ Write a numpy array to YAML.
+    """Write a numpy array to YAML.
 
     It registers the array under the tag ``!numpy_array``.
 
@@ -139,16 +145,13 @@ def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, da
     np.save(b, data)
     b.seek(0)
     # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
-    return cast(
-        str,
-        representer.represent_scalar(
-            "!numpy_array", base64.encodebytes(b.read()).decode("utf-8"),
-        )
-    )
+    return cast(str, representer.represent_scalar("!numpy_array", base64.encodebytes(b.read()).decode("utf-8"),),)
 
-def numpy_array_from_yaml(constructor: ruamel.yaml.constructor.BaseConstructor,
-                          data: ruamel.yaml.nodes.SequenceNode) -> np.ndarray:
-    """ Read an array from YAML to numpy.
+
+def numpy_array_from_yaml(
+    constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.SequenceNode
+) -> np.ndarray:
+    """Read an array from YAML to numpy.
 
     It reads arrays registered under the tag ``!numpy_array``.
 
@@ -187,11 +190,12 @@ def numpy_array_from_yaml(constructor: ruamel.yaml.constructor.BaseConstructor,
         b = data.value.encode("utf-8")
         # Requires explicitly allowing pickle to load arrays. This used to be default True,
         # so our risk hasn't changed.
-        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle = True)
+        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)
     return return_value
 
+
 def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, data: np.float64) -> str:
-    """ Write a numpy float64 to YAML.
+    """Write a numpy float64 to YAML.
 
     It registers the float under the tag ``!numpy_float64``.
 
@@ -213,16 +217,13 @@ def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, 
     np.save(b, data)
     b.seek(0)
     # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
-    return cast(
-        str,
-        representer.represent_scalar(
-            "!numpy_float64", base64.encodebytes(b.read()).decode("utf-8"),
-        )
-    )
+    return cast(str, representer.represent_scalar("!numpy_float64", base64.encodebytes(b.read()).decode("utf-8"),),)
 
-def numpy_float64_from_yaml(constructor: ruamel.yaml.constructor.BaseConstructor,
-                            data: ruamel.yaml.nodes.ScalarNode) -> np.float64:
-    """ Read an float64 from YAML to numpy.
+
+def numpy_float64_from_yaml(
+    constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.ScalarNode
+) -> np.float64:
+    """Read an float64 from YAML to numpy.
 
     It reads the float64 registered under the tag ``!numpy_float64``.
 
@@ -258,13 +259,14 @@ def numpy_float64_from_yaml(constructor: ruamel.yaml.constructor.BaseConstructor
         b = data.value.encode("utf-8")
         # Requires explicitly allowing pickle to load arrays. This used to be default True,
         # so our risk hasn't changed.
-        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle = True)
+        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)
     return return_value
 
-def enum_to_yaml(cls: Type[T_EnumToYAML],
-                 representer: ruamel.yaml.representer.BaseRepresenter,
-                 data: T_EnumToYAML) -> ruamel.yaml.nodes.ScalarNode:
-    """ Encodes YAML representation.
+
+def enum_to_yaml(
+    cls: Type[T_EnumToYAML], representer: ruamel.yaml.representer.BaseRepresenter, data: T_EnumToYAML
+) -> ruamel.yaml.nodes.ScalarNode:
+    """Encodes YAML representation.
 
     This is a mixin method for writing enum values to YAML. It needs to be added to the enum
     as a classmethod. See the module docstring for further information on this approach and how
@@ -285,18 +287,13 @@ def enum_to_yaml(cls: Type[T_EnumToYAML],
     Returns:
         Scalar representation of the name of the enumeration value.
     """
-    return cast(
-        ruamel.yaml.nodes.ScalarNode,
-        representer.represent_scalar(
-            f"!{cls.__name__}",
-            f"{str(data)}"
-        )
-    )
+    return cast(ruamel.yaml.nodes.ScalarNode, representer.represent_scalar(f"!{cls.__name__}", f"{str(data)}"))
 
-def enum_from_yaml(cls: Type[T_EnumFromYAML],
-                   constructor: ruamel.yaml.constructor.BaseConstructor,
-                   node: ruamel.yaml.nodes.ScalarNode) -> T_EnumFromYAML:
-    """ Decode YAML representation.
+
+def enum_from_yaml(
+    cls: Type[T_EnumFromYAML], constructor: ruamel.yaml.constructor.BaseConstructor, node: ruamel.yaml.nodes.ScalarNode
+) -> T_EnumFromYAML:
+    """Decode YAML representation.
 
     This is a mixin method for reading enum values from YAML. It needs to be added to the enum
     as a classmethod. See the module docstring for further information on this approach and how

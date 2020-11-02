@@ -51,7 +51,7 @@ class FitFailed(Exception):
 
 @dataclass
 class BaseFitResult:
-    """ Base fit result.
+    """Base fit result.
 
     This represents the most basic fit result.
 
@@ -79,7 +79,7 @@ class BaseFitResult:
 
     @property
     def correlation_matrix(self) -> Dict[Tuple[str, str], float]:
-        """ The correlation matrix of the free parameters.
+        """The correlation matrix of the free parameters.
 
         These values are derived from the covariance matrix values stored in the fit.
 
@@ -119,7 +119,7 @@ class BaseFitResult:
 
 @dataclass
 class FitResult(BaseFitResult):
-    """ Main fit result class.
+    """Main fit result class.
 
     Note:
         free_parameters + fixed_parameters == parameters
@@ -152,7 +152,7 @@ class FitResult(BaseFitResult):
         return self.n_fit_data_points - len(self.free_parameters)
 
     def effective_chi_squared(self, cost_func: "cost_function.DataComparisonCostFunction") -> float:
-        """ Calculate the effective chi squared value.
+        """Calculate the effective chi squared value.
 
         If the fit was performed using a chi squared cost function, it's just equal to
         the ``minimal_val``. If it's log likelihood, one must calculate the effective
@@ -219,7 +219,7 @@ class FitResult(BaseFitResult):
     def from_minuit(
         cls: Type[_T_FitResult], minuit: iminuit.Minuit, cost_func: Callable[..., float], x: np.ndarray
     ) -> _T_FitResult:
-        """ Create a fit result form the Minuit fit object.
+        """Create a fit result form the Minuit fit object.
 
         Args:
             minuit: Minuit fit object after performing the fit.
@@ -251,7 +251,7 @@ class FitResult(BaseFitResult):
 
 
 def extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> Tuple[Dict[str, Any], List[str]]:
-    """ Extract the parameters relevant to the given function from a fit result.
+    """Extract the parameters relevant to the given function from a fit result.
 
     Note:
         The fit result may have more arguments at minimum and free parameters than the fit function that we've
@@ -279,7 +279,7 @@ def extract_function_values(func: Callable[..., float], fit_result: BaseFitResul
 
 
 def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
-    """ Calculate the errors of the given function based on values from the fit.
+    """Calculate the errors of the given function based on values from the fit.
 
     Note:
         We don't take the x values for the fit_result as it may be desirable to calculate the errors for
@@ -327,7 +327,7 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
 
 
 def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
-    """ Evaluate the gradient of the given function based on the fit values.
+    """Evaluate the gradient of the given function based on the fit values.
 
     For a function of 5 free parameters (7 total) and 10 x values, the returned result would be of the shape (10, 5).
 
@@ -348,7 +348,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
     # passed on to the function via *args and **kwargs, but they won't be varied.
     # To ensure the proper signature, we wrap the function and route the arguments.
     def func_wrap(args_to_vary: Sequence[float], x: np.array) -> float:
-        """ Wrap the given function to ensure that the arguments are routed properly for ``numdifftools``.
+        """Wrap the given function to ensure that the arguments are routed properly for ``numdifftools``.
 
         To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
         must contain a list of values that it will vary when taking the gradient. The rest of the args are
@@ -395,7 +395,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
 
 
 class FuncCode(generic_class.EqualityMixin):
-    """ Minimal class to describe function arguments.
+    """Minimal class to describe function arguments.
 
     Same approach as is taken in ``iminuit``. Note that the precise name of the parameters is
     extremely important.
@@ -420,7 +420,7 @@ class FuncCode(generic_class.EqualityMixin):
     def from_function(
         cls: Type[T_FuncCode], func: Callable[..., float], leading_parameters_to_remove: int = 1
     ) -> T_FuncCode:
-        """ Create a func_code from a function.
+        """Create a func_code from a function.
 
         Args:
             func: Function for which we want a func_code.
@@ -435,7 +435,7 @@ def merge_func_codes(
     prefixes: Optional[Sequence[str]] = None,
     skip_prefixes: Optional[Sequence[str]] = None,
 ) -> Tuple[List[str], List[List[int]]]:
-    """ Merge the arguments of the given functions into one func_code.
+    """Merge the arguments of the given functions into one func_code.
 
     Note:
         This has very similar functionality and is heavily inspired by ``Probfit.merge_func_code...)``.
@@ -492,7 +492,7 @@ def merge_func_codes(
 def _function_arguments_from_argument_positions(
     argument_positions: T_ArgumentPositions, *args: Union[float, np.ndarray]
 ) -> Iterable[List[Union[float, np.ndarray]]]:
-    """ Extract the function arguments from a larger set of arguments given the argument positions.
+    """Extract the function arguments from a larger set of arguments given the argument positions.
 
     It determines the arguments for calling functions stored in ``SimultaneousFit`` or ``AddPDF`` classes. Use it
     something like:
@@ -528,7 +528,7 @@ def call_list_of_callables_with_operation(
     argument_positions: T_ArgumentPositions,
     *args: Union[float, np.ndarray],
 ) -> float:
-    """ Call and add a list of callables with the given args.
+    """Call and add a list of callables with the given args.
 
     Args:
         functions: Functions to be evaluated.
@@ -546,7 +546,7 @@ def call_list_of_callables_with_operation(
 
 
 def chi_squared_probability(chi_2: float, ndf: float) -> float:
-    """ Calculate the probability that the
+    """Calculate the probability that the
 
     This is just a thin wrapped around ``scipy.stats``, but it's convenient.
 

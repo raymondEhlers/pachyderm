@@ -6,22 +6,24 @@
 """
 
 import logging
-from typing import Optional, Union
-
 import matplotlib
 import matplotlib.axes
 import matplotlib.colors
 import numpy as np
+from typing import Optional, Union
+
 
 # Setup logger
 logger = logging.getLogger(__name__)
+
 
 def restore_defaults() -> None:
     """ Restore the default matplotlib settings. """
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
+
 def configure() -> None:
-    """ Configure matplotlib according to my (biased) specification.
+    """Configure matplotlib according to my (biased) specification.
 
     As a high level summary, this is a combination of a number of seaborn settings, along with
     my own tweaks. By calling this function, the matplotlilb ``rcParams`` will be modified according
@@ -113,20 +115,22 @@ def configure() -> None:
     #       why that might be preferable here.
 
     # Setup the LaTeX preamble
-    matplotlib.rcParams["text.latex.preamble"] = "\n".join([
-        # Enable AMS math package (for among other things, "\text")
-        r"\usepackage{amsmath}",
-        # Add fonts that will be used below. See the `mathtext` fonts set below for further info.
-        r"\usepackage{sfmath}",
-        # Ensure that existing values are included.
-        matplotlib.rcParams["text.latex.preamble"],
-    ])
+    matplotlib.rcParams["text.latex.preamble"] = "\n".join(
+        [
+            # Enable AMS math package (for among other things, "\text")
+            r"\usepackage{amsmath}",
+            # Add fonts that will be used below. See the `mathtext` fonts set below for further info.
+            r"\usepackage{sfmath}",
+            # Ensure that existing values are included.
+            matplotlib.rcParams["text.latex.preamble"],
+        ]
+    )
     params = {
         # Enable latex
         "text.usetex": True,
         # Enable tex preview, which improves the alignment of the baseline
         # Not necessary anymore for matplotlib ^3.3
-        #"text.latex.preview": True,
+        # "text.latex.preview": True,
         # Enable axis ticks (after they can be disabled by seaborn)
         "xtick.bottom": True,
         "xtick.top": True,
@@ -155,8 +159,7 @@ def configure() -> None:
         "font.size": 18.0,
         "legend.fontsize": 18.0,
         # Set the possible sans serif fonts. These are the ones made available in seaborn.
-        "font.sans-serif": ["Arial", "DejaVu Sans", "Liberation " "Sans",
-                            "Bitstream Vera Sans", "sans-serif"],
+        "font.sans-serif": ["Arial", "DejaVu Sans", "Liberation " "Sans", "Bitstream Vera Sans", "sans-serif"],
         # Make the grid lines light grey and slightly larger.
         "grid.color": light_grey,
         "grid.linewidth": 1.0,
@@ -166,7 +169,7 @@ def configure() -> None:
         # NOTE: This is disabled because if you forget to set the marker, then nothing will show up,
         #       which is a very frustrating user experience. Better to instead just disable it for a
         #       given plot.
-        #"lines.linestyle": "none",
+        # "lines.linestyle": "none",
         # Set the edge color to white.
         "patch.edgecolor": "none",
         # Apparently this has to be enabled just for setting the edge color to be possible.
@@ -189,11 +192,16 @@ def configure() -> None:
     # Apply the updated settings.
     matplotlib.rcParams.update(params)
 
-def error_boxes(ax: matplotlib.axes.Axes,
-                x_data: np.ndarray, y_data: np.ndarray,
-                y_errors: np.ndarray, x_errors: np.ndarray = None,
-                **kwargs: Union[str, float]) -> matplotlib.collections.PatchCollection:
-    """ Plot error boxes for the given data.
+
+def error_boxes(
+    ax: matplotlib.axes.Axes,
+    x_data: np.ndarray,
+    y_data: np.ndarray,
+    y_errors: np.ndarray,
+    x_errors: np.ndarray = None,
+    **kwargs: Union[str, float],
+) -> matplotlib.collections.PatchCollection:
+    """Plot error boxes for the given data.
 
     Inpsired by: https://matplotlib.org/gallery/statistics/errorbars_and_boxes.html and
     https://github.com/HDembinski/pyik/blob/217ae25bbc316c7a209a1a4a1ce084f6ca34276b/pyik/mplext.py#L138
@@ -220,9 +228,13 @@ def error_boxes(ax: matplotlib.axes.Axes,
     if len(x_data) != len(y_data):
         raise ValueError(f"Length of x_data and y_data doesn't match! x_data: {len(x_data)}, y_data: {len(y_data)}")
     if len(x_errors.T) != len(x_data):
-        raise ValueError(f"Length of x_data and x_errors doesn't match! x_data: {len(x_data)}, x_errors: {len(x_errors)}")
+        raise ValueError(
+            f"Length of x_data and x_errors doesn't match! x_data: {len(x_data)}, x_errors: {len(x_errors)}"
+        )
     if len(y_errors.T) != len(y_data):
-        raise ValueError(f"Length of y_data and y_errors doesn't match! y_data: {y_data.shape}, y_errors: {y_errors.shape}")
+        raise ValueError(
+            f"Length of y_data and y_errors doesn't match! y_data: {y_data.shape}, y_errors: {y_errors.shape}"
+        )
 
     # Default arguments
     if "alpha" not in kwargs:
@@ -238,7 +250,7 @@ def error_boxes(ax: matplotlib.axes.Axes,
         # errors, we want to take * 2 of the error.
         xerr = np.atleast_1d(xerr)
         yerr = np.atleast_1d(yerr)
-        #logger.debug(f"yerr: {yerr}")
+        # logger.debug(f"yerr: {yerr}")
         r = matplotlib.patches.Rectangle(
             (x - xerr[0], y - yerr[0]),
             xerr.sum() if len(xerr) == 2 else xerr * 2,
@@ -247,18 +259,19 @@ def error_boxes(ax: matplotlib.axes.Axes,
         error_boxes.append(r)
 
     # Create the patch collection and add it to the given axis.
-    patch_collection = matplotlib.collections.PatchCollection(
-        error_boxes, **kwargs,
-    )
+    patch_collection = matplotlib.collections.PatchCollection(error_boxes, **kwargs,)
     ax.add_collection(patch_collection)
 
     return patch_collection
 
 
-def convert_mpl_color_scheme_to_ROOT(name: Optional[str] = None,
-                                     cmap: Optional[Union[matplotlib.colors.ListedColormap, matplotlib.colors.LinearSegmentedColormap]] = None,
-                                     reversed: bool = False, n_values_to_cut_from_top: int = 0) -> str:
-    """ Convert matplotlib color scheme to ROOT.
+def convert_mpl_color_scheme_to_ROOT(
+    name: Optional[str] = None,
+    cmap: Optional[Union[matplotlib.colors.ListedColormap, matplotlib.colors.LinearSegmentedColormap]] = None,
+    reversed: bool = False,
+    n_values_to_cut_from_top: int = 0,
+) -> str:
+    """Convert matplotlib color scheme to ROOT.
 
     Args:
         name: Name of the matplotlib color scheme.

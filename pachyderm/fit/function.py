@@ -7,18 +7,19 @@
 
 import abc
 import logging
+import numpy as np
 import operator
 from typing import Callable, Optional, Sequence, Union
-
-import numpy as np
 
 from pachyderm import generic_class
 from pachyderm.fit import base as fit_base
 
+
 logger = logging.getLogger(__name__)
 
+
 class CombinePDF(generic_class.EqualityMixin, abc.ABC):
-    """ Combine functions (PDFs) together.
+    """Combine functions (PDFs) together.
 
     Args:
         functions: Functions to be added.
@@ -33,26 +34,31 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
             specified to allow iminuit to determine the proper arguments.
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
+
     # Don't specify the function arguments to work aorund a mypy bug.
     # For an unclear reason, it won't properly detect the number of arguments.
     _operation: Callable[..., float]
     _call_function: Callable[..., float]
 
-    def __init__(self, *functions: Callable[..., float], prefixes: Optional[Sequence[str]] = None,
-                 skip_prefixes: Optional[Sequence[str]] = None) -> None:
+    def __init__(
+        self,
+        *functions: Callable[..., float],
+        prefixes: Optional[Sequence[str]] = None,
+        skip_prefixes: Optional[Sequence[str]] = None,
+    ) -> None:
         # Store the functions
         self.functions = list(functions)
 
         # Determine the arguments for the functions.
         merged_args, argument_positions = fit_base.merge_func_codes(
-            self.functions, prefixes = prefixes, skip_prefixes = skip_prefixes
+            self.functions, prefixes=prefixes, skip_prefixes=skip_prefixes
         )
         logger.debug(f"merged_args: {merged_args}")
         self.func_code = fit_base.FuncCode(merged_args)
         self.argument_positions = argument_positions
 
     def __call__(self, x: np.ndarray, *merged_args: float) -> float:
-        """ Call the added PDF.
+        """Call the added PDF.
 
         Args:
             x: Value(s) where the functions should be evaluated.
@@ -64,12 +70,12 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
         # We add in the x values into the function arguments here so we don't have to play tricks later
         # to get the function argumment indices correct.
         return fit_base.call_list_of_callables_with_operation(
-            self._operation,
-            self.functions, self.argument_positions, *[x, *merged_args]
+            self._operation, self.functions, self.argument_positions, *[x, *merged_args]
         )
 
+
 class AddPDF(CombinePDF):
-    """ Add functions (PDFs) together.
+    """Add functions (PDFs) together.
 
     Args:
         functions: Functions to be added.
@@ -84,10 +90,12 @@ class AddPDF(CombinePDF):
             specified to allow iminuit to determine the proper arguments.
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
+
     _operation = operator.add
 
+
 class SubtractPDF(CombinePDF):
-    """ Subtract functions (PDFs) together.
+    """Subtract functions (PDFs) together.
 
     Args:
         functions: Functions to be added.
@@ -102,10 +110,12 @@ class SubtractPDF(CombinePDF):
             specified to allow iminuit to determine the proper arguments.
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
+
     _operation = operator.sub
 
+
 class MultiplyPDF(CombinePDF):
-    """ Multiply functions (PDFs) together.
+    """Multiply functions (PDFs) together.
 
     Args:
         functions: Functions to be added.
@@ -120,10 +130,12 @@ class MultiplyPDF(CombinePDF):
             specified to allow iminuit to determine the proper arguments.
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
+
     _operation = operator.mul
 
+
 class DividePDF(CombinePDF):
-    """ Divide functions (PDFs) together.
+    """Divide functions (PDFs) together.
 
     Args:
         functions: Functions to be added.
@@ -138,10 +150,12 @@ class DividePDF(CombinePDF):
             specified to allow iminuit to determine the proper arguments.
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
+
     _operation = operator.truediv
 
+
 def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np.ndarray, float]:
-    r""" Normalized gaussian.
+    r"""Normalized gaussian.
 
     .. math::
 
@@ -156,9 +170,11 @@ def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np
     """
     return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))
 
-def extended_gaussian(x: Union[np.ndarray, float], mean: float, sigma: float,
-                      amplitude: float) -> Union[np.ndarray, float]:
-    r""" Extended gaussian.
+
+def extended_gaussian(
+    x: Union[np.ndarray, float], mean: float, sigma: float, amplitude: float
+) -> Union[np.ndarray, float]:
+    r"""Extended gaussian.
 
     .. math::
 
