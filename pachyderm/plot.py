@@ -129,12 +129,12 @@ def configure() -> None:
         #"text.latex.preview": True,
         # Enable axis ticks (after they can be disabled by seaborn)
         "xtick.bottom": True,
+        "xtick.top": True,
         "ytick.left": True,
-        # Make minor axis ticks visible (but only on left and bottom)
+        "ytick.right": True,
+        # Make minor axis ticks visible
         "xtick.minor.visible": True,
         "ytick.minor.visible": True,
-        "xtick.minor.top": False,
-        "ytick.minor.right": False,
         # Ensure that axis ticks go inward instead of outward
         "xtick.direction": "in",
         "ytick.direction": "in",
