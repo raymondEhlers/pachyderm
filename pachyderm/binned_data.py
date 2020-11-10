@@ -561,8 +561,19 @@ class BinnedData:
         if hist.GetSumw2N() == 0:
             hist.Sumw2(True)
         class_name = hist.ClassName()
-        # TH*D
-        n_dim = int(class_name[2])
+        # Determine the number of dimensions
+        # TProfile
+        if "TProfile" in class_name:
+            if "TProfile" == class_name:
+                n_dim = 1
+            else:
+                n_dim = int(class_name[-1])
+        else:
+            # TH*D
+            n_dim = int(class_name[2])
+        # If it doesn't match these, then let it throw a ValueError so we know what's going on.
+
+        # Then determine the axes based on the dimensions
         axis_methods = [hist.GetXaxis, hist.GetYaxis, hist.GetZaxis]
         root_axes = axis_methods[:n_dim]
 
