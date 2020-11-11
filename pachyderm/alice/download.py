@@ -340,6 +340,9 @@ class CopyHandler(threading.Thread):
                 n_tries += 1
                 if n_tries >= self.max_tries:
                     logger.error(f"File {next_file.source} failed copying in {self.max_tries} tries - giving up")
+                    # Although this copying failed, from the perspective of the queue, the task was "completed",
+                    # so we have to note that the task is done in order for us to be able to join the queue.
+                    self._queue.task_done()
                 else:
                     logger.error(
                         f"File {next_file.source} failed copying ({n_tries}/{self.max_tries}) "
