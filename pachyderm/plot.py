@@ -6,11 +6,12 @@
 """
 
 import logging
+from typing import Optional, Union
+
 import matplotlib
 import matplotlib.axes
 import matplotlib.colors
 import numpy as np
-from typing import Optional, Union
 
 
 # Setup logger
@@ -206,6 +207,10 @@ def error_boxes(
     Inpsired by: https://matplotlib.org/gallery/statistics/errorbars_and_boxes.html and
     https://github.com/HDembinski/pyik/blob/217ae25bbc316c7a209a1a4a1ce084f6ca34276b/pyik/mplext.py#L138
 
+    Note:
+        The errors are distances from the central value. ie. for 10% error on 1, the two entry version
+        should be [0.1, 0.1].
+
     Args:
         ax: Axis onto which the rectangles will be drawn.
         x_data: x location of the data.
@@ -259,7 +264,10 @@ def error_boxes(
         error_boxes.append(r)
 
     # Create the patch collection and add it to the given axis.
-    patch_collection = matplotlib.collections.PatchCollection(error_boxes, **kwargs,)
+    patch_collection = matplotlib.collections.PatchCollection(
+        error_boxes,
+        **kwargs,
+    )
     ax.add_collection(patch_collection)
 
     return patch_collection
