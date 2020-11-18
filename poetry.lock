@@ -15,17 +15,6 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "aspy.refactor-imports"
-version = "2.1.1"
-description = "Utilities for refactoring imports in python-like syntax."
-category = "dev"
-optional = false
-python-versions = ">=3.6.1"
-
-[package.dependencies]
-cached-property = "*"
-
-[[package]]
 name = "atomicwrites"
 version = "1.4.0"
 description = "Atomic file writes."
@@ -98,14 +87,6 @@ dev = ["ipykernel", "cloudpickle", "pytest", "pytest-benchmark"]
 docs = ["Sphinx (>=3.0,<4.0)", "recommonmark (>=0.5.0)", "sphinx-book-theme (0.38.0)", "nbsphinx", "sphinx-copybutton"]
 examples = ["matplotlib", "xarray", "xhistogram", "netcdf4", "numba", "uproot"]
 test = ["pytest", "pytest-benchmark"]
-
-[[package]]
-name = "cached-property"
-version = "1.5.2"
-description = "A decorator for caching properties in classes."
-category = "dev"
-optional = false
-python-versions = "*"
 
 [[package]]
 name = "certifi"
@@ -710,17 +691,6 @@ python-versions = ">=3.6"
 numpy = ">=1.14.5"
 
 [[package]]
-name = "seed-isort-config"
-version = "2.2.0"
-description = "Statically populate the `known_third_party` `isort` setting."
-category = "dev"
-optional = false
-python-versions = ">=3.6.1"
-
-[package.dependencies]
-"aspy.refactor-imports" = "*"
-
-[[package]]
 name = "six"
 version = "1.15.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -940,7 +910,7 @@ docs = ["Sphinx", "recommonmark", "sphinx-markdown-tables", "importlib-metadata"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6.1"
-content-hash = "472c016cceef4037c6b721d14a6cdf446e5cc0d00d304f64a2daa7626809f68b"
+content-hash = "4bc8ca0d60132afe2081fb4c0de9ae4fe9c597c277960750fbd271ad7b58e18b"
 
 [metadata.files]
 alabaster = [
@@ -950,10 +920,6 @@ alabaster = [
 appdirs = [
     {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
     {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
-]
-"aspy.refactor-imports" = [
-    {file = "aspy.refactor_imports-2.1.1-py2.py3-none-any.whl", hash = "sha256:9df76bf19ef81620068b785a386740ab3c8939fcbdcebf20c4a4e0057230d782"},
-    {file = "aspy.refactor_imports-2.1.1.tar.gz", hash = "sha256:eec8d1a73bedf64ffb8b589ad919a030c1fb14acf7d1ce0ab192f6eedae895c5"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
@@ -1035,10 +1001,6 @@ boost-histogram = [
     {file = "boost_histogram-0.11.1-pp37-pypy37_pp73-manylinux2010_x86_64.whl", hash = "sha256:bb6e254da69709419fd169dd46e5187b3fc10df92c91f9d4b153dfe415a9dcdc"},
     {file = "boost_histogram-0.11.1-pp37-pypy37_pp73-win32.whl", hash = "sha256:28f97f4ca8f69641cfe7ac0adaf40219f3bcb8baf4900c76bb8247f0bb8b207a"},
     {file = "boost_histogram-0.11.1.tar.gz", hash = "sha256:eb2205e7cac21c3742b19ea147359c588e07a4f3b719d58c6ad6009fee423fce"},
-]
-cached-property = [
-    {file = "cached-property-1.5.2.tar.gz", hash = "sha256:9fa5755838eecbb2d234c3aa390bd80fbd3ac6b6869109bfc1b499f7bd89a130"},
-    {file = "cached_property-1.5.2-py2.py3-none-any.whl", hash = "sha256:df4f613cf7ad9a588cc381aaf4a512d26265ecebd5eb9e1ba12f1319eb85a6a0"},
 ]
 certifi = [
     {file = "certifi-2020.6.20-py2.py3-none-any.whl", hash = "sha256:8fc0819f1f30ba15bdb34cceffb9ef04d99f420f68eb75d901e9560b8749fc41"},
@@ -1517,10 +1479,6 @@ scipy = [
     {file = "scipy-1.5.3-cp38-cp38-win32.whl", hash = "sha256:33e6a7439f43f37d4c1135bc95bcd490ffeac6ef4b374892c7005ce2c729cf4a"},
     {file = "scipy-1.5.3-cp38-cp38-win_amd64.whl", hash = "sha256:a3db1fe7c6cb29ca02b14c9141151ebafd11e06ffb6da8ecd330eee5c8283a8a"},
     {file = "scipy-1.5.3.tar.gz", hash = "sha256:ddae76784574cc4c172f3d5edd7308be16078dd3b977e8746860c76c195fa707"},
-]
-seed-isort-config = [
-    {file = "seed_isort_config-2.2.0-py2.py3-none-any.whl", hash = "sha256:8601fb715a5a4aac39256bbf73c2da6a81f964da9c9d9897ab9074db3663526f"},
-    {file = "seed_isort_config-2.2.0.tar.gz", hash = "sha256:be4cfef8f9a3fe8ea1817069c6b624538ac0b429636ec746edeb27e98ed628c8"},
 ]
 six = [
     {file = "six-1.15.0-py2.py3-none-any.whl", hash = "sha256:8b74bedcbbbaca38ff6d7491d76f2b06b3592611af620f8426e82dddb04a5ced"},
