@@ -5,16 +5,17 @@
 .. codeauthor:: Ramyond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
-import attr
 import collections
 import itertools
 import logging
-import numpy as np
 import operator
-import ruamel.yaml
 import uuid
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Sequence, Tuple, Type, Union, cast
+
+import attr
+import numpy as np
+import ruamel.yaml
 
 
 logger = logging.getLogger(__name__)
@@ -208,7 +209,10 @@ class AxesTuple(Tuple[Axis, ...]):
         representation = representer.represent_sequence(f"!{cls.__name__}", obj)
 
         # Finally, return the represented object.
-        return cast(ruamel.yaml.nodes.SequenceNode, representation,)
+        return cast(
+            ruamel.yaml.nodes.SequenceNode,
+            representation,
+        )
 
     @classmethod
     def from_yaml(
@@ -530,15 +534,19 @@ class BinnedData:
         Cannot just use the boost_histogram conversion because it includes flow bins.
 
         """
-        # Explanation of otions:
-        # We want to exclude the overflow bins
-        # We want to receive the errors.
-        # dd returns the bin edges as tuple
-        (values, errors), bin_edges = hist.to_numpy(flow=False, errors=True, dd=True)
+        # We explicitly decide to exclude flow bins.
+        values = hist.values(flow=False)
+        variances = hist.variances(flow=False)
+        bin_edges = (axis.edges(flow=False) for axis in hist.axes)
 
         metadata: Dict[str, Any] = {}
 
-        return cls(axes=bin_edges, values=values, variances=errors ** 2, metadata=metadata,)
+        return cls(
+            axes=bin_edges,
+            values=values,
+            variances=variances,
+            metadata=metadata,
+        )
 
     @classmethod
     def _from_boost_histogram(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
@@ -546,7 +554,12 @@ class BinnedData:
         view = hist.view()
         metadata: Dict[str, Any] = {}
 
-        return cls(axes=hist.axes.edges, values=view.value, variances=np.copy(view.variance), metadata=metadata,)
+        return cls(
+            axes=hist.axes.edges,
+            values=view.value,
+            variances=np.copy(view.variance),
+            metadata=metadata,
+        )
 
     @classmethod
     def _from_ROOT(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
@@ -642,7 +655,12 @@ class BinnedData:
 
         metadata: Dict[str, Any] = {}
 
-        return cls(axes=axes, values=values, variances=variances, metadata=metadata,)
+        return cls(
+            axes=axes,
+            values=values,
+            variances=variances,
+            metadata=metadata,
+        )
 
     @classmethod
     def from_existing_data(
@@ -668,12 +686,13 @@ class BinnedData:
                 return binned_data
 
         # Now actually deal with conversion from other types.
-        # Uproot3: "values" and "variances" is a proxy for an uproot3 hist. uproot4 doesn't have variances.
+        # Uproot4: has "_values_variances"
+        if hasattr(binned_data, "_values_variances"):
+            return cls._from_uproot4(binned_data)
+        # Uproot3: "values" and "variances" is a proxy for an uproot3 hist. uproot4 hists also have these,
+        # so we need to check for uproot4 first
         if hasattr(binned_data, "values") and hasattr(binned_data, "variances"):
             return cls._from_uproot3(binned_data)
-        # Uproot4: has "values_errors"
-        if hasattr(binned_data, "values_errors"):
-            return cls._from_uproot4(binned_data)
         if hasattr(binned_data, "view"):
             return cls._from_boost_histogram(binned_data)
 
@@ -789,7 +808,11 @@ class BinnedData:
 
         from pachyderm import histogram
 
-        return histogram.Histogram1D(bin_edges=self.axes[0].bin_edges, y=self.values, errors_squared=self.variances,)
+        return histogram.Histogram1D(
+            bin_edges=self.axes[0].bin_edges,
+            y=self.values,
+            errors_squared=self.variances,
+        )
 
     def to_numpy(self) -> Tuple[np.ndarray, ...]:
         """Convert to a numpy histogram.

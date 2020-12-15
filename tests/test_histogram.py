@@ -7,13 +7,14 @@
 
 import ctypes
 import logging
-import numpy as np
 import os
-import pytest
-import uproot4 as uproot
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterator, Tuple
+
+import numpy as np
+import pytest
+import uproot
 
 from pachyderm import histogram
 from pachyderm.typing_helpers import Hist
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture  # type: ignore
 def retrieve_root_list(test_root_hists: Any) -> Iterator[Tuple[str, Any, Any]]:
-    """ Create an set of lists to load for a ROOT file.
+    """Create an set of lists to load for a ROOT file.
 
     NOTE: Not using a mock since I'd like to the real objects and storing
           a ROOT file is just as easy here.
@@ -199,7 +200,7 @@ class TestRetrievingHistgramsFromAList:
         assert "nonExistent" in exception_info.value.args[0]
 
     def test_retrieve_object(self, logging_mixin: Any, retrieve_root_list: Any) -> None:
-        """ Test for retrieving a list of histograms from a ROOT file.
+        """Test for retrieving a list of histograms from a ROOT file.
 
         NOTE: One would normally expect to have the hists in the first level of the dict, but
               this is actually taken care of in `get_histograms_in_list()`, so we need to avoid
@@ -222,7 +223,7 @@ class TestRetrievingHistgramsFromAList:
 
 @pytest.fixture  # type: ignore
 def setup_histogram_conversion() -> Tuple[str, str, histogram.Histogram1D]:
-    """ Setup expected values for histogram conversion tests.
+    """Setup expected values for histogram conversion tests.
 
     This set of expected values corresponds to:
 
@@ -263,7 +264,7 @@ def setup_histogram_conversion() -> Tuple[str, str, histogram.Histogram1D]:
 
 
 def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1D) -> bool:
-    """ Helper function to compare a given Histogram against expected values.
+    """Helper function to compare a given Histogram against expected values.
 
     Args:
         input_hist (histogram.Histogram1D): Converted histogram.
@@ -323,7 +324,9 @@ def test_uproot_hist_to_histogram(setup_histogram_conversion: Any) -> None:
 def test_histogram1D_to_from_existing_histogram(logging_mixin: Any) -> None:
     """ Test passing a Histogram1D to ``from_existing_histogram``. It should return the same object. """
     h_input = histogram.Histogram1D(
-        bin_edges=np.array([0, 1, 2]), y=np.array([2.3, 5.4]), errors_squared=np.array([2.3, 5.4]),
+        bin_edges=np.array([0, 1, 2]),
+        y=np.array([2.3, 5.4]),
+        errors_squared=np.array([2.3, 5.4]),
     )
 
     h_output = histogram.Histogram1D.from_existing_hist(h_input)
@@ -425,7 +428,7 @@ def test_hist_identical_arrays(logging_mixin: Any) -> None:
 @pytest.mark.ROOT
 class TestWithRootHists:
     def test_get_array_from_hist(self, logging_mixin: Any, test_root_hists: Any) -> None:
-        """ Test getting numpy arrays from a 1D hist.
+        """Test getting numpy arrays from a 1D hist.
 
         Note:
             This test is from the legacy get_array_from_hist(...) function. This functionality is
@@ -478,7 +481,7 @@ class TestWithRootHists:
         assert not np.allclose(expected_hist.bin_edges, uniform_bins)
 
     def test_Histogram1D_from_profile(self, logging_mixin: Any) -> None:
-        """ Test creating a Histogram1D from a TProfile.
+        """Test creating a Histogram1D from a TProfile.
 
         The errors are retrieved differently than for a TH1.
         """
@@ -552,7 +555,7 @@ class TestWithRootHists:
 
 @pytest.fixture  # type: ignore
 def setup_basic_hist(logging_mixin: Any) -> Tuple[histogram.Histogram1D, np.ndarray, np.ndarray, np.ndarray]:
-    """ Setup a basic `Histogram1D` for basic tests.
+    """Setup a basic `Histogram1D` for basic tests.
 
     This histogram contains 4 bins, with edges of [0, 1, 2, 3, 5], values of [2, 2, 3, 0], with
     errors of [4, 2, 3, 0], simulating the first bin being filled once with a weight of 2, and the
@@ -651,7 +654,7 @@ def test_histogram1D_equality(logging_mixin, setup_basic_hist, test_equality, ac
 
 @dataclass
 class HistInfo:
-    """ Convenience for storing hist testing information.
+    """Convenience for storing hist testing information.
 
     Could reuse the ``Histogram1D`` object, but since we're testing it here, it seems better to use
     a separate object.
@@ -662,10 +665,14 @@ class HistInfo:
 
     def convert_to_histogram_1D(self, bin_edges: np.array) -> histogram.Histogram1D:
         """ Convert these stored values into a ``Histogram1D``. """
-        return histogram.Histogram1D(bin_edges=bin_edges, y=self.y, errors_squared=self.errors_squared,)
+        return histogram.Histogram1D(
+            bin_edges=bin_edges,
+            y=self.y,
+            errors_squared=self.errors_squared,
+        )
 
     def convert_to_ROOT_hist(self, bin_edges: np.array) -> Hist:
-        """ Convert these stored values in a ROOT.TH1F.
+        """Convert these stored values in a ROOT.TH1F.
 
         This isn't very robust, which is why I'm not including it in ``Histogram1D``. However,
         something simple is sufficient for our purposes here.
@@ -685,7 +692,7 @@ class HistInfo:
 
 
 class TestHistogramOperators:
-    """ Test ``Histogram1D`` operators.
+    """Test ``Histogram1D`` operators.
 
     In principle, we could refactor all of the tests by explicitly calling
     the functions. But since the expected values are different for each test,
@@ -725,7 +732,7 @@ class TestHistogramOperators:
         ids=["Standard filled", "One standard, one weighted", "Two weighted"],
     )
     def setup_addition(self, request: Any, logging_mixin: Any) -> Tuple[Any, ...]:
-        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+        """We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
 
@@ -802,7 +809,7 @@ class TestHistogramOperators:
         ids=["Standard filled", "One standard, one weighted", "Two weighted"],
     )
     def setup_subtraction(self, request: Any, logging_mixin: Any) -> Tuple[Any, ...]:
-        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+        """We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
@@ -860,7 +867,7 @@ class TestHistogramOperators:
         ids=["Standard filled", "One standard, one weighted", "Two weighted"],
     )
     def setup_multiplication(self, request: Any, logging_mixin: Any) -> Tuple[Any, ...]:
-        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+        """We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
@@ -913,7 +920,7 @@ class TestHistogramOperators:
         ids=["Standard filled", "Weighing filled"],
     )
     def setup_scalar_multiplication(self, logging_mixin: Any, request: Any) -> Tuple[Any, ...]:
-        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+        """We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
@@ -969,7 +976,7 @@ class TestHistogramOperators:
         ids=["Standard filled", "One standard, one weighted", "Two weighted"],
     )
     def setup_division(self, request: Any, logging_mixin: Any) -> Tuple[Any, ...]:
-        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+        """We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
@@ -1022,7 +1029,7 @@ class TestHistogramOperators:
         ids=["Standard filled", "Weighing filled"],
     )
     def setup_scalar_division(self, logging_mixin: Any, request: Any) -> Tuple[Any, ...]:
-        """ We want to share this parametrization between multiple tests, so we define it as a fixture.
+        """We want to share this parametrization between multiple tests, so we define it as a fixture.
 
         However, each test performs rather different steps, so there is little else to do here.
         """
@@ -1060,7 +1067,7 @@ class TestHistogramOperators:
 
 @pytest.mark.ROOT
 class TestIntegrateHistogram1D:
-    """ Test for counting and integrating bins stored in a ``Histogram1D``.
+    """Test for counting and integrating bins stored in a ``Histogram1D``.
 
     These tests require ROOT because we compare against ROOT to check that the values
     are correct.
@@ -1076,7 +1083,7 @@ class TestIntegrateHistogram1D:
     def setup_hists_and_args(
         self, request: Any, logging_mixin: Any
     ) -> Tuple[Dict[str, float], histogram.Histogram1D, float, float, Any]:
-        """ Setup hist for testing integration.
+        """Setup hist for testing integration.
 
         Note:
             The `Histogram1D` bins are 0-indexed, while the ROOT bins are 1-indexed.
@@ -1201,7 +1208,7 @@ class TestHistogramIntegralValidation:
 
 
 def test_convert_HEPdata_hist(logging_mixin: Any) -> None:
-    """ Test converting HEPdata into Histogram1D objects.
+    """Test converting HEPdata into Histogram1D objects.
 
     Compare to pp pion-hadron correlations.
     """

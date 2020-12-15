@@ -8,11 +8,12 @@
 import collections
 import itertools
 import logging
-import numpy as np
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Callable, ContextManager, Dict, List, Mapping, Optional, Tuple, Type, TypeVar, Union, cast
+
+import numpy as np
 
 from pachyderm.typing_helpers import Axis, Hist, TFile
 
@@ -427,7 +428,11 @@ class Histogram1D:
             (value, error): Integral value, error
         """
         return self._integral(
-            min_value=min_value, max_value=max_value, min_bin=min_bin, max_bin=max_bin, multiply_by_bin_width=False,
+            min_value=min_value,
+            max_value=max_value,
+            min_bin=min_bin,
+            max_bin=max_bin,
+            multiply_by_bin_width=False,
         )
 
     def integral(
@@ -462,7 +467,11 @@ class Histogram1D:
             (value, error): Integral value, error
         """
         return self._integral(
-            min_value=min_value, max_value=max_value, min_bin=min_bin, max_bin=max_bin, multiply_by_bin_width=True,
+            min_value=min_value,
+            max_value=max_value,
+            min_bin=min_bin,
+            max_bin=max_bin,
+            multiply_by_bin_width=True,
         )
 
     def _integral(
@@ -738,11 +747,10 @@ class Histogram1D:
             tuple: (bin_edges, y, errors, metadata) where bin_edges are the bin edges, y is the bin values, and
                 errors are the sumw2 bin errors, and metadata is the extracted metadata.
         """
-        # This excludes underflow and overflow
-        # Also retrieve errors from sumw2.
-        # If more sophistication is needed for the errors, we can modify this to follow the approach to
-        # calculating bin errors from TH1::GetBinError()
-        (y, errors), (bin_edges,) = hist.to_numpy(flow=False, errors=True, dd=True)
+        # We explicitly decide to exclude flow bins.
+        y = hist.values(flow=False)
+        variances = hist.variances(flow=False)
+        (bin_edges,) = (axis.edges(flow=False) for axis in hist.axes)
 
         print(dir(hist))
         print(hist.member("fTsumw"))
@@ -756,7 +764,7 @@ class Histogram1D:
             )
         )
 
-        return (bin_edges, y, errors ** 2, metadata)
+        return (bin_edges, y, variances, metadata)
 
     @classmethod
     def from_hepdata(

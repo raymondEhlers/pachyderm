@@ -48,7 +48,7 @@ importlib-metadata = {version = "^2.0.0", python="^3.6, <3.8", optional = true}
 docs = ["Sphinx", "recommonmark", "sphinx-markdown-tables", "importlib-metadata"]
 
 [tool.poetry.dev-dependencies]
-uproot4 = "^0.1.0"
+uproot = "^4"
 pre-commit = "^2.8.2"
 flake8 = "^3.8.4"
 flake8-colors = "^0.1.6"
