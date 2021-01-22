@@ -25,6 +25,7 @@ htmlcov/
 .py*/
 .pachyderm/
 env/
+.python-version
 
 # Ignore filetypes
 *.root
