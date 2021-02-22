@@ -246,8 +246,27 @@ class FitResult(BaseFitResult):
             x=x,
             n_fit_data_points=len(x),
             minimum_val=minuit.fval,
-            errors=[],
+            errors=np.array([]),
         )
+
+    def __eq__(self, other: Any) -> bool:
+        """ Check for equality of members.
+
+        This is pretty hacky, but the code is already brittle, and it passes the tests, so it's
+        good enough for these purposes.
+        """
+        # Check identity to avoid needing to perform the (potentially costly) dict comparison.
+        if self is other:
+            return True
+        # Compare via the member values.
+        if type(other) is type(self):
+            keys_agree = (list(self.__dict__.keys()) == list(other.__dict__))
+            try:
+                values_agree = [v == other.__dict__[k] if not isinstance(v, np.ndarray) else np.allclose(v, other.__dict__[k]) for k, v in self.__dict__.items()]
+            except KeyError:
+                values_agree = False
+            return keys_agree and all(values_agree)
+        return NotImplemented
 
 
 def extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> Tuple[Dict[str, Any], List[str]]:
@@ -278,7 +297,7 @@ def extract_function_values(func: Callable[..., float], fit_result: BaseFitResul
     return args_at_minimum, free_parameters
 
 
-def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
+def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.ndarray:
     """Calculate the errors of the given function based on values from the fit.
 
     Note:
@@ -323,10 +342,11 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
     # logger.debug("error_val: shape: {error_val.shape}, error_val: {error_val}")
 
     # We want the error itself, so we take the square root.
-    return np.sqrt(error_vals)
+    res: np.ndarray = np.sqrt(error_vals)
+    return res
 
 
-def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.array:
+def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.ndarray:
     """Evaluate the gradient of the given function based on the fit values.
 
     For a function of 5 free parameters (7 total) and 10 x values, the returned result would be of the shape (10, 5).
@@ -347,7 +367,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
     # must contain a list of values that it will vary when taking the gradient. The rest of the args are
     # passed on to the function via *args and **kwargs, but they won't be varied.
     # To ensure the proper signature, we wrap the function and route the arguments.
-    def func_wrap(args_to_vary: Sequence[float], x: np.array) -> float:
+    def func_wrap(args_to_vary: Sequence[float], x: np.ndarray) -> float:
         """Wrap the given function to ensure that the arguments are routed properly for ``numdifftools``.
 
         To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
@@ -380,7 +400,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
     #       respect to fixed parameters. But due to the argument requirements of ``numdifftools``, it would be
     #       quite difficult to tell it to only take the gradient with respect to a non-continuous selection of
     #       parameters. So we just accept the inefficiency.
-    partial_derivative_result = partial_derivative_func(list(args_at_minimum.values()), x)
+    partial_derivative_result: np.ndarray = partial_derivative_func(list(args_at_minimum.values()), x)
     end = time.time()
     logger.debug(f"Finished calculating the gradient in {end-start} seconds.")
 

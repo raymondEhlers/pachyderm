@@ -354,7 +354,7 @@ def fit_with_minuit(
     if isinstance(cost_func, cost_function.CostFunctionBase):
         errors = base.calculate_function_errors(cost_func.f, fit_result, x)
     else:
-        errors = []
+        errors = np.array([])
     fit_result.errors = errors
 
     return fit_result, minuit

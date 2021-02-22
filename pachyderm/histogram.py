@@ -293,7 +293,8 @@ class Histogram1D:
 
     @property
     def errors(self) -> np.ndarray:
-        return np.sqrt(self.errors_squared)
+        res: np.ndarray = np.sqrt(self.errors_squared)
+        return res
 
     @property
     def bin_widths(self) -> np.ndarray:
@@ -302,7 +303,8 @@ class Histogram1D:
         Returns:
             Array of the bin widths.
         """
-        return self.bin_edges[1:] - self.bin_edges[:-1]
+        res: np.ndarray = self.bin_edges[1:] - self.bin_edges[:-1]
+        return res
 
     @property
     def x(self) -> np.ndarray:
@@ -398,7 +400,7 @@ class Histogram1D:
         # We want to copy bin_edges, y, and errors_squared, but not anything else. Namely, we skip _x here.
         # In principle, it wouldn't really be a problem to copy, but there may be other "_" fields that we
         # want to skip later, so we do the right thing now.
-        kwargs = {k: np.array(v, copy=True) for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"}
+        kwargs: Dict[str, Any] = {k: np.array(v, copy=True) for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"}
         # We also want to make an explicit copy of the metadata
         kwargs["metadata"] = self.metadata.copy()
         return type(self)(**kwargs)
@@ -814,9 +816,9 @@ class Histogram1D:
                 y, errors_squared, metadata = extraction_function(var)
                 histograms.append(
                     cls(
-                        bin_edges=bin_edges,
-                        y=y,
-                        errors_squared=[err ** 2 for err in errors_squared],
+                        bin_edges=np.asarray(bin_edges),
+                        y=np.asarray(y),
+                        errors_squared=np.asarray([err ** 2 for err in errors_squared]),
                         metadata=metadata,
                     )
                 )
@@ -1071,7 +1073,7 @@ def _create_stats_dict_from_values(
     }
 
 
-def calculate_binned_stats(bin_edges: np.array, y: np.array, weights_squared: np.array) -> Dict[str, float]:
+def calculate_binned_stats(bin_edges: np.ndarray, y: np.ndarray, weights_squared: np.ndarray) -> Dict[str, float]:
     """Calculate the stats needed to fully determine histogram properties.
 
     The values are calculated the same way as in ``ROOT.TH1.GetStats(...)``. Recalculating the statistics
@@ -1103,7 +1105,7 @@ def calculate_binned_stats(bin_edges: np.array, y: np.array, weights_squared: np
     total_sum_w2 = np.sum(weights_squared)
     total_sum_wx = np.sum(y * x)
     total_sum_wx2 = np.sum(y * x ** 2)
-    return _create_stats_dict_from_values(total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2)
+    return _create_stats_dict_from_values(total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2)  # type: ignore
 
 
 def binned_mean(stats: Dict[str, float]) -> float:
@@ -1126,7 +1128,7 @@ def binned_mean(stats: Dict[str, float]) -> float:
     if total_sum_w > 0:
         return stats["_total_sum_wx"] / total_sum_w
     # Can't divide, so return NaN
-    return np.nan  # type: ignore
+    return np.nan
 
 
 def binned_standard_deviation(stats: Dict[str, float]) -> float:
@@ -1165,4 +1167,4 @@ def binned_variance(stats: Dict[str, float]) -> float:
     if total_sum_w > 0:
         return (stats["_total_sum_wx2"] - (stats["_total_sum_wx"] ** 2 / total_sum_w)) / total_sum_w
     # Can't divide, so return NaN
-    return np.nan  # type: ignore
+    return np.nan

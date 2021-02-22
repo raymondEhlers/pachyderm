@@ -61,7 +61,7 @@ def _simpson_38(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[flo
     a = bin_edges[:-1]
     b = bin_edges[1:]
     # Recall that bin_edges[1:] - bin_edges[:-1] is the bin widths
-    return (b - a) / 8 * (f(a, *args) + 3 * f((2 * a + b) / 3, *args) + 3 * f((a + 2 * b) / 3, *args) + f(b, *args))
+    return (b - a) / 8 * (f(a, *args) + 3 * f((2 * a + b) / 3, *args) + 3 * f((a + 2 * b) / 3, *args) + f(b, *args))  # type: ignore
 
 
 def _integrate_1D(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
@@ -86,7 +86,7 @@ def _integrate_1D(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[f
     # QUADPACK is another option, but it's slow.
     # return _quad(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])
     # Simpson's 3/8 rule is better than the simple case, but faster than QUADPACK.
-    return _simpson_38(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])
+    return _simpson_38(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])  # type: ignore
 
 
 def unravel_simultaneous_fits(
@@ -243,7 +243,7 @@ class StandaloneCostFunction(CostFunctionBase):
 
     @classmethod
     def _call_cost_function(
-        cls, data: np.ndarray, f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any
+        cls, data: Union[histogram.Histogram1D, np.ndarray], f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
 

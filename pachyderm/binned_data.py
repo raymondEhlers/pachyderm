@@ -48,20 +48,6 @@ def _axis_bin_edges_converter(value: Any) -> np.ndarray:
     return np.ravel(np.array(value, dtype=np.float64))
 
 
-def _np_array_converter(value: Any) -> np.ndarray:
-    """Convert the given value to a numpy array.
-
-    Normally, we would just use np.array directly as the converter function. However, mypy will complain if
-    the converter is untyped. So we add (trivial) typing here.  See: https://github.com/python/mypy/issues/6172.
-
-    Args:
-        value: Value to be converted to a numpy array.
-    Returns:
-        The converted numpy array.
-    """
-    return np.array(value)
-
-
 def find_bin(bin_edges: np.ndarray, value: float) -> int:
     """Determine the index position where the value should be inserted.
 
@@ -99,7 +85,8 @@ class Axis:
         Returns:
             Array of the bin widths.
         """
-        return self.bin_edges[1:] - self.bin_edges[:-1]
+        res: np.ndarray = self.bin_edges[1:] - self.bin_edges[:-1]
+        return res
 
     @property
     def bin_centers(self) -> np.ndarray:
@@ -147,7 +134,7 @@ class Axis:
 
     def __eq__(self, other: Any) -> bool:
         """ Check for equality. """
-        return cast(bool, np.allclose(self.bin_edges, other.bin_edges))
+        return np.allclose(self.bin_edges, other.bin_edges)
 
     # TODO: Serialize more carefully...
 
@@ -181,7 +168,7 @@ class AxesTuple(Tuple[Axis, ...]):
         # but if it becomes problematic, we can instead use the more specific:
         # if isinstance(axes, (Axis, np.ndarray)):
         if not isinstance(values, collections.abc.Iterable) or (isinstance(values, np.ndarray) and values.ndim == 1):
-            values = [axes]
+            values = [axes]  # type: ignore
         # Help out mypy
         assert isinstance(values, collections.abc.Iterable)
         return cls([Axis(a) for a in values])
@@ -311,13 +298,13 @@ def _shape_array_check(instance: "BinnedData", attribute: NumpyAttribute, value:
 @attr.s(eq=False)
 class BinnedData:
     axes: AxesTuple = attr.ib(
-        converter=_axes_tuple_from_axes_sequence, validator=[_shared_memory_check, _validate_axes]
+        converter=_axes_tuple_from_axes_sequence, validator=[_shared_memory_check, _validate_axes]  # type: ignore
     )
     values: np.ndarray = attr.ib(
-        converter=_np_array_converter, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
+        converter=np.asarray, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
     )
     variances: np.ndarray = attr.ib(
-        converter=_np_array_converter, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
+        converter=np.asarray, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
     )
     metadata: Dict[str, Any] = attr.ib(factory=dict)
 
@@ -336,7 +323,8 @@ class BinnedData:
 
     @property
     def errors(self) -> np.ndarray:
-        return np.sqrt(self.variances)
+        res: np.ndarray = np.sqrt(self.variances)
+        return res
 
     def copy(self: "BinnedData") -> "BinnedData":
         """Copies the object.
@@ -537,7 +525,7 @@ class BinnedData:
         # We explicitly decide to exclude flow bins.
         values = hist.values(flow=False)
         variances = hist.variances(flow=False)
-        bin_edges = (axis.edges(flow=False) for axis in hist.axes)
+        bin_edges = [axis.edges(flow=False) for axis in hist.axes]
 
         metadata: Dict[str, Any] = {}
 

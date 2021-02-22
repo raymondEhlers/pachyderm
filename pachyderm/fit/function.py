@@ -70,7 +70,7 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
         # We add in the x values into the function arguments here so we don't have to play tricks later
         # to get the function argumment indices correct.
         return fit_base.call_list_of_callables_with_operation(
-            self._operation, self.functions, self.argument_positions, *[x, *merged_args]
+            self._operation, self.functions, self.argument_positions, *[x, *merged_args]  # type: ignore
         )
 
 
@@ -168,7 +168,7 @@ def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np
     Returns:
         Calculated gaussian value(s).
     """
-    return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))
+    return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))  # type: ignore
 
 
 def extended_gaussian(
@@ -188,4 +188,4 @@ def extended_gaussian(
     Returns:
         Calculated gaussian value(s).
     """
-    return amplitude / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))
+    return amplitude / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))  # type: ignore

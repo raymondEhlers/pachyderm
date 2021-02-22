@@ -336,4 +336,5 @@ def test_simultaneous_fit(logging_mixin: Any, setup_simultaneous_fit_data: Any) 
     fit_result_probfit, _ = fit_integration.fit_with_minuit(cost_func=s_probfit, minuit_args=minuit_args, x=h.x)
     # And check that the fit results agree
     logger.debug(f"scale: {fit_result.values_at_minimum['scale']} +/- {fit_result.errors_on_parameters['scale']}")
+    logger.info(f"type: {type(fit_result)}, {type(fit_result_probfit)}")
     assert fit_result == fit_result_probfit

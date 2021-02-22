@@ -36,7 +36,8 @@ def moving_average(arr: np.ndarray, n: int = 3) -> np.ndarray:
     """
     ret = np.cumsum(arr, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
-    return ret[n - 1 :] / n
+    res: np.ndarray = ret[n - 1 :] / n
+    return res
 
 
 def recursive_getattr(obj: Any, attr: str, *args: Any) -> Any:

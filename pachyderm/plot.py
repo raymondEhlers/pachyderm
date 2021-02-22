@@ -199,7 +199,7 @@ def error_boxes(
     x_data: np.ndarray,
     y_data: np.ndarray,
     y_errors: np.ndarray,
-    x_errors: np.ndarray = None,
+    x_errors: Optional[np.ndarray] = None,
     **kwargs: Union[str, float],
 ) -> matplotlib.collections.PatchCollection:
     """Plot error boxes for the given data.
@@ -228,6 +228,8 @@ def error_boxes(
         # Use the last width for the final point. (This is a bit of a hack).
         x_errors = np.append(x_errors, x_errors[-1])
         logger.debug(f"x_errors: {x_errors}")
+        # Help out mypy...
+        assert x_errors is not None
 
     # Validate input data.
     if len(x_data) != len(y_data):
@@ -327,7 +329,7 @@ def convert_mpl_color_scheme_to_ROOT(
 
     stops: np.ndarray = np.linspace(0, 1, n_colors + 1)
 
-    def listing_array(arr: np.ndaray) -> str:
+    def listing_array(arr: np.ndarray) -> str:
         return ", ".join(str(v) for v in arr)
 
     s = f"""
