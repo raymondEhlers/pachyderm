@@ -44,11 +44,11 @@ _dockerTestScript: &dockerTestScript
 jobs:
     include:
         # Tests which require ROOT, coverage
-        - stage: test
-          <<: *dockerTestScript
-          python: 3.6
-          # For use with the docker image.
-          env: PYTHON_VERSION=3.6.7
+        #- stage: test
+        #  <<: *dockerTestScript
+        #  python: 3.6
+        #  # For use with the docker image.
+        #  env: PYTHON_VERSION=3.6.7
         - stage: test
           <<: *dockerTestScript
           python: 3.7
