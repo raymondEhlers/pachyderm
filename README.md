@@ -1,8 +1,8 @@
 # 🐘 Pachyderm
 
 [![Documentation Status](https://readthedocs.org/projects/pachyderm-heavy-ion/badge/?version=latest)](https://pachyderm-heavy-ion.readthedocs.io/en/latest/?badge=latest)
-[![Build Status](https://travis-ci.com/raymondEhlers/pachyderm.svg?branch=master)](https://travis-ci.com/raymondEhlers/pachyderm)
-[![codecov](https://codecov.io/gh/raymondEhlers/pachyderm/branch/master/graph/badge.svg)](https://codecov.io/gh/raymondEhlers/pachyderm)
+[![Build Status](https://travis-ci.com/raymondEhlers/pachyderm.svg?branch=main)](https://travis-ci.com/raymondEhlers/pachyderm)
+[![codecov](https://codecov.io/gh/raymondEhlers/pachyderm/branch/main/graph/badge.svg)](https://codecov.io/gh/raymondEhlers/pachyderm)
 
 Pachyderm[\*](#name-meaning) provides core functionality for heavy-ion physics analyses. The main
 functionality includes a generic histogram projection interface, a recursive configuration determination
