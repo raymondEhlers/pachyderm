@@ -398,13 +398,13 @@ class BinnedData:
         self.variances += other.variances
         return self
 
-    def __mul__(self: "BinnedData", other: Union["BinnedData", float]) -> "BinnedData":
+    def __mul__(self: "BinnedData", other: Union["BinnedData", np.ndarray, float]) -> "BinnedData":
         """ Handles ``a = b * c``. """
         new = self.copy()
         new *= other
         return new
 
-    def __imul__(self: "BinnedData", other: Union["BinnedData", float]) -> "BinnedData":
+    def __imul__(self: "BinnedData", other: Union["BinnedData", np.ndarray, float]) -> "BinnedData":
         """ Handles ``a *= b``. """
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
@@ -429,13 +429,13 @@ class BinnedData:
             self.values *= other.values
         return self
 
-    def __truediv__(self: "BinnedData", other: Union["BinnedData", float]) -> "BinnedData":
+    def __truediv__(self: "BinnedData", other: Union["BinnedData", np.ndarray, float]) -> "BinnedData":
         """ Handles ``a = b / c``. """
         new = self.copy()
         new /= other
         return new
 
-    def __itruediv__(self: "BinnedData", other: Union["BinnedData", float]) -> "BinnedData":
+    def __itruediv__(self: "BinnedData", other: Union["BinnedData", np.ndarray, float]) -> "BinnedData":
         """ Handles ``a /= b``. """
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
