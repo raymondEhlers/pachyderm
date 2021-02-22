@@ -603,7 +603,9 @@ class HistProjector:
 
         # Run the actual projection.
         output_hist, projection_name, projection_name_args, = self._project_observable(
-            input_key="single_observable", input_observable=self.observable_to_project_from, **kwargs,
+            input_key="single_observable",
+            input_observable=self.observable_to_project_from,
+            **kwargs,
         )
         # Store the output.
         output_hist_args = projection_name_args

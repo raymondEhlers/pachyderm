@@ -6,11 +6,12 @@
 """
 
 import abc
-import iminuit
 import logging
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union, cast
+
+import iminuit
 import numpy as np
 import ruamel.yaml
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union, cast
 
 from pachyderm import generic_class
 from pachyderm.fit import base, cost_function
@@ -137,7 +138,11 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         """
         if x is None:
             x = self.fit_result.x
-        return base.calculate_function_errors(func=self.fit_function, fit_result=self.fit_result, x=x,)
+        return base.calculate_function_errors(
+            func=self.fit_function,
+            fit_result=self.fit_result,
+            x=x,
+        )
 
     def fit(self, h: "histogram.Histogram1D", user_arguments: Optional[T_FitArguments] = None) -> base.FitResult:
         """Fit the given histogram to the stored fit function using iminuit.

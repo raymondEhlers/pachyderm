@@ -8,9 +8,10 @@
 import ctypes
 import enum
 import logging
-import numpy as np
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+
+import numpy as np
 
 from pachyderm import histogram, projectors, utils
 from pachyderm.typing_helpers import Hist
@@ -346,7 +347,10 @@ class OutliersRemovalManager:
 
             # Determine the index where the outliers begin and then remove them.
             outliers_indices.append(
-                _determine_outliers_index(hist=hist_to_check, moving_average_threshold=self.moving_average_threshold,)
+                _determine_outliers_index(
+                    hist=hist_to_check,
+                    moving_average_threshold=self.moving_average_threshold,
+                )
             )
 
         outliers_start_index: int = np.max(outliers_indices)
@@ -355,7 +359,9 @@ class OutliersRemovalManager:
         for hist_name, hist in hists.items():
             # Then do the actual outliers removal.
             _remove_outliers_from_hist(
-                hist=hist, outliers_start_index=outliers_start_index, outliers_removal_axis=outliers_removal_axis,
+                hist=hist,
+                outliers_start_index=outliers_start_index,
+                outliers_removal_axis=outliers_removal_axis,
             )
 
             # Now check the mean and median to see how much they've changed.

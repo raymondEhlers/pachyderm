@@ -536,7 +536,11 @@ def download_dataset(
 
     # Setup
     q: FilePairQueue = queue.Queue()
-    queue_filler = DatasetDownloadFiller(dataset=dataset, output_dir=output_dir, q=q,)
+    queue_filler = DatasetDownloadFiller(
+        dataset=dataset,
+        output_dir=output_dir,
+        q=q,
+    )
     download(queue_filler=queue_filler, q=q, fewer_threads=fewer_threads)
 
     # Return the files that are stored corresponding to this period.
@@ -566,12 +570,23 @@ def run_dataset_download() -> None:
     ```
     """
     logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
-    parser = argparse.ArgumentParser(prog="downloadALICEDataset", description="Download an ALICE dataset in parallel",)
-    parser.add_argument(
-        "-p", "--period", type=str, default="", help="Run period (i.e. dataset) to download. For example, lhc16j5.",
+    parser = argparse.ArgumentParser(
+        prog="downloadALICEDataset",
+        description="Download an ALICE dataset in parallel",
     )
     parser.add_argument(
-        "-o", "--outputdir", type=str, default="alice", help="Base output directory. [default: 'alice']",
+        "-p",
+        "--period",
+        type=str,
+        default="",
+        help="Run period (i.e. dataset) to download. For example, lhc16j5.",
+    )
+    parser.add_argument(
+        "-o",
+        "--outputdir",
+        type=str,
+        default="alice",
+        help="Base output directory. [default: 'alice']",
     )
     parser.add_argument(
         "-f",
@@ -590,7 +605,10 @@ def run_dataset_download() -> None:
     )
     args = parser.parse_args()
     output = download_dataset(
-        period=args.period, output_dir=args.outputdir, fewer_threads=args.fewerThreads, datasets_path=args.datasets,
+        period=args.period,
+        output_dir=args.outputdir,
+        fewer_threads=args.fewerThreads,
+        datasets_path=args.datasets,
     )
     print(output)
 
@@ -732,7 +750,14 @@ def download_run_by_run_train_output(
     logger.info(f"Checking dataset {dataset} for train with ID {trainrun} ({legotrain})")
 
     queue_filler = RunByRunTrainOutputFiller(
-        outputpath, trainrun, legotrain, dataset, pt_hard_bin, recpass, aodprod if len(aodprod) > 0 else "", q=q,
+        outputpath,
+        trainrun,
+        legotrain,
+        dataset,
+        pt_hard_bin,
+        recpass,
+        aodprod if len(aodprod) > 0 else "",
+        q=q,
     )
     download(queue_filler=queue_filler, q=q, fewer_threads=fewer_threads)
 
@@ -748,10 +773,14 @@ def run_download_run_by_run_train_output() -> None:
     """
     logging.basicConfig(format="[%(levelname)s] %(message)s", level=logging.INFO)
     parser = argparse.ArgumentParser(
-        prog="downloadAliceRunByRun", description="Download run-by-run LEGO train outputs",
+        prog="downloadAliceRunByRun",
+        description="Download run-by-run LEGO train outputs",
     )
     parser.add_argument(
-        "-o", "--outputdir", metavar="OUTPUTDIR", help="Path where to store the output files run-by-run",
+        "-o",
+        "--outputdir",
+        metavar="OUTPUTDIR",
+        help="Path where to store the output files run-by-run",
     )
     parser.add_argument(
         "-t",
@@ -761,7 +790,10 @@ def run_download_run_by_run_train_output() -> None:
         help="ID of the train run (number is sufficient, time stamp not necessary)",
     )
     parser.add_argument(
-        "-l", "--legotrain", metavar="LEGOTRAIN", help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
+        "-l",
+        "--legotrain",
+        metavar="LEGOTRAIN",
+        help="Name of the lego train (i.e. PWGJE/Jets_EMC_pPb)",
     )
     parser.add_argument("-d", "--dataset", metavar="DATASET", help="Name of the dataset")
     parser.add_argument(
@@ -775,7 +807,11 @@ def run_download_run_by_run_train_output() -> None:
         help="Reconstruction pass (only meaningful in case of data) [default: pass1]",
     )
     parser.add_argument(
-        "-a", "--aod", type=str, default="", help="Dedicated AOD production (if requested) [default: not set]",
+        "-a",
+        "--aod",
+        type=str,
+        default="",
+        help="Dedicated AOD production (if requested) [default: not set]",
     )
     parser.add_argument(
         "-f", "--fewerThreads", action="store_true", default=False, help="Decrease the number of threads by half."

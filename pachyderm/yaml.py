@@ -38,10 +38,11 @@ import base64
 import enum
 import inspect
 import logging
-import numpy as np
-import ruamel.yaml
 from io import BytesIO
 from typing import Any, Iterable, Optional, Type, TypeVar, cast
+
+import numpy as np
+import ruamel.yaml
 
 
 logger = logging.getLogger(__name__)
@@ -145,7 +146,13 @@ def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, da
     np.save(b, data)
     b.seek(0)
     # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
-    return cast(str, representer.represent_scalar("!numpy_array", base64.encodebytes(b.read()).decode("utf-8"),),)
+    return cast(
+        str,
+        representer.represent_scalar(
+            "!numpy_array",
+            base64.encodebytes(b.read()).decode("utf-8"),
+        ),
+    )
 
 
 def numpy_array_from_yaml(
@@ -217,7 +224,13 @@ def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, 
     np.save(b, data)
     b.seek(0)
     # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
-    return cast(str, representer.represent_scalar("!numpy_float64", base64.encodebytes(b.read()).decode("utf-8"),),)
+    return cast(
+        str,
+        representer.represent_scalar(
+            "!numpy_float64",
+            base64.encodebytes(b.read()).decode("utf-8"),
+        ),
+    )
 
 
 def numpy_float64_from_yaml(

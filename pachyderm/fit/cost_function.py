@@ -6,12 +6,13 @@
 """
 
 import abc
-import iminuit
 import logging
-import numpy as np
 import operator
-import scipy.integrate
 from typing import Any, Callable, Dict, Iterable, Iterator, TypeVar, Union
+
+import iminuit
+import numpy as np
+import scipy.integrate
 
 from pachyderm import generic_class, histogram
 from pachyderm.fit import base as fit_base
@@ -204,7 +205,7 @@ class CostFunctionBase(abc.ABC):
         data: Union[np.ndarray, histogram.Histogram1D],
         f: Callable[..., float],
         *args: Union[float, np.ndarray],
-        **kwargs: Any
+        **kwargs: Any,
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
 
@@ -243,7 +244,11 @@ class StandaloneCostFunction(CostFunctionBase):
 
     @classmethod
     def _call_cost_function(
-        cls, data: Union[histogram.Histogram1D, np.ndarray], f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any
+        cls,
+        data: Union[histogram.Histogram1D, np.ndarray],
+        f: Callable[..., float],
+        *args: Union[float, np.ndarray],
+        **kwargs: Any,
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
 
@@ -454,7 +459,7 @@ def _extended_binned_log_likelihood(
     bin_edges: np.ndarray,
     f: Callable[..., float],
     *args: float,
-    use_weights: bool = False
+    use_weights: bool = False,
 ) -> Any:
     r"""Actual implementation of the extended binned log likelihood (cost function).
 

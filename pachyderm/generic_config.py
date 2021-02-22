@@ -372,7 +372,10 @@ def create_objects_from_iterables(
     names = list(iterables)
     logger.debug(f"iterables: {iterables}")
     # Create the key index object, where the name of each field is the name of each iterable.
-    KeyIndex = create_key_index_object(key_index_name=key_index_name, iterables=iterables,)
+    KeyIndex = create_key_index_object(
+        key_index_name=key_index_name,
+        iterables=iterables,
+    )
     # ``itertools.product`` produces all possible permutations of the iterables values.
     # NOTE: Product preserves the order of the iterables values, which is important for properly
     #       assigning the values to the ``KeyIndex``.

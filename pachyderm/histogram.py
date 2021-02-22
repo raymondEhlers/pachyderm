@@ -400,7 +400,9 @@ class Histogram1D:
         # We want to copy bin_edges, y, and errors_squared, but not anything else. Namely, we skip _x here.
         # In principle, it wouldn't really be a problem to copy, but there may be other "_" fields that we
         # want to skip later, so we do the right thing now.
-        kwargs: Dict[str, Any] = {k: np.array(v, copy=True) for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"}
+        kwargs: Dict[str, Any] = {
+            k: np.array(v, copy=True) for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"
+        }
         # We also want to make an explicit copy of the metadata
         kwargs["metadata"] = self.metadata.copy()
         return type(self)(**kwargs)

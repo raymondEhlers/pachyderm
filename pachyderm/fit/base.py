@@ -6,11 +6,8 @@
 """
 
 import functools
-import iminuit
 import itertools
 import logging
-import numdifftools as nd
-import numpy as np
 import time
 from dataclasses import dataclass
 from typing import (
@@ -28,6 +25,10 @@ from typing import (
     Union,
     cast,
 )
+
+import iminuit
+import numdifftools as nd
+import numpy as np
 
 from pachyderm import generic_class
 
@@ -250,7 +251,7 @@ class FitResult(BaseFitResult):
         )
 
     def __eq__(self, other: Any) -> bool:
-        """ Check for equality of members.
+        """Check for equality of members.
 
         This is pretty hacky, but the code is already brittle, and it passes the tests, so it's
         good enough for these purposes.
@@ -260,11 +261,14 @@ class FitResult(BaseFitResult):
             return True
         # Compare via the member values.
         if type(other) is type(self):
-            keys_agree = (list(self.__dict__.keys()) == list(other.__dict__))
+            keys_agree = list(self.__dict__.keys()) == list(other.__dict__)
             try:
-                values_agree = [v == other.__dict__[k] if not isinstance(v, np.ndarray) else np.allclose(v, other.__dict__[k]) for k, v in self.__dict__.items()]
+                values_agree = [
+                    v == other.__dict__[k] if not isinstance(v, np.ndarray) else np.allclose(v, other.__dict__[k])
+                    for k, v in self.__dict__.items()
+                ]
             except KeyError:
-                values_agree = False
+                values_agree = [False]
             return keys_agree and all(values_agree)
         return NotImplemented
 
