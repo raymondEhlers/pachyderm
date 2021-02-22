@@ -18,7 +18,7 @@ repos:
             args: ["--ignore-missing-imports", "--no-incremental"]
             # A sufficiently new version of attrs is needed to keep mypy happy.
             # Same with ruamel.yaml
-            additional_dependencies: ["attrs>=19.3.0", "ruamel.yaml>=0.16.10"]
+            additional_dependencies: ["attrs>=19.3.0", "ruamel.yaml>=0.16.10", "numpy>=1.2"]
     - repo: https://github.com/pre-commit/pygrep-hooks
       rev: v1.7.1
       hooks:
