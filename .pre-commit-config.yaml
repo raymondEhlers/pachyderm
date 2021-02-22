@@ -6,11 +6,11 @@ repos:
           - id: flake8
             additional_dependencies: ["flake8-colors"]
     - repo: https://github.com/adrienverge/yamllint.git
-      rev: v1.25.0
+      rev: v1.26.0
       hooks:
           - id: yamllint
     - repo: https://github.com/pre-commit/mirrors-mypy
-      rev: v0.790
+      rev: v0.812
       hooks:
           - id: mypy
             # no-incremental helps with a bug in ruamel.yaml typing.
@@ -20,12 +20,12 @@ repos:
             # Same with ruamel.yaml
             additional_dependencies: ["attrs>=19.3.0", "ruamel.yaml>=0.16.10"]
     - repo: https://github.com/pre-commit/pygrep-hooks
-      rev: v1.7.0
+      rev: v1.7.1
       hooks:
           - id: python-check-mock-methods
           - id: rst-backticks
     - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v3.3.0
+      rev: v3.4.0
       hooks:
           - id: check-added-large-files
           - id: check-executables-have-shebangs
@@ -36,7 +36,7 @@ repos:
           - id: mixed-line-ending
           - id: trailing-whitespace
     - repo: https://github.com/pre-commit/mirrors-isort
-      rev: v5.6.4
+      rev: v5.7.0
       hooks:
           - id: isort
             additional_dependencies: ["toml"]
