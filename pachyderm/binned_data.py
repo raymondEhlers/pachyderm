@@ -537,6 +537,46 @@ class BinnedData:
         )
 
     @classmethod
+    def _from_tgraph(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
+        """Convert from uproot4 TGraphAsymmetricErrors to BinnedData.
+
+        We have to make a number of assumptions here, but it seems that it should work
+        for well behaved cases.
+        """
+        bin_centers, values = hist.values(axis="both")
+        x_errors_low, y_errors_low = hist.errors(which="low", axis="both")
+        x_errors_high, y_errors_high = hist.errors(which="high", axis="both")
+
+        # Aim to reconstruct the bin widths from the x_errors.
+        possible_low_bin_edges = bin_centers - x_errors_low
+        possible_high_bin_edges = bin_centers + x_errors_high
+        if not np.allclose(possible_low_bin_edges[1:], possible_high_bin_edges[:-1]):
+            raise ValueError(
+                "Bin edges in graph are inconsistent. Please fix this and try again."
+                f"\n\tLow: {possible_low_bin_edges}"
+                f"\n\tHigh: {possible_high_bin_edges}"
+                f"\n\tValues: {values}"
+            )
+        # x errors are consistent, so we can create bin edges from them.
+        bin_edges = np.append(possible_low_bin_edges, possible_high_bin_edges[-1])
+
+        # If the errors agree, we can just store them in a standard binned data.
+        # Otherwise, we have to use the metadata.
+        metadata = {}
+        if np.allclose(y_errors_low, y_errors_high):
+            variances = y_errors_low ** 2
+        else:
+            variances = np.ones_like(y_errors_low)
+            metadata["y_errors"] = {"low": y_errors_low, "high": y_errors_high}
+
+        return cls(
+            axes=bin_edges,
+            values=values,
+            variances=variances,
+            metadata=metadata,
+        )
+
+    @classmethod
     def _from_boost_histogram(cls: Type["BinnedData"], hist: Any) -> "BinnedData":
         """Convert from boost histogram to BinnedData."""
         view = hist.view()
@@ -674,6 +714,9 @@ class BinnedData:
                 return binned_data
 
         # Now actually deal with conversion from other types.
+        # Need to deal with boost histogram first because it now (Feb 2021) has values and variances.
+        if hasattr(binned_data, "view"):
+            return cls._from_boost_histogram(binned_data)
         # Uproot4: has "_values_variances"
         if hasattr(binned_data, "_values_variances"):
             return cls._from_uproot4(binned_data)
@@ -681,8 +724,9 @@ class BinnedData:
         # so we need to check for uproot4 first
         if hasattr(binned_data, "values") and hasattr(binned_data, "variances"):
             return cls._from_uproot3(binned_data)
-        if hasattr(binned_data, "view"):
-            return cls._from_boost_histogram(binned_data)
+        # Next, look for TGraphs
+        if hasattr(binned_data, "values") and hasattr(binned_data, "errors"):
+            return cls._from_tgraph(binned_data)
 
         # Fall back to handling a traditional ROOT hist.
         return cls._from_ROOT(binned_data)
