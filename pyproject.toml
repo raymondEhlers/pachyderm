@@ -33,7 +33,7 @@ scipy = "^1.7.0"
 matplotlib = "^3.3.2"
 iminuit = "^2.7.0"
 numdifftools = "^0.9.40"
-"ruamel.yaml" = "^0.16.12"
+"ruamel.yaml" = "^0.17.10"
 dataclasses = {version = "^0.7", python="^3.6, <3.7"}
 importlib-resources = {version = "^3.3.0", python="^3.6, <3.7"}
 # These are the docs requirements. Ideally, I would put them into the dev docs.
