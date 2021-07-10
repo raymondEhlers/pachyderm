@@ -6,12 +6,13 @@
 """
 
 import logging
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import matplotlib
 import matplotlib.axes
 import matplotlib.colors
 import numpy as np
+import numpy.typing as npt
 
 
 # Setup logger
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def restore_defaults() -> None:
-    """ Restore the default matplotlib settings. """
+    """Restore the default matplotlib settings."""
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
 
@@ -196,10 +197,10 @@ def configure() -> None:
 
 def error_boxes(
     ax: matplotlib.axes.Axes,
-    x_data: np.ndarray,
-    y_data: np.ndarray,
-    y_errors: np.ndarray,
-    x_errors: Optional[np.ndarray] = None,
+    x_data: npt.NDArray[Any],
+    y_data: npt.NDArray[Any],
+    y_errors: npt.NDArray[Any],
+    x_errors: Optional[npt.NDArray[Any]] = None,
     **kwargs: Union[str, float],
 ) -> matplotlib.collections.PatchCollection:
     """Plot error boxes for the given data.
@@ -226,7 +227,7 @@ def error_boxes(
         # Default to 10% of the distance between the two points.
         x_errors = (x_data[1:] - x_data[:-1]) * 0.1
         # Use the last width for the final point. (This is a bit of a hack).
-        x_errors = np.append(x_errors, x_errors[-1])
+        x_errors = np.append(x_errors, x_errors[-1])  # type: ignore
         logger.debug(f"x_errors: {x_errors}")
         # Help out mypy...
         assert x_errors is not None
@@ -327,9 +328,9 @@ def convert_mpl_color_scheme_to_ROOT(
         greens = greens[:-n_values_to_cut_from_top]
         blues = blues[:-n_values_to_cut_from_top]
 
-    stops: np.ndarray = np.linspace(0, 1, n_colors + 1)
+    stops: npt.NDArray[Any] = np.linspace(0, 1, n_colors + 1)
 
-    def listing_array(arr: np.ndarray) -> str:
+    def listing_array(arr: npt.NDArray[Any]) -> str:
         return ", ".join(str(v) for v in arr)
 
     s = f"""

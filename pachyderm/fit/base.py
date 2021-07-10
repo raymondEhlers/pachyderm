@@ -29,6 +29,7 @@ from typing import (
 import iminuit
 import numdifftools as nd
 import numpy as np
+import numpy.typing as npt
 
 from pachyderm import generic_class
 
@@ -45,7 +46,7 @@ _T_FitResult = TypeVar("_T_FitResult", bound="FitResult")
 
 
 class FitFailed(Exception):
-    """ Raised if the fit failed. The message will include further details. """
+    """Raised if the fit failed. The message will include further details."""
 
     pass
 
@@ -76,7 +77,7 @@ class BaseFitResult:
     values_at_minimum: Dict[str, float]
     errors_on_parameters: Dict[str, float]
     covariance_matrix: Dict[Tuple[str, str], float]
-    errors: np.ndarray
+    errors: npt.NDArray[Any]
 
     @property
     def correlation_matrix(self) -> Dict[Tuple[str, str], float]:
@@ -98,7 +99,7 @@ class BaseFitResult:
         except AttributeError:
 
             def corr(i_name: str, j_name: str) -> float:
-                """ Calculate the correlation matrix (definition from iminuit) from the covariance matrix. """
+                """Calculate the correlation matrix (definition from iminuit) from the covariance matrix."""
                 # The + 1e-100 is just to ensure that we don't divide by 0.
                 value = self.covariance_matrix[(i_name, j_name)] / (
                     np.sqrt(self.covariance_matrix[(i_name, i_name)] * self.covariance_matrix[(j_name, j_name)])
@@ -143,13 +144,13 @@ class FitResult(BaseFitResult):
             chi squared minimization fit.
     """
 
-    x: np.ndarray
+    x: npt.NDArray[Any]
     n_fit_data_points: int
     minimum_val: float
 
     @property
     def nDOF(self) -> int:
-        """ Number of degrees of freedom. """
+        """Number of degrees of freedom."""
         return self.n_fit_data_points - len(self.free_parameters)
 
     def effective_chi_squared(self, cost_func: "cost_function.DataComparisonCostFunction") -> float:
@@ -218,7 +219,7 @@ class FitResult(BaseFitResult):
 
     @classmethod
     def from_minuit(
-        cls: Type[_T_FitResult], minuit: iminuit.Minuit, cost_func: Callable[..., float], x: np.ndarray
+        cls: Type[_T_FitResult], minuit: iminuit.Minuit, cost_func: Callable[..., float], x: npt.NDArray[Any]
     ) -> _T_FitResult:
         """Create a fit result form the Minuit fit object.
 
@@ -301,7 +302,9 @@ def extract_function_values(func: Callable[..., float], fit_result: BaseFitResul
     return args_at_minimum, free_parameters
 
 
-def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.ndarray:
+def calculate_function_errors(
+    func: Callable[..., float], fit_result: BaseFitResult, x: npt.NDArray[Any]
+) -> npt.NDArray[Any]:
     """Calculate the errors of the given function based on values from the fit.
 
     Note:
@@ -346,11 +349,11 @@ def calculate_function_errors(func: Callable[..., float], fit_result: BaseFitRes
     # logger.debug("error_val: shape: {error_val.shape}, error_val: {error_val}")
 
     # We want the error itself, so we take the square root.
-    res: np.ndarray = np.sqrt(error_vals)
+    res: npt.NDArray[Any] = np.sqrt(error_vals)
     return res
 
 
-def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: np.ndarray) -> np.ndarray:
+def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: npt.NDArray[Any]) -> npt.NDArray[Any]:
     """Evaluate the gradient of the given function based on the fit values.
 
     For a function of 5 free parameters (7 total) and 10 x values, the returned result would be of the shape (10, 5).
@@ -371,7 +374,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
     # must contain a list of values that it will vary when taking the gradient. The rest of the args are
     # passed on to the function via *args and **kwargs, but they won't be varied.
     # To ensure the proper signature, we wrap the function and route the arguments.
-    def func_wrap(args_to_vary: Sequence[float], x: np.ndarray) -> float:
+    def func_wrap(args_to_vary: Sequence[float], x: npt.NDArray[Any]) -> float:
         """Wrap the given function to ensure that the arguments are routed properly for ``numdifftools``.
 
         To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
@@ -404,7 +407,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
     #       respect to fixed parameters. But due to the argument requirements of ``numdifftools``, it would be
     #       quite difficult to tell it to only take the gradient with respect to a non-continuous selection of
     #       parameters. So we just accept the inefficiency.
-    partial_derivative_result: np.ndarray = partial_derivative_func(list(args_at_minimum.values()), x)
+    partial_derivative_result: npt.NDArray[Any] = partial_derivative_func(list(args_at_minimum.values()), x)
     end = time.time()
     logger.debug(f"Finished calculating the gradient in {end-start} seconds.")
 
@@ -514,8 +517,8 @@ def merge_func_codes(
 
 
 def _function_arguments_from_argument_positions(
-    argument_positions: T_ArgumentPositions, *args: Union[float, np.ndarray]
-) -> Iterable[List[Union[float, np.ndarray]]]:
+    argument_positions: T_ArgumentPositions, *args: Union[float, npt.NDArray[Any]]
+) -> Iterable[List[Union[float, npt.NDArray[Any]]]]:
     """Extract the function arguments from a larger set of arguments given the argument positions.
 
     It determines the arguments for calling functions stored in ``SimultaneousFit`` or ``AddPDF`` classes. Use it
@@ -550,7 +553,7 @@ def call_list_of_callables_with_operation(
     operation: Callable[[float, float], float],
     functions: Iterable[Callable[..., float]],
     argument_positions: T_ArgumentPositions,
-    *args: Union[float, np.ndarray],
+    *args: Union[float, npt.NDArray[Any]],
 ) -> float:
     """Call and add a list of callables with the given args.
 

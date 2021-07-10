@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
+import numpy.typing as npt
 
 from pachyderm import histogram, projectors, utils
 from pachyderm.typing_helpers import Hist
@@ -50,7 +51,7 @@ def _get_mean_and_median(hist: Hist) -> Tuple[float, float]:
 
 @dataclass
 class _OutputObject:
-    """ Helper object to retrieve the result of a projector. """
+    """Helper object to retrieve the result of a projector."""
 
     output: Hist
 
@@ -173,7 +174,7 @@ def _determine_outliers_index(
 
 
 def _determine_outliers_for_moving_average(
-    moving_average: np.ndarray,
+    moving_average: npt.NDArray[Any],
     moving_average_threshold: float,
     number_of_values_to_search_ahead: int,
     limit_of_number_of_values_below_threshold: int,
@@ -353,7 +354,7 @@ class OutliersRemovalManager:
                 )
             )
 
-        outliers_start_index: int = np.max(outliers_indices)
+        outliers_start_index: int = np.max(outliers_indices)  # type: ignore
         logger.debug(f"outliers_start_index: {outliers_start_index}")
 
         for hist_name, hist in hists.items():

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Sequence, Tuple, Typ
 
 import attr
 import numpy as np
+import numpy.typing as npt
 import ruamel.yaml
 
 
@@ -24,13 +25,13 @@ logger = logging.getLogger(__name__)
 # If only supporting 3.7+, we can add `from __future__ import annotations` and just use the more detailed definition
 if TYPE_CHECKING:
     AxesTupleAttribute = attr.Attribute["AxesTuple"]
-    NumpyAttribute = attr.Attribute[np.ndarray]
+    NumpyAttribute = attr.Attribute[npt.NDArray[Any]]
 else:
     AxesTupleAttribute = attr.Attribute
     NumpyAttribute = attr.Attribute
 
 
-def _axis_bin_edges_converter(value: Any) -> np.ndarray:
+def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
     """Convert the bin edges input to a numpy array.
 
     If an `Axis` is passed, we grab its bin edges.
@@ -48,7 +49,7 @@ def _axis_bin_edges_converter(value: Any) -> np.ndarray:
     return np.ravel(np.array(value, dtype=np.float64))
 
 
-def find_bin(bin_edges: np.ndarray, value: float) -> int:
+def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int:
     """Determine the index position where the value should be inserted.
 
     This is basically ``ROOT.TH1.FindBin(value)``, but it can used for any set of bin_edges.
@@ -72,24 +73,24 @@ def find_bin(bin_edges: np.ndarray, value: float) -> int:
 
 @attr.s(eq=False)
 class Axis:
-    bin_edges: np.ndarray = attr.ib(converter=_axis_bin_edges_converter)
+    bin_edges: npt.NDArray[Any] = attr.ib(converter=_axis_bin_edges_converter)
 
     def __len__(self) -> int:
-        """ The number of bins. """
+        """The number of bins."""
         return len(self.bin_edges) - 1
 
     @property
-    def bin_widths(self) -> np.ndarray:
+    def bin_widths(self) -> npt.NDArray[Any]:
         """Bin widths calculated from the bin edges.
 
         Returns:
             Array of the bin widths.
         """
-        res: np.ndarray = self.bin_edges[1:] - self.bin_edges[:-1]
+        res: npt.NDArray[Any] = self.bin_edges[1:] - self.bin_edges[:-1]
         return res
 
     @property
-    def bin_centers(self) -> np.ndarray:
+    def bin_centers(self) -> npt.NDArray[Any]:
         """The axis bin centers (``x`` for 1D).
 
         This property caches the values so we don't have to calculate it every time.
@@ -104,7 +105,7 @@ class Axis:
         except AttributeError:
             half_bin_widths = self.bin_widths / 2
             bin_centers = self.bin_edges[:-1] + half_bin_widths
-            self._bin_centers: np.ndarray = bin_centers
+            self._bin_centers: npt.NDArray[Any] = bin_centers
 
         return self._bin_centers
 
@@ -133,7 +134,7 @@ class Axis:
         return type(self)(bin_edges=np.array(self.bin_edges, copy=True))
 
     def __eq__(self, other: Any) -> bool:
-        """ Check for equality. """
+        """Check for equality."""
         return np.allclose(self.bin_edges, other.bin_edges)
 
     # TODO: Serialize more carefully...
@@ -141,15 +142,15 @@ class Axis:
 
 class AxesTuple(Tuple[Axis, ...]):
     @property
-    def bin_edges(self) -> Tuple[np.ndarray, ...]:
+    def bin_edges(self) -> Tuple[npt.NDArray[Any], ...]:
         return tuple(a.bin_edges for a in self)
 
     @property
-    def bin_widths(self) -> Tuple[np.ndarray, ...]:
+    def bin_widths(self) -> Tuple[npt.NDArray[Any], ...]:
         return tuple(a.bin_widths for a in self)
 
     @property
-    def bin_centers(self) -> Tuple[np.ndarray, ...]:
+    def bin_centers(self) -> Tuple[npt.NDArray[Any], ...]:
         return tuple(a.bin_centers for a in self)
 
     @property
@@ -158,7 +159,7 @@ class AxesTuple(Tuple[Axis, ...]):
 
     @classmethod
     def from_axes(
-        cls: Type["AxesTuple"], axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]
+        cls: Type["AxesTuple"], axes: Union[Axis, Sequence[Axis], npt.NDArray[Any], Sequence[npt.NDArray[Any]]]
     ) -> "AxesTuple":
         values = axes
         # Convert to a list if necessary
@@ -174,7 +175,7 @@ class AxesTuple(Tuple[Axis, ...]):
         return cls([Axis(a) for a in values])
 
     def __eq__(self, other: Any) -> bool:
-        """ Check for equality. """
+        """Check for equality."""
         if other:
             return all(a == b for a, b in itertools.zip_longest(self, other))
         return False
@@ -221,7 +222,9 @@ class AxesTuple(Tuple[Axis, ...]):
         return cls(values)
 
 
-def _axes_tuple_from_axes_sequence(axes: Union[Axis, Sequence[Axis], np.ndarray, Sequence[np.ndarray]]) -> AxesTuple:
+def _axes_tuple_from_axes_sequence(
+    axes: Union[Axis, Sequence[Axis], npt.NDArray[Any], Sequence[npt.NDArray[Any]]]
+) -> AxesTuple:
     """Workaround for mypy issue in creating an AxesTuple from axes.
 
     Converter class methods are currently not supported by mypy, so we ignore the typing here.
@@ -249,7 +252,7 @@ def _validate_axes(instance: "BinnedData", attribute: AxesTupleAttribute, value:
             )
 
 
-def _validate_arrays(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
+def _validate_arrays(instance: "BinnedData", attribute: NumpyAttribute, value: npt.NDArray[Any]) -> None:
     expected_length = _array_length_from_axes(instance.axes)
     if value.size != expected_length:
         raise ValueError(
@@ -258,7 +261,7 @@ def _validate_arrays(instance: "BinnedData", attribute: NumpyAttribute, value: n
         )
 
 
-def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
+def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, value: npt.NDArray[Any]) -> None:
     # TODO: This trivially fails for axes.
     # Define this array for convenience in accessing the members. This way, we're less likely to miss
     # newly added members.
@@ -269,15 +272,15 @@ def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, valu
     # Check the other values.
     for other_name, other_value in arrays.items():
         # logger.debug(f"{attribute.name}: Checking {other_name} for shared memory.")
-        if np.may_share_memory(value, other_value):
+        if np.may_share_memory(value, other_value):  # type: ignore
             logger.warning(
                 f"Object '{other_name}' shares memory with object '{attribute.name}'. Copying '{attribute}'!"
             )
             setattr(instance, attribute.name, value.copy())
 
 
-def _shape_array_check(instance: "BinnedData", attribute: NumpyAttribute, value: np.ndarray) -> None:
-    """ Ensure that the arrays are shaped the same as the shape expected from the axes. """
+def _shape_array_check(instance: "BinnedData", attribute: NumpyAttribute, value: npt.NDArray[Any]) -> None:
+    """Ensure that the arrays are shaped the same as the shape expected from the axes."""
     # If we're passed a flattened array, reshape it to follow the shape of the axes.
     # NOTE: One must be a bit careful with this to ensure that the it is formatted as expected.
     #       Especially when converting between ROOT and numpy.
@@ -300,10 +303,10 @@ class BinnedData:
     axes: AxesTuple = attr.ib(
         converter=_axes_tuple_from_axes_sequence, validator=[_shared_memory_check, _validate_axes]  # type: ignore
     )
-    values: np.ndarray = attr.ib(
+    values: npt.NDArray[Any] = attr.ib(
         converter=np.asarray, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
     )
-    variances: np.ndarray = attr.ib(
+    variances: npt.NDArray[Any] = attr.ib(
         converter=np.asarray, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
     )
     metadata: Dict[str, Any] = attr.ib(factory=dict)
@@ -322,8 +325,8 @@ class BinnedData:
         return self.axes[0]
 
     @property
-    def errors(self) -> np.ndarray:
-        res: np.ndarray = np.sqrt(self.variances)
+    def errors(self) -> npt.NDArray[Any]:
+        res: npt.NDArray[Any] = np.sqrt(self.variances)
         return res
 
     def copy(self: "BinnedData") -> "BinnedData":
@@ -344,20 +347,20 @@ class BinnedData:
     # TODO: Stats
 
     def __add__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
-        """ Handles ``a = b + c.`` """
+        """Handles ``a = b + c.``"""
         new = self.copy()
         new += other
         return new
 
     def __radd__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
-        """ For use with sum(...). """
+        """For use with sum(...)."""
         if other == 0:
             return self
         else:
             return self + other
 
     def __iadd__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
-        """ Handles ``a += b``. """
+        """Handles ``a += b``."""
         if self.axes != other.axes:
             raise TypeError(
                 f"Binning is different for given binned data, so cannot be added!"
@@ -369,13 +372,13 @@ class BinnedData:
         return self
 
     def __sub__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
-        """ Handles ``a = b - c``. """
+        """Handles ``a = b - c``."""
         new = self.copy()
         new -= other
         return new
 
     def __isub__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
-        """ Handles ``a -= b``. """
+        """Handles ``a -= b``."""
         if self.axes != other.axes:
             raise TypeError(
                 f"Binning is different for given binned data, so cannot be subtracted!"
@@ -386,14 +389,14 @@ class BinnedData:
         self.variances += other.variances
         return self
 
-    def __mul__(self: "BinnedData", other: Union["BinnedData", np.ndarray, float]) -> "BinnedData":
-        """ Handles ``a = b * c``. """
+    def __mul__(self: "BinnedData", other: Union["BinnedData", npt.NDArray[Any], float]) -> "BinnedData":
+        """Handles ``a = b * c``."""
         new = self.copy()
         new *= other
         return new
 
-    def __imul__(self: "BinnedData", other: Union["BinnedData", np.ndarray, float]) -> "BinnedData":
-        """ Handles ``a *= b``. """
+    def __imul__(self: "BinnedData", other: Union["BinnedData", npt.NDArray[Any], float]) -> "BinnedData":
+        """Handles ``a *= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
             assert isinstance(other, (float, int, np.number, np.ndarray))
@@ -417,14 +420,14 @@ class BinnedData:
             self.values *= other.values
         return self
 
-    def __truediv__(self: "BinnedData", other: Union["BinnedData", np.ndarray, float]) -> "BinnedData":
-        """ Handles ``a = b / c``. """
+    def __truediv__(self: "BinnedData", other: Union["BinnedData", npt.NDArray[Any], float]) -> "BinnedData":
+        """Handles ``a = b / c``."""
         new = self.copy()
         new /= other
         return new
 
-    def __itruediv__(self: "BinnedData", other: Union["BinnedData", np.ndarray, float]) -> "BinnedData":
-        """ Handles ``a /= b``. """
+    def __itruediv__(self: "BinnedData", other: Union["BinnedData", npt.NDArray[Any], float]) -> "BinnedData":
+        """Handles ``a /= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
             assert isinstance(other, (float, int, np.number, np.ndarray))
@@ -459,7 +462,7 @@ class BinnedData:
         return self
 
     def __eq__(self, other: Any) -> bool:
-        """ Check for equality. """
+        """Check for equality."""
         attributes = [k for k in vars(self) if not k.startswith("_")]
         other_attributes = [k for k in vars(other) if not k.startswith("_")]
 
@@ -558,7 +561,7 @@ class BinnedData:
                 f"\n\tValues: {values}"
             )
         # x errors are consistent, so we can create bin edges from them.
-        bin_edges = np.append(possible_low_bin_edges, possible_high_bin_edges[-1])
+        bin_edges = np.append(possible_low_bin_edges, possible_high_bin_edges[-1])  # type: ignore
 
         # If the errors agree, we can just store them in a standard binned data.
         # Otherwise, we have to use the metadata.
@@ -585,7 +588,7 @@ class BinnedData:
         return cls(
             axes=hist.axes.edges,
             values=view.value,
-            variances=np.copy(view.variance),
+            variances=np.copy(view.variance),  # type: ignore
             metadata=metadata,
         )
 
@@ -618,7 +621,7 @@ class BinnedData:
         axis_methods = [hist.GetXaxis, hist.GetYaxis, hist.GetZaxis]
         root_axes = axis_methods[:n_dim]
 
-        def get_bin_edges_from_axis(axis: Any) -> np.ndarray:
+        def get_bin_edges_from_axis(axis: Any) -> npt.NDArray[Any]:
             """Get bin edges from a ROOT hist axis.
 
             Note:
@@ -846,7 +849,7 @@ class BinnedData:
             errors_squared=self.variances,
         )
 
-    def to_numpy(self) -> Tuple[np.ndarray, ...]:
+    def to_numpy(self) -> Tuple[npt.NDArray[Any], ...]:
         """Convert to a numpy histogram.
 
         Returns:

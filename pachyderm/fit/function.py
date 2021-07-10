@@ -7,9 +7,11 @@
 
 import abc
 import logging
-import numpy as np
 import operator
-from typing import Callable, Optional, Sequence, Union
+from typing import Any, Callable, Optional, Sequence, Union
+
+import numpy as np
+import numpy.typing as npt
 
 from pachyderm import generic_class
 from pachyderm.fit import base as fit_base
@@ -57,7 +59,7 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
         self.func_code = fit_base.FuncCode(merged_args)
         self.argument_positions = argument_positions
 
-    def __call__(self, x: np.ndarray, *merged_args: float) -> float:
+    def __call__(self, x: npt.NDArray[Any], *merged_args: float) -> float:
         """Call the added PDF.
 
         Args:
@@ -154,7 +156,9 @@ class DividePDF(CombinePDF):
     _operation = operator.truediv
 
 
-def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np.ndarray, float]:
+def gaussian(
+    x: Union[npt.NDArray[np.float64], float], mean: float, sigma: float
+) -> Union[npt.NDArray[np.float64], float]:
     r"""Normalized gaussian.
 
     .. math::
@@ -172,8 +176,8 @@ def gaussian(x: Union[np.ndarray, float], mean: float, sigma: float) -> Union[np
 
 
 def extended_gaussian(
-    x: Union[np.ndarray, float], mean: float, sigma: float, amplitude: float
-) -> Union[np.ndarray, float]:
+    x: Union[npt.NDArray[np.float64], float], mean: float, sigma: float, amplitude: float
+) -> Union[npt.NDArray[np.float64], float]:
     r"""Extended gaussian.
 
     .. math::

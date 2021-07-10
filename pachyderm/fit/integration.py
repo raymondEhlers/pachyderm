@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, Ty
 
 import iminuit
 import numpy as np
+import numpy.typing as npt
 import ruamel.yaml
 
 from pachyderm import generic_class
@@ -127,7 +128,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         """
         return self.fit_function(*args, **kwargs)
 
-    def calculate_errors(self, x: Optional[np.ndarray] = None) -> np.ndarray:
+    def calculate_errors(self, x: Optional[npt.NDArray[Any]] = None) -> npt.NDArray[Any]:
         """Calculate the errors on the fit function for the given x values.
 
         Args:
@@ -301,7 +302,7 @@ def _validate_minuit_args(
 def fit_with_minuit(
     cost_func: Union[cost_function.CostFunctionBase, cost_function.SimultaneousFit],
     minuit_args: T_FitArguments,
-    x: np.ndarray,
+    x: npt.NDArray[Any],
     use_minos: Optional[bool] = False,
 ) -> Tuple[base.FitResult, iminuit.Minuit]:
     """Perform a fit using the given cost function with Minuit.

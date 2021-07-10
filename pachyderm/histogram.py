@@ -14,6 +14,7 @@ from types import TracebackType
 from typing import Any, Callable, ContextManager, Dict, List, Mapping, Optional, Tuple, Type, TypeVar, Union, cast
 
 import numpy as np
+import numpy.typing as npt
 
 from pachyderm.typing_helpers import Axis, Hist, TFile
 
@@ -22,11 +23,13 @@ from pachyderm.typing_helpers import Axis, Hist, TFile
 logger = logging.getLogger(__name__)
 
 _T_ContextManager = TypeVar("_T_ContextManager")
-T_Extraction_Function = Tuple[Union[List[float], np.ndarray], Union[List[float], np.ndarray], Dict[str, Any]]
+T_Extraction_Function = Tuple[
+    Union[List[float], npt.NDArray[Any]], Union[List[float], npt.NDArray[Any]], Dict[str, Any]
+]
 
 
 class RootOpen(ContextManager[_T_ContextManager]):
-    """ Very simple helper to open root files. """
+    """Very simple helper to open root files."""
 
     def __init__(self, filename: Union[Path, str], mode: str = "read"):
         import ROOT
@@ -47,7 +50,7 @@ class RootOpen(ContextManager[_T_ContextManager]):
         exception_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
-        """ We want to pass on all raised exceptions, but ensure that the file is always closed. """
+        """We want to pass on all raised exceptions, but ensure that the file is always closed."""
         # The typing information is from here:
         # https://github.com/python/mypy/blob/master/docs/source/protocols.rst#context-manager-protocols
 
@@ -245,13 +248,13 @@ class Histogram1D:
             strings, while the values can be anything. For example, could contain systematic errors, etc.
     """
 
-    bin_edges: np.ndarray
-    y: np.ndarray
-    errors_squared: np.ndarray
+    bin_edges: npt.NDArray[Any]
+    y: npt.NDArray[Any]
+    errors_squared: npt.NDArray[Any]
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """ Perform validation on the inputs. """
+        """Perform validation on the inputs."""
         # Define this array for convenience in accessing the members.
         arrays = {k: v for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"}
 
@@ -277,7 +280,7 @@ class Histogram1D:
         # Ensure they don't point to one another (which can cause issues when performing
         # operations in place).
         for (a_name, a), (b_name, b) in itertools.combinations(arrays.items(), 2):
-            if np.may_share_memory(a, b):
+            if np.may_share_memory(a, b):  # type: ignore
                 logger.warning(f"Object '{b_name}' shares memory with object '{a_name}'. Copying object '{b_name}'!")
                 setattr(self, b_name, b.copy())
 
@@ -292,22 +295,22 @@ class Histogram1D:
             self._recalculate_stats()
 
     @property
-    def errors(self) -> np.ndarray:
-        res: np.ndarray = np.sqrt(self.errors_squared)
+    def errors(self) -> npt.NDArray[Any]:
+        res: npt.NDArray[Any] = np.sqrt(self.errors_squared)
         return res
 
     @property
-    def bin_widths(self) -> np.ndarray:
+    def bin_widths(self) -> npt.NDArray[Any]:
         """Bin widths calculated from the bin edges.
 
         Returns:
             Array of the bin widths.
         """
-        res: np.ndarray = self.bin_edges[1:] - self.bin_edges[:-1]
+        res: npt.NDArray[Any] = self.bin_edges[1:] - self.bin_edges[:-1]
         return res
 
     @property
-    def x(self) -> np.ndarray:
+    def x(self) -> npt.NDArray[Any]:
         """The histogram bin centers (``x``).
 
         This property caches the x value so we don't have to calculate it every time.
@@ -322,7 +325,7 @@ class Histogram1D:
         except AttributeError:
             half_bin_widths = self.bin_widths / 2
             x = self.bin_edges[:-1] + half_bin_widths
-            self._x: np.ndarray = x
+            self._x: npt.NDArray[Any] = x
 
         return self._x
 
@@ -552,26 +555,26 @@ class Histogram1D:
         return float(value), float(np.sqrt(error_squared))
 
     def _recalculate_stats(self: _T) -> None:
-        """ Recalculate the hist stats. """
+        """Recalculate the hist stats."""
         self.metadata.update(
             calculate_binned_stats(bin_edges=self.bin_edges, y=self.y, weights_squared=self.errors_squared)
         )
 
     def __add__(self: _T, other: _T) -> _T:
-        """ Handles ``a = b + c.`` """
+        """Handles ``a = b + c.``"""
         new = self.copy()
         new += other
         return new
 
     def __radd__(self: _T, other: _T) -> _T:
-        """ For use with sum(...). """
+        """For use with sum(...)."""
         if other == 0:
             return self
         else:
             return self + other
 
     def __iadd__(self: _T, other: _T) -> _T:
-        """ Handles ``a += b``. """
+        """Handles ``a += b``."""
         if not np.allclose(self.bin_edges, other.bin_edges):
             raise TypeError(
                 f"Binning is different for given histograms."
@@ -593,13 +596,13 @@ class Histogram1D:
         return self
 
     def __sub__(self: _T, other: _T) -> _T:
-        """ Handles ``a = b - c``. """
+        """Handles ``a = b - c``."""
         new = self.copy()
         new -= other
         return new
 
     def __isub__(self: _T, other: _T) -> _T:
-        """ Handles ``a -= b``. """
+        """Handles ``a -= b``."""
         if not np.allclose(self.bin_edges, other.bin_edges):
             raise TypeError(
                 f"Binning is different for given histograms."
@@ -624,13 +627,13 @@ class Histogram1D:
             self.metadata[key] = self.metadata[key] * factor
 
     def __mul__(self: _T, other: Union[_T, float]) -> _T:
-        """ Handles ``a = b * c``. """
+        """Handles ``a = b * c``."""
         new = self.copy()
         new *= other
         return new
 
     def __imul__(self: _T, other: Union[_T, float]) -> _T:
-        """ Handles ``a *= b``. """
+        """Handles ``a *= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
             assert isinstance(other, (float, int, np.number, np.ndarray))
@@ -664,13 +667,13 @@ class Histogram1D:
         return self
 
     def __truediv__(self: _T, other: Union[_T, float]) -> _T:
-        """ Handles ``a = b / c``. """
+        """Handles ``a = b / c``."""
         new = self.copy()
         new /= other
         return new
 
     def __itruediv__(self: _T, other: Union[_T, float]) -> _T:
-        """ Handles ``a /= b``. """
+        """Handles ``a /= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
             assert isinstance(other, (float, int, np.number, np.ndarray))
@@ -714,7 +717,7 @@ class Histogram1D:
         return self
 
     def __eq__(self, other: Any) -> bool:
-        """ Check for equality. """
+        """Check for equality."""
         attributes = [k for k in vars(self) if not k.startswith("_")]
         other_attributes = [k for k in vars(other) if not k.startswith("_")]
 
@@ -739,7 +742,7 @@ class Histogram1D:
         return all(agreement) and metadata_agree
 
     @staticmethod
-    def _from_uproot(hist: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
+    def _from_uproot(hist: Any) -> Tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any], Dict[str, Any]]:
         """Convert a uproot histogram to a set of array for creating a Histogram.
 
         Note:
@@ -835,7 +838,7 @@ class Histogram1D:
         return histograms
 
     @staticmethod
-    def _from_th1(hist: Hist) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict[str, Any]]:
+    def _from_th1(hist: Hist) -> Tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any], Dict[str, Any]]:
         """Convert a TH1 histogram to a Histogram.
 
         Note:
@@ -875,7 +878,7 @@ class Histogram1D:
             # Retrieve the stats and store them in the metadata.
             # They are useful for calculating histogram properties (mean, variance, etc).
             stats = np.array([0, 0, 0, 0], dtype=np.float64)
-            hist.GetStats(np.ctypeslib.as_ctypes(stats))
+            hist.GetStats(np.ctypeslib.as_ctypes(stats))  # type: ignore
             # Return values are (each one is a single float):
             # [1], [2], [3], [4]
             # [1]: total_sum_w: Sum of weights (equal to np.sum(y) if unscaled)
@@ -927,7 +930,7 @@ class Histogram1D:
 
 def get_array_from_hist2D(
     hist: Hist, set_zero_to_NaN: bool = True, return_bin_edges: bool = False
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any]]:
     """Extract x, y, and bin values from a 2D ROOT histogram.
 
     Converts the histogram into a numpy array, and suitably processes it for a surface plot
@@ -996,12 +999,12 @@ def get_array_from_hist2D(
         x_range = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
         y_range = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
 
-    X, Y = np.meshgrid(x_range, y_range)
+    X, Y = np.meshgrid(x_range, y_range)  # type: ignore
 
     return (X, Y, hist_array)
 
 
-def get_bin_edges_from_axis(axis: Axis) -> np.ndarray:
+def get_bin_edges_from_axis(axis: Axis) -> npt.NDArray[Any]:
     """Get bin edges from a ROOT hist axis.
 
     Note:
@@ -1022,7 +1025,7 @@ def get_bin_edges_from_axis(axis: Axis) -> np.ndarray:
     return bin_edges
 
 
-def find_bin(bin_edges: np.ndarray, value: float) -> int:
+def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int:
     """Determine the index position where the value should be inserted.
 
     This is basically ``ROOT.TH1.FindBin(value)``, but it can used for any set of bin_edges.
@@ -1075,7 +1078,9 @@ def _create_stats_dict_from_values(
     }
 
 
-def calculate_binned_stats(bin_edges: np.ndarray, y: np.ndarray, weights_squared: np.ndarray) -> Dict[str, float]:
+def calculate_binned_stats(
+    bin_edges: npt.NDArray[Any], y: npt.NDArray[Any], weights_squared: npt.NDArray[Any]
+) -> Dict[str, float]:
     """Calculate the stats needed to fully determine histogram properties.
 
     The values are calculated the same way as in ``ROOT.TH1.GetStats(...)``. Recalculating the statistics
@@ -1107,7 +1112,7 @@ def calculate_binned_stats(bin_edges: np.ndarray, y: np.ndarray, weights_squared
     total_sum_w2 = np.sum(weights_squared)
     total_sum_wx = np.sum(y * x)
     total_sum_wx2 = np.sum(y * x ** 2)
-    return _create_stats_dict_from_values(total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2)  # type: ignore
+    return _create_stats_dict_from_values(total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2)
 
 
 def binned_mean(stats: Dict[str, float]) -> float:

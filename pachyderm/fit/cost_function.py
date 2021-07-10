@@ -12,6 +12,7 @@ from typing import Any, Callable, Dict, Iterable, Iterator, TypeVar, Union
 
 import iminuit
 import numpy as np
+import numpy.typing as npt
 import scipy.integrate
 
 from pachyderm import generic_class, histogram
@@ -23,7 +24,9 @@ logger = logging.getLogger(__name__)
 T_CostFunction = TypeVar("T_CostFunction", bound="CostFunctionBase")
 
 
-def _quad(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
+def _quad(
+    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: Union[float, npt.NDArray[np.float64]]
+) -> npt.NDArray[Any]:
     """Integrate over the given function using QUADPACK.
 
     Unfortunately, this option is fairly slow because we can't take advantage of vectorized numpy operations.
@@ -43,7 +46,9 @@ def _quad(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np
     return np.array(values)
 
 
-def _simpson_38(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
+def _simpson_38(
+    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: Union[float, npt.NDArray[np.float64]]
+) -> npt.NDArray[Any]:
     """Integrate over each histogram bin with the Simpson 3/8 rule.
 
     Implemented via the expression at https://en.wikipedia.org/wiki/Simpson%27s_rule#Simpson's_3/8_rule .
@@ -65,7 +70,9 @@ def _simpson_38(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[flo
     return (b - a) / 8 * (f(a, *args) + 3 * f((2 * a + b) / 3, *args) + 3 * f((a + 2 * b) / 3, *args) + f(b, *args))  # type: ignore
 
 
-def _integrate_1D(f: Callable[..., float], bin_edges: np.ndarray, *args: Union[float, np.ndarray]) -> np.ndarray:
+def _integrate_1D(
+    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: Union[float, npt.NDArray[np.float64]]
+) -> npt.NDArray[Any]:
     """Integrate the given function over each bin in 1D.
 
     A number of options are available for integration, including a simple method evaluated on
@@ -138,18 +145,18 @@ class SimultaneousFit(generic_class.EqualityMixin):
         self.argument_positions = argument_positions
 
     def __add__(self, other: Union[T_CostFunction, "SimultaneousFit"]) -> "SimultaneousFit":
-        """ Add a new function to the simultaneous fit. """
+        """Add a new function to the simultaneous fit."""
         return type(self)(self, other)
 
     def __radd__(self, other: Union[T_CostFunction, "SimultaneousFit"]) -> "SimultaneousFit":
-        """ For use with ``sum(...)``. """
+        """For use with ``sum(...)``."""
         if other == 0:
             return self
         else:
             return self + other
 
     def __call__(self, *args: float) -> float:
-        """ Calculate the cost function for all x values in the data. """
+        """Calculate the cost function for all x values in the data."""
         return fit_base.call_list_of_callables_with_operation(
             operator.add, self.cost_functions, self.argument_positions, *args
         )
@@ -174,7 +181,10 @@ class CostFunctionBase(abc.ABC):
     _cost_function: Callable[..., float]
 
     def __init__(
-        self, f: Callable[..., float], data: Union[np.ndarray, histogram.Histogram1D], **additional_call_options: Any
+        self,
+        f: Callable[..., float],
+        data: Union[npt.NDArray[Any], histogram.Histogram1D],
+        **additional_call_options: Any,
     ):
         # If using numba, we would need to JIT the function to be able to pass it to the cost function.
         self.f = f
@@ -184,27 +194,27 @@ class CostFunctionBase(abc.ABC):
         self._additional_call_options: Dict[str, Any] = additional_call_options
 
     def __add__(self: T_CostFunction, other: T_CostFunction) -> SimultaneousFit:
-        """ Creates a simultaneous fit when added with another cost function. """
+        """Creates a simultaneous fit when added with another cost function."""
         return SimultaneousFit(self, other)
 
     def __radd__(self: T_CostFunction, other: T_CostFunction) -> Union[T_CostFunction, SimultaneousFit]:
-        """ For use with ``sum(...)``. """
+        """For use with ``sum(...)``."""
         if other == 0:
             return self
         else:
             return self + other
 
     def __call__(self, *args: float) -> float:
-        """ Calculate the cost function for all x values in the data. """
+        """Calculate the cost function for all x values in the data."""
         return self._call_cost_function(self.data, self.f, *args, **self._additional_call_options)
 
     @classmethod
     @abc.abstractmethod
     def _call_cost_function(
         cls,
-        data: Union[np.ndarray, histogram.Histogram1D],
+        data: Union[npt.NDArray[Any], histogram.Histogram1D],
         f: Callable[..., float],
-        *args: Union[float, np.ndarray],
+        *args: Union[float, npt.NDArray[Any]],
         **kwargs: Any,
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
@@ -245,9 +255,9 @@ class StandaloneCostFunction(CostFunctionBase):
     @classmethod
     def _call_cost_function(
         cls,
-        data: Union[histogram.Histogram1D, np.ndarray],
+        data: Union[histogram.Histogram1D, npt.NDArray[Any]],
         f: Callable[..., float],
-        *args: Union[float, np.ndarray],
+        *args: Union[float, npt.NDArray[np.float64]],
         **kwargs: Any,
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
@@ -284,7 +294,7 @@ class DataComparisonCostFunction(CostFunctionBase):
 
     @classmethod
     def _call_cost_function(
-        cls, data: Any, f: Callable[..., float], *args: Union[float, np.ndarray], **kwargs: Any
+        cls, data: Any, f: Callable[..., float], *args: Union[float, npt.NDArray[np.float64]], **kwargs: Any
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
 
@@ -303,7 +313,12 @@ class DataComparisonCostFunction(CostFunctionBase):
 
 
 def _chi_squared(
-    x: np.ndarray, y: np.ndarray, errors: np.ndarray, _: np.ndarray, f: Callable[..., float], *args: float
+    x: npt.NDArray[Any],
+    y: npt.NDArray[Any],
+    errors: npt.NDArray[Any],
+    _: npt.NDArray[Any],
+    f: Callable[..., float],
+    *args: float,
 ) -> Any:
     r"""Actual implementation of the chi squared.
 
@@ -344,7 +359,12 @@ class ChiSquared(DataComparisonCostFunction):
 
 
 def _binned_chi_squared(
-    x: np.ndarray, y: np.ndarray, errors: np.ndarray, bin_edges: np.ndarray, f: Callable[..., float], *args: float
+    x: npt.NDArray[Any],
+    y: npt.NDArray[Any],
+    errors: npt.NDArray[Any],
+    bin_edges: npt.NDArray[Any],
+    f: Callable[..., float],
+    *args: float,
 ) -> Any:
     r"""Actual implementation of the binned chi squared.
 
@@ -377,7 +397,12 @@ def _binned_chi_squared(
 
 
 def binned_chi_squared_safe_for_zeros(
-    x: np.ndarray, y: np.ndarray, errors: np.ndarray, bin_edges: np.ndarray, f: Callable[..., float], *args: float
+    x: npt.NDArray[Any],
+    y: npt.NDArray[Any],
+    errors: npt.NDArray[Any],
+    bin_edges: npt.NDArray[Any],
+    f: Callable[..., float],
+    *args: float,
 ) -> Any:
     """Actual implementation of the binned chi squared.
 
@@ -414,7 +439,7 @@ class BinnedChiSquared(DataComparisonCostFunction):
     _cost_function = _binned_chi_squared
 
 
-def _log_likelihood(data: np.ndarray, f: Callable[..., float], *args: float) -> Any:
+def _log_likelihood(data: npt.NDArray[Any], f: Callable[..., float], *args: float) -> Any:
     r"""Actual implementation of the log likelihood cost function.
 
     The unbinned log likelihood is defined as:
@@ -453,10 +478,10 @@ class LogLikelihood(StandaloneCostFunction):
 
 
 def _extended_binned_log_likelihood(
-    x: np.ndarray,
-    y: np.ndarray,
-    errors: np.ndarray,
-    bin_edges: np.ndarray,
+    x: npt.NDArray[Any],
+    y: npt.NDArray[Any],
+    errors: npt.NDArray[Any],
+    bin_edges: npt.NDArray[Any],
     f: Callable[..., float],
     *args: float,
     use_weights: bool = False,

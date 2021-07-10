@@ -42,6 +42,7 @@ from io import BytesIO
 from typing import Any, Iterable, Optional, Type, TypeVar, cast
 
 import numpy as np
+import numpy.typing as npt
 import ruamel.yaml
 
 
@@ -86,7 +87,7 @@ def yaml(
 
 
 def register_classes(yaml: ruamel.yaml.YAML, classes: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
-    """ Register externally defined classes. """
+    """Register externally defined classes."""
     # Validation
     if classes is None:
         classes = []
@@ -123,7 +124,7 @@ def register_module_classes(yaml: ruamel.yaml.YAML, modules: Optional[Iterable[A
 #
 
 
-def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, data: np.ndarray) -> str:
+def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, data: npt.NDArray[Any]) -> str:
     """Write a numpy array to YAML.
 
     It registers the array under the tag ``!numpy_array``.
@@ -143,7 +144,7 @@ def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, da
     # Create a bytes object, dump to it, encode the bytes to a str, and then write them.
     # It's less transparent when physically reading it, but it should avoid encoding issues.
     b = BytesIO()
-    np.save(b, data)
+    np.save(b, data)  # type: ignore
     b.seek(0)
     # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
     return cast(
@@ -157,7 +158,7 @@ def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, da
 
 def numpy_array_from_yaml(
     constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.SequenceNode
-) -> np.ndarray:
+) -> npt.NDArray[Any]:
     """Read an array from YAML to numpy.
 
     It reads arrays registered under the tag ``!numpy_array``.
@@ -185,7 +186,7 @@ def numpy_array_from_yaml(
     Returns:
         Numpy array containing the data in the current YAML node.
     """
-    return_value: np.ndarray
+    return_value: npt.NDArray[Any]
     if isinstance(data.value, list):
         # These are probably from a hand encoded file. We will convert them into an array.
         # Construct the contained values so that we properly construct int, float, etc.
@@ -197,7 +198,7 @@ def numpy_array_from_yaml(
         b = data.value.encode("utf-8")
         # Requires explicitly allowing pickle to load arrays. This used to be default True,
         # so our risk hasn't changed.
-        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)
+        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)  # type: ignore
     return return_value
 
 
@@ -221,7 +222,7 @@ def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, 
     # Create a bytes object, dump to it, encode the bytes to a str, and then write them.
     # It's less transparent when physically reading it, but it should avoid encoding issues.
     b = BytesIO()
-    np.save(b, data)
+    np.save(b, data)  # type: ignore
     b.seek(0)
     # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
     return cast(
@@ -272,7 +273,7 @@ def numpy_float64_from_yaml(
         b = data.value.encode("utf-8")
         # Requires explicitly allowing pickle to load arrays. This used to be default True,
         # so our risk hasn't changed.
-        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)
+        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)  # type: ignore
     return return_value
 
 

@@ -7,9 +7,11 @@
 
 import functools
 import logging
-import numpy as np
 import operator
 from typing import Any, Mapping, Sequence, Union
+
+import numpy as np
+import numpy.typing as npt
 
 
 # Setup logger
@@ -23,7 +25,7 @@ epsilon = 1e-5
 ###################
 # Utility functions
 ###################
-def moving_average(arr: np.ndarray, n: int = 3) -> np.ndarray:
+def moving_average(arr: npt.NDArray[Any], n: int = 3) -> npt.NDArray[Any]:
     """Calculate the moving overage over an array.
 
     Algorithm from: https://stackoverflow.com/a/14314054
@@ -36,7 +38,7 @@ def moving_average(arr: np.ndarray, n: int = 3) -> np.ndarray:
     """
     ret = np.cumsum(arr, dtype=float)
     ret[n:] = ret[n:] - ret[:-n]
-    res: np.ndarray = ret[n - 1 :] / n
+    res: npt.NDArray[Any] = ret[n - 1 :] / n
     return res
 
 
