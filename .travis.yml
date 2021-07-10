@@ -65,7 +65,7 @@ jobs:
         #  python: 3.6
         - stage: test
           <<: *testScript
-          python: 3.7
+          python: 3.7.2
         - stage: deploy
           python: 3.7
           # Always need a script to make Travis happy, so we effectively use a no-op.
