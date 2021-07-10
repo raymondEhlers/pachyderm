@@ -319,6 +319,8 @@ def fit_with_minuit(
     # Validation
     # Will raise an exception if there are invalid arguments.
     _validate_minuit_args(cost_func=cost_func, minuit_args=minuit_args)
+    # Copy the minuit_args so we don't cause issues elsewhere when we pop values
+    minuit_args = dict(minuit_args)
     # Set the error definition.
     # We check if it's set to the allow the user to override if they are so inclined.
     # (Overriding it should be pretty rare).
@@ -331,8 +333,31 @@ def fit_with_minuit(
         # Store the value.
         minuit_args["errordef"] = error_def
 
+    # Transform into iminuit 2 args
+    # This isn't the cleanest thing to do, but it avoids having to changes interfaces for now (July 2021)
+    # Errors
+    error_args_names = [k for k in minuit_args if "error_" in k]
+    error_args = {k.replace("error_", ""): minuit_args.pop(k) for k in error_args_names if "error_" in k}
+    # Limits
+    limit_args_names = [k for k in minuit_args if "limit_" in k]
+    limit_args = {k.replace("limit_", ""): minuit_args.pop(k) for k in limit_args_names if "limit_" in k}
+    # Fixed
+    fixed_args_names = [k for k in minuit_args if "fix_" in k]
+    fixed_args = {k.replace("fix_", ""): minuit_args.pop(k) for k in fixed_args_names if "fix_" in k}
+    # errordef
+    error_def_arg = minuit_args.pop("errordef")
+
     # Perform the fit
     minuit = iminuit.Minuit(cost_func, **minuit_args)
+    # Set iminuit 2 interface args
+    # NOTE: Can't assign the values directly - need to loop parameter by parameter
+    for k, v in limit_args.items():
+        minuit.limits[k] = v
+    for k, v in fixed_args.items():
+        minuit.fixed[k] = v
+    for k, v in error_args.items():
+        minuit.errors[k] = v
+    minuit.errordef = error_def_arg
     # Improve minimization reliability.
     minuit.strategy = 2
     minuit.migrad()

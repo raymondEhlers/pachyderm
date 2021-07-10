@@ -231,7 +231,7 @@ class FitResult(BaseFitResult):
             raise RuntimeError("The fit is invalid - unable to extract result!")
 
         # Determine the relevant fit parameters.
-        fixed_parameters: List[str] = [k for k, v in minuit.fixed.items() if v is True]
+        fixed_parameters: List[str] = [k for k in minuit.parameters if minuit.fixed[k] is True]
         # We use the cost function because we want intentionally want to skip "x"
         parameters: List[str] = iminuit.util.describe(cost_func)
         # Can't just use set(parameters) - set(fixed_parameters) because set() is unordered!
@@ -241,8 +241,8 @@ class FitResult(BaseFitResult):
             parameters=parameters,
             free_parameters=free_parameters,
             fixed_parameters=fixed_parameters,
-            values_at_minimum=dict(minuit.values),
-            errors_on_parameters=dict(minuit.errors),
+            values_at_minimum={k: minuit.values[k] for k in minuit.parameters},
+            errors_on_parameters={k: minuit.errors[k] for k in minuit.parameters},
             covariance_matrix=minuit.covariance,
             x=x,
             n_fit_data_points=len(x),
