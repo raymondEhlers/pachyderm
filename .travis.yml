@@ -8,6 +8,8 @@ _testScript: &testScript
     # Use cache with pip to save time.
     cache: pip
     install:
+        # Update pip first to try to avoid any issues with old versions
+        - pip install --upgrade pip
         # Install poetry
         - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python - && source $HOME/.poetry/env
         # Install the package
