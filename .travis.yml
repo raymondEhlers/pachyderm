@@ -6,7 +6,7 @@ language: python
 _testScript: &testScript
     language: python
     # Use cache with pip to save time.
-    cache: pip
+    #cache: pip
     install:
         # Update pip first to try to avoid any issues with old versions
         - pip install --upgrade pip
