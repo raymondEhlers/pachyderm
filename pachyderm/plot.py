@@ -2,12 +2,13 @@
 
 """ Plotting styling and utilities.
 
-.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University + Oak Ridge National Lab
 """
 
 import logging
-from typing import Any, Optional, Union
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
+import attr
 import matplotlib
 import matplotlib.axes
 import matplotlib.colors
@@ -90,7 +91,7 @@ def configure() -> None:
          'xtick.major.size': 'original: 3.5, new: 6.0',
          'xtick.major.width': 'original: 0.8, new: 1.25',
          'xtick.minor.size': 'original: 2.0, new: 4.0',
-         'xtick.minor.top': 'original: True, new: False',
+         #'xtick.minor.top': 'original: True, new: False',
          'xtick.minor.visible': 'original: False, new: True',
          'xtick.minor.width': 'original: 0.6, new: 1.0',
          'ytick.color': 'original: black, new: .15',
@@ -100,7 +101,7 @@ def configure() -> None:
          'ytick.major.width': 'original: 0.8, new: 1.25',
          'ytick.minor.right': 'original: True, new: False',
          'ytick.minor.size': 'original: 2.0, new: 4.0',
-         'ytick.minor.visible': 'original: False, new: True',
+         #'ytick.minor.visible': 'original: False, new: True',
          'ytick.minor.width': 'original: 0.6, new: 1.0'}
 
     I implemented most of these below (although I left out a few color options).
@@ -350,3 +351,227 @@ gStyle->SetNumberContours(NCont);*/
 gStyle->SetPalette(NCont + 1, colors);*/
 """
     return s
+
+
+def _validate_axis_name(instance: "AxisConfig", attribute: attr.Attribute[str], value: str) -> None:
+    if value not in ["x", "y", "z"]:
+        raise ValueError("Invalid axis name: {value}")
+
+
+@attr.s
+class AxisConfig:
+    axis: str = attr.ib(validator=[_validate_axis_name])
+    label: str = attr.ib(default="")
+    log: bool = attr.ib(default=False)
+    range: Tuple[Optional[float], Optional[float]] = attr.ib(default=None)
+    font_size: Optional[float] = attr.ib(default=None)
+
+    def apply(self, ax: matplotlib.axes.Axes) -> None:
+        if self.label:
+            getattr(ax, f"set_{self.axis}label")(self.label, fontsize=self.font_size)
+        if self.log:
+            getattr(ax, f"set_{self.axis}scale")("log")
+            # Probably need to increase the number of ticks for a log axis. We just assume that's the case.
+            # I really wish it handled this better by default...
+            # See: https://stackoverflow.com/a/44079725/12907985
+            major_locator = matplotlib.ticker.LogLocator(base=10, numticks=12)
+            getattr(ax, f"{self.axis}axis").set_major_locator(major_locator)
+            minor_locator = matplotlib.ticker.LogLocator(base=10.0, subs=np.linspace(0.2, 0.9, 8), numticks=12)
+            getattr(ax, f"{self.axis}axis").set_minor_locator(minor_locator)
+            # But we don't want to label these ticks.
+            getattr(ax, f"{self.axis}axis").set_minor_formatter(matplotlib.ticker.NullFormatter())
+        if self.range:
+            min_range, max_range = self.range
+            min_current_range, max_current_range = getattr(ax, f"get_{self.axis}lim")()
+            if min_range is None:
+                min_range = min_current_range
+            if max_range is None:
+                max_range = max_current_range
+            getattr(ax, f"set_{self.axis}lim")([min_range, max_range])
+
+
+@attr.s
+class TextConfig:
+    text: str = attr.ib()
+    x: float = attr.ib()
+    y: float = attr.ib()
+    alignment: Optional[str] = attr.ib(default=None)
+    color: Optional[str] = attr.ib(default="black")
+    font_size: Optional[float] = attr.ib(default=None)
+
+    def apply(self, ax: matplotlib.axes.Axes) -> None:
+        # Some reasonable defaults
+        if self.alignment is None:
+            ud = "upper" if self.y >= 0.5 else "lower"
+            lr = "right" if self.x >= 0.5 else "left"
+            self.alignment = f"{ud} {lr}"
+
+        alignments = {
+            "upper right": dict(
+                horizontalalignment="right",
+                verticalalignment="top",
+                multialignment="right",
+            ),
+            "upper left": dict(
+                horizontalalignment="left",
+                verticalalignment="top",
+                multialignment="left",
+            ),
+            "lower right": dict(
+                horizontalalignment="right",
+                verticalalignment="bottom",
+                multialignment="right",
+            ),
+            "lower left": dict(
+                horizontalalignment="left",
+                verticalalignment="bottom",
+                multialignment="left",
+            ),
+        }
+        alignment_kwargs = alignments[self.alignment]
+
+        # Finally, draw the text.
+        ax.text(
+            self.x,
+            self.y,
+            self.text,
+            color=self.color,
+            fontsize=self.font_size,
+            # We always want to place using normalized coordinates.
+            # In the rare case that we don't want to, we can place by hand.
+            transform=ax.transAxes,
+            **alignment_kwargs,
+        )
+
+
+@attr.s
+class LegendConfig:
+    location: str = attr.ib(default=None)
+    # Takes advantage of the fact that None will use the default.
+    anchor: Optional[Tuple[float, float]] = attr.ib(default=None)
+    font_size: Optional[float] = attr.ib(default=None)
+    ncol: Optional[float] = attr.ib(default=1)
+    marker_label_spacing: Optional[float] = attr.ib(default=None)
+
+    def apply(
+        self,
+        ax: matplotlib.axes.Axes,
+        legend_handles: Optional[Sequence[matplotlib.container.ErrorbarContainer]] = None,
+        legend_labels: Optional[Sequence[str]] = None,
+    ) -> None:
+        if self.location:
+            kwargs = {}
+            if legend_handles:
+                kwargs["handles"] = legend_handles
+            if legend_labels:
+                kwargs["labels"] = legend_labels
+
+            ax.legend(
+                loc=self.location,
+                bbox_to_anchor=self.anchor,
+                # If we specify an anchor, we want to reduce an additional padding
+                # to ensure that we have accurate placement.
+                borderaxespad=(0 if self.anchor else None),
+                borderpad=(0 if self.anchor else None),
+                frameon=False,
+                fontsize=self.font_size,
+                ncol=self.ncol,
+                handletextpad=self.marker_label_spacing,
+                **kwargs,
+            )
+
+
+def _ensure_sequence_of_axis_config(value: Union[AxisConfig, Sequence[AxisConfig]]) -> Sequence[AxisConfig]:
+    if isinstance(value, AxisConfig):
+        value = [value]
+    return value
+
+
+@attr.s
+class Panel:
+    axes: Sequence[AxisConfig] = attr.ib(converter=_ensure_sequence_of_axis_config)
+    text: Optional[TextConfig] = attr.ib(default=None)
+    legend: LegendConfig = attr.ib(default=None)
+
+    def apply(
+        self,
+        ax: matplotlib.axes.Axes,
+        legend_handles: Optional[Sequence[matplotlib.container.ErrorbarContainer]] = None,
+        legend_labels: Optional[Sequence[str]] = None,
+    ) -> None:
+        # Axes
+        for axis in self.axes:
+            axis.apply(ax)
+        # Text
+        if self.text is not None:
+            self.text.apply(ax)
+        # Legend
+        if self.legend is not None:
+            self.legend.apply(ax, legend_handles=legend_handles, legend_labels=legend_labels)
+
+
+@attr.s
+class Figure:
+    edge_padding: Mapping[str, float] = attr.ib(factory=dict)
+
+    def apply(self, fig: matplotlib.figure.Figure) -> None:
+        # It shouldn't hurt to align the labels if there's only one.
+        fig.align_ylabels()
+
+        # Adjust the layout.
+        fig.tight_layout()
+        adjust_default_args = dict(
+            # Reduce spacing between subplots
+            hspace=0,
+            wspace=0,
+            # Reduce external spacing
+            left=0.10,
+            bottom=0.105,
+            right=0.98,
+            top=0.98,
+        )
+        adjust_default_args.update(self.edge_padding)
+        fig.subplots_adjust(**adjust_default_args)
+
+
+def _ensure_sequence_of_panels(value: Union[Panel, Sequence[Panel]]) -> Sequence[Panel]:
+    if isinstance(value, Panel):
+        value = [value]
+    return value
+
+
+@attr.s
+class PlotConfig:
+    name: str = attr.ib()
+    panels: Sequence[Panel] = attr.ib(converter=_ensure_sequence_of_panels)
+    figure: Figure = attr.ib(factory=Figure)
+
+    def apply(
+        self,
+        fig: matplotlib.figure.Figure,
+        ax: Optional[matplotlib.axes.Axes] = None,
+        axes: Optional[Sequence[matplotlib.axes.Axes]] = None,
+        legend_handles: Optional[Sequence[matplotlib.container.ErrorbarContainer]] = None,
+        legend_labels: Optional[Sequence[str]] = None,
+    ) -> None:
+        # Validation
+        if ax is None and axes is None:
+            raise TypeError("Must pass the axis or axes of the figure.")
+        if ax is not None and axes is not None:
+            raise TypeError("Cannot pass both a single axis and multiple axes.")
+        # If we just have a single axis, wrap it up into a list so we can process it along with our panels.
+        if ax is not None:
+            axes = [ax]
+        # Help out mypy...
+        assert axes is not None
+        if len(axes) != len(self.panels):
+            raise ValueError(
+                f"Must have the same number of axes and panels. Passed axes: {axes}, panels: {self.panels}"
+            )
+
+        # Finally, we can actually apply the stored properties.
+        # Apply panels to the axes.
+        for ax, panel in zip(axes, self.panels):
+            panel.apply(ax, legend_handles=legend_handles, legend_labels=legend_labels)
+        # Figure
+        self.figure.apply(fig)
