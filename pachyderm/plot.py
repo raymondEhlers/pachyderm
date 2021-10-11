@@ -5,6 +5,8 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University + Oak Ridge National Lab
 """
 
+from __future__ import annotations
+
 import logging
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
