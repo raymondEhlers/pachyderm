@@ -1,0 +1,20 @@
+---
+# LHC20g4: pp 5.02 TeV jet-jet PYTHIA anchored to LHC18{q,r} pass 3
+# https://alice.its.cern.ch/jira/browse/ALIROOT-8505
+period: "lhc20g4"
+parameters:
+    system: "pp"
+    year: 2020
+    file_types:
+        AOD:
+            # AOD: /alice/sim/2020/LHC20g4/{pt_hard_bin}/{run}/AOD/
+            search_path: "/alice/{data_type}/{year}/{period}/{pt_hard_bin}/{run}/AOD"
+            filename: "aod_archive.zip"
+            #filename: "AliAOD.root"
+selections:
+    n_files_per_selection: 3
+    file_type: AOD
+    production_number: null
+    runs: [296191]
+    #pt_hard_bins: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+    pt_hard_bins: [12]
