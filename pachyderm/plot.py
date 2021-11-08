@@ -496,10 +496,16 @@ def _ensure_sequence_of_axis_config(value: Union[AxisConfig, Sequence[AxisConfig
     return value
 
 
+def _ensure_sequence_of_text_config(value: Union[TextConfig, Sequence[TextConfig]]) -> Sequence[TextConfig]:
+    if isinstance(value, TextConfig):
+        value = [value]
+    return value
+
+
 @attr.s
 class Panel:
     axes: Sequence[AxisConfig] = attr.ib(converter=_ensure_sequence_of_axis_config)
-    text: Optional[TextConfig] = attr.ib(default=None)
+    text: Sequence[TextConfig] = attr.ib(converter=_ensure_sequence_of_text_config, factory=list)
     legend: LegendConfig = attr.ib(default=None)
 
     def apply(
@@ -512,8 +518,8 @@ class Panel:
         for axis in self.axes:
             axis.apply(ax)
         # Text
-        if self.text is not None:
-            self.text.apply(ax)
+        for text in self.text:
+            text.apply(ax)
         # Legend
         if self.legend is not None:
             self.legend.apply(ax, legend_handles=legend_handles, legend_labels=legend_labels)
