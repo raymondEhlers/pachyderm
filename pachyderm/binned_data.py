@@ -31,6 +31,11 @@ else:
     NumpyAttribute = attr.Attribute
 
 
+@attr.s(frozen=True)
+class Rebin:
+    value: Tuple[int, np.ndarray] = attr.ib()
+
+
 def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
     """Convert the bin edges input to a numpy array.
 
@@ -135,7 +140,71 @@ class Axis:
 
     def __eq__(self, other: Any) -> bool:
         """Check for equality."""
-        return np.allclose(self.bin_edges, other.bin_edges)
+        if self.bin_edges.shape == other.bin_edges.shape:
+            return np.allclose(self.bin_edges, other.bin_edges)
+        return False
+
+    def __getitem__(self, selection: Union[int, slice]) -> "Axis":
+        """Select a subset of the axis.
+
+        Args:
+            selection: Selection of the axis.
+
+        Returns:
+            new axis with the new binning
+        """
+        # Basic validation
+        # If it's just an int, it was probably an accident. Let the user know.
+        if isinstance(selection, int):
+            raise ValueError("Passed an integer to getitem. This is a bit ambiguous, so if you want single values, access the bin edges directly.")
+
+        # Evaluate the selections, expanding the axis values if passed via complex numbers
+        start = selection.start
+        stop = selection.stop
+        if isinstance(start, complex):
+            start = int(start.real) + self.find_bin(int(start.imag))
+        if isinstance(stop, complex):
+            stop = int(stop.real) + self.find_bin(int(stop.imag))
+        if stop is not None:
+            """
+            If we've set an upper limit, we want to add +1 to ensure that the upper edge of the bin that contains
+            the value is included. If we do find_bin on a bin edge, it returns the correct value, but in that case,
+            we need the +1 because otherwise the slice will end one value too early (due to slicing rules).
+            As an example,
+
+            >>> a = binned_data.Axis(np.arange(1, 12))
+            >>> a
+            Axis(bin_edges=array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.]))
+            >>> a.find_bin(11)
+            10
+            >>> a.bin_edges[:10]
+            array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
+
+            So if we wanted the stop to be at 11, we need the +1 to get the slice to contain 11
+            """
+            stop = stop + 1
+
+        # Handle the step
+        step = selection.step
+        if isinstance(step, Rebin):
+            if not isinstance(step.value, int):
+                # We have an array. The new axis will be the array, but we need to check that the rebin bin
+                # edges match up to the start and stop.
+                bin_edges = step.value
+                # Validation
+                if start is not None and bin_edges[0] != self.bin_edges[start]:
+                    raise ValueError(f"Lower edge doesn't match rebin. index: {start}, value: {self.bin_edges[start]}, rebin: {bin_edges}")
+                if stop is not None and bin_edges[-1] != self.bin_edges[stop]:
+                    raise ValueError(f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}")
+
+                return type(self)(bin_edges=np.array(bin_edges, copy=True))
+            else:
+                # We want to rebin by a step. Pass the value through.
+                step = step.value
+
+        # Pass in the values into the evaluated slice.
+        evaluated_slice = slice(start, stop, step)
+        return type(self)(bin_edges=np.array(self.bin_edges[evaluated_slice], copy=True))
 
     # TODO: Serialize more carefully...
 

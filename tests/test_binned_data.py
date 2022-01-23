@@ -5,12 +5,52 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 
 from pachyderm import binned_data
+
+def test_axis_slice_copy(caplog: Any) -> None:
+    axis = binned_data.Axis(np.arange(1, 11))
+    sliced_axis = axis[:]
+
+    assert sliced_axis.bin_edges is not axis.bin_edges
+    assert not np.may_share_memory(sliced_axis.bin_edges, axis.bin_edges)
+    assert sliced_axis == axis
+
+
+@pytest.mark.parametrize("start,stop,step,result", [  # type: ignore
+    (2, None, None, np.arange(3, 12)),
+    (2j, None, None, np.arange(2, 12)),
+    # +1 because we need to include the upper bin edge
+    (None, 6, None, np.arange(1, 7 + 1)),
+    # +1 because we need to include the upper bin edge
+    (None, 6j, None, np.arange(1, 6 + 1)),
+    (4j, 8, None, np.arange(4, 10)),
+    (None, None, 2, np.arange(1, 12, 2)),
+], ids = ["set start by bin", "set start by value", "set stop by bin", "set stop by value", "start value, stop bin", "rebin by int"])
+def test_axis_slice(start: Optional[int], stop: Optional[int], step: Optional[int], result: npt.NDArray[np.int64], caplog: Any) -> None:
+    axis = binned_data.Axis(bin_edges=np.arange(1, 12))
+    s = slice(start, stop, step)
+    sliced_axis = axis[s]
+
+    assert sliced_axis != axis
+    np.testing.assert_allclose(sliced_axis.bin_edges, result)
+
+    # Cross check with hist
+    # NOTE: We use hist here rather than boost-histogram because it allows us to use complex numbers
+    #       (ie. uhi) for the indexing comparison.
+    # NOTE: We need to create a histogram because we can't slice directly on an axis.
+    hist = pytest.importorskip("hist")
+    hist_s = slice(s.start, s.stop, hist.rebin(s.step) if s.step else s.step)
+    hist_h = hist.Hist(hist.axis.Regular(10, 1, 11))
+    hist_sliced_axis = hist_h[hist_s].axes[0]
+
+    np.testing.assert_allclose(sliced_axis.bin_edges, hist_sliced_axis.edges)
+
 
 @pytest.mark.parametrize("h", [  # type: ignore
     binned_data.BinnedData(
