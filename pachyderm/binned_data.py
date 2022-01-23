@@ -238,6 +238,23 @@ def _axes_tuple_from_axes_sequence(
     return AxesTuple.from_axes(axes)
 
 
+def _axes_shared_memory_check(instance: "BinnedData", attribute: AxesTupleAttribute, value: AxesTuple) -> None:
+    """Ensure none of the axes share memory for the numpy arrays."""
+    # Ensure the axes don't point to one another (which can cause issues when performing operations in place).
+    found_shared_memory = False
+    for a_i, b_i in itertools.combinations(range(len(value)), 2):
+        if np.may_share_memory(value[a_i].bin_edges, value[b_i].bin_edges):  # type: ignore
+            found_shared_memory = True
+            logger.warning(
+                f"Axis at index {a_i} shares memory with axis at index {b_i}. Copying axis {a_i}!"
+            )
+            value[a_i] = value[a_i].copy()
+
+    # If we found some shared memory, be certain that we save the modified object
+    if found_shared_memory:
+        setattr(instance, attribute.name, value.copy())
+
+
 def _array_length_from_axes(axes: AxesTuple) -> int:
     return reduce(operator.mul, (len(a) for a in axes))
 
@@ -262,12 +279,15 @@ def _validate_arrays(instance: "BinnedData", attribute: NumpyAttribute, value: n
 
 
 def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, value: npt.NDArray[Any]) -> None:
-    # TODO: This trivially fails for axes.
     # Define this array for convenience in accessing the members. This way, we're less likely to miss
     # newly added members.
     arrays = {
-        k: v for k, v in vars(instance).items() if not k.startswith("_") and k != "metadata" and k != attribute.name
+        k: v for k, v in vars(instance).items() if not k.startswith("_") and k != "metadata" and k != "axes" and k != attribute.name
     }
+    # Extract the axes to check those arrays too
+    arrays.update({
+        f"axis_{i}": v.bin_edges for i, v in enumerate(instance.axes)
+    })
     # Ensure the members don't point to one another (which can cause issues when performing operations in place).
     # Check the other values.
     for other_name, other_value in arrays.items():
@@ -301,7 +321,7 @@ def _shape_array_check(instance: "BinnedData", attribute: NumpyAttribute, value:
 @attr.s(eq=False)
 class BinnedData:
     axes: AxesTuple = attr.ib(
-        converter=_axes_tuple_from_axes_sequence, validator=[_shared_memory_check, _validate_axes]  # type: ignore
+        converter=_axes_tuple_from_axes_sequence, validator=[_axes_shared_memory_check, _validate_axes]  # type: ignore
     )
     values: npt.NDArray[Any] = attr.ib(
         converter=np.asarray, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
