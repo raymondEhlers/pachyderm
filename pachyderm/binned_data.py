@@ -5,13 +5,15 @@
 .. codeauthor:: Ramyond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
+from __future__ import annotations
+
 import collections
 import itertools
 import logging
 import operator
 import uuid
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Sequence, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import attr
 import numpy as np
@@ -54,7 +56,7 @@ def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
     return np.ravel(np.array(value, dtype=np.float64))
 
 
-def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int:
+def find_bin(bin_edges: npt.NDArray[Any], value: Union[float, npt.NDArray[Any]]) -> int:
     """Determine the index position where the value should be inserted.
 
     This is basically ``ROOT.TH1.FindBin(value)``, but it can used for any set of bin_edges.
@@ -74,6 +76,26 @@ def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int:
     # NOTE: By specifying that ``side = "right"``, it find values as arr[i] <= value < arr[i - 1],
     #       which matches the ROOT convention.
     return cast(int, np.searchsorted(bin_edges, value, side="right") - 1)
+
+
+def _expand_slice_start_and_stop(axis: Axis, selection: slice) -> Tuple[Optional[int], Optional[int]]:
+    """Expand out the start and stop values for a slice.
+
+    Args:
+        axis: Axis to apply the slice to.
+        selection: Slice to apply to the axis.
+    Returns:
+        (start, stop). Note that they may be None.
+    """
+    # Evaluate the selections, expanding the axis values if passed via complex numbers
+    start = selection.start
+    stop = selection.stop
+    if isinstance(start, complex):
+        start = int(start.real) + axis.find_bin(start.imag)
+    if isinstance(stop, complex):
+        stop = int(stop.real) + axis.find_bin(stop.imag)
+
+    return start, stop
 
 
 @attr.s(eq=False)
@@ -159,62 +181,62 @@ class Axis:
             raise ValueError("Passed an integer to getitem. This is a bit ambiguous, so if you want single values (edges or centers), access the bin edges directly.")
 
         # Evaluate the selections, expanding the axis values if passed via complex numbers
-        start = selection.start
-        stop = selection.stop
-        if isinstance(start, complex):
-            start = int(start.real) + self.find_bin(int(start.imag))
-        if isinstance(stop, complex):
-            stop = int(stop.real) + self.find_bin(int(stop.imag))
+        start, stop = _expand_slice_start_and_stop(self, selection)
 
         # Handle the step
-        step = selection.step
+        step: Union[int, npt.NDArray[np.float64]] = selection.step
         if isinstance(step, Rebin):
-            if not isinstance(step.value, int):
-                # We have an array. The new axis will be the array, but we need to check that the rebin bin
-                # edges match up to the start and stop.
-                bin_edges = step.value
-                # Validation
-                if start is not None and bin_edges[0] != self.bin_edges[start]:
-                    raise ValueError(f"Lower edge doesn't match rebin. index: {start}, value: {self.bin_edges[start]}, rebin: {bin_edges}")
-                if stop is not None and bin_edges[-1] != self.bin_edges[stop]:
-                    raise ValueError(f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}")
+            # Extract the value if it's stored in the object.
+            step = step.value
 
-                # Validate that the new binning lies within the old binning
-                # (ie. each new bin edge is contained in the previous binning)
-                if not set(bin_edges).issubset(self.bin_edges):
-                    raise ValueError(
-                        f"New bin edges {bin_edges} aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
-                    )
+        if isinstance(step, np.ndarray):
+            # We have an array. The new axis will be the array, but we need to check that the rebin bin
+            # edges match up to the start and stop.
+            bin_edges = np.array(step, copy=True)
+            # Validation
+            if start is not None and bin_edges[0] != self.bin_edges[start]:
+                raise ValueError(f"Lower edge doesn't match rebin. index: {start}, value: {self.bin_edges[start]}, rebin: {bin_edges}")
+            if stop is not None and bin_edges[-1] != self.bin_edges[stop]:
+                raise ValueError(f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}")
 
-                return type(self)(bin_edges=np.array(bin_edges, copy=True))
-            else:
-                # We want to rebin by a step. Pass the value through.
-                step = step.value
+            # Validate that the new binning lies within the old binning
+            # (ie. each new bin edge is contained in the previous binning)
+            if not set(bin_edges).issubset(self.bin_edges):
+                raise ValueError(
+                    f"New bin edges {bin_edges} aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
+                )
 
-        # If we're not rebinning (where we ignore the passed bin edges and just check for consistency),
-        # then we need to ensure that the stop value is consistent.
-        if stop is not None:
-            """
-            If we've set an upper limit, we want to add +1 to ensure that the upper edge of the bin that contains
-            the value is included. If we do find_bin on a bin edge, it returns the correct value, but in that case,
-            we need the +1 because otherwise the slice will end one value too early (due to slicing rules).
-            As an example,
+            # From here, we're good, so pass on the bin edges
+        else:
+            # The step is either an integer step or None. In either case, we can treat it the same.
 
-            >>> a = binned_data.Axis(np.arange(1, 12))
-            >>> a
-            Axis(bin_edges=array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.]))
-            >>> a.find_bin(11)
-            10
-            >>> a.bin_edges[:10]
-            array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
+            # First, if we're not rebinning with an array (where we ignore the passed start and stop and just
+            # check for consistency), then we need to ensure that the stop value is consistent.
+            if stop is not None:
+                """
+                If we've set an upper limit, we want to add +1 to ensure that the upper edge of the bin that contains
+                the value is included. If we do find_bin on a bin edge, it returns the correct value, but in that case,
+                we need the +1 because otherwise the slice will end one value too early (due to slicing rules).
+                As an example,
 
-            So if we wanted the stop to be at 11, we need the +1 to get the slice to contain 11
-            """
-            stop = stop + 1
+                >>> a = binned_data.Axis(np.arange(1, 12))
+                >>> a
+                Axis(bin_edges=array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.]))
+                >>> a.find_bin(11)
+                10
+                >>> a.bin_edges[:10]
+                array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
 
-        # Pass in the values into the evaluated slice.
-        evaluated_slice = slice(start, stop, step)
-        return type(self)(bin_edges=np.array(self.bin_edges[evaluated_slice], copy=True))
+                So if we wanted the stop to be at 11, we need the +1 to get the slice to contain 11
+                """
+                stop = stop + 1
+
+            # Pass in the values into the evaluated slice.
+            evaluated_slice = slice(start, stop, step)
+            bin_edges = np.array(self.bin_edges[evaluated_slice], copy=True)
+
+        # Finally, we have the bin edges and we can construct the axis
+        return type(self)(bin_edges=bin_edges)
 
     # TODO: Serialize more carefully...
 
@@ -956,3 +978,128 @@ class BinnedData:
         """
         # TODO: Check that the values don't need to be transposed or similar.
         return (self.values, *self.axes.bin_edges)
+
+    def __getitem__(self, selection: Union[slice, Tuple[slice, ...]]) -> "BinnedData":
+        """Select a subset of data.
+
+        Args:
+            selection: Selection of the data.
+        """
+        # Basic validation
+        # If it's just an int, it was probably an accident. Let the user know.
+        if isinstance(selection, int):
+            raise ValueError("Passed an integer to getitem. This is a bit ambiguous, so if you want single values, access the values directly.")
+        if len(self.axes) > 1:
+            raise NotImplementedError("Not yet implemented for more than 1D")
+
+        # First, determine the new axis. We can just defer that to axes implementation
+        new_axis = self.axes[0][selection]
+
+        ## Evaluate the selections, expanding the axis values if passed via complex numbers
+        start, stop = _expand_slice_start_and_stop(self.axes[0], selection)
+
+        # Build up map from old binning to new binning
+        old_to_new_index = find_bin(new_axis.bin_edges, self.axes[0].bin_centers)
+        #old_to_new_map = dict(zip(range(len(self.axes[0].bin_edges)), find_bin(new_axis.bin_edges, self.axes[0].bin_centers)))
+        old_to_new_map_helper = dict(zip(range(len(self.axes[0].bin_edges)), find_bin(new_axis.bin_edges, self.axes[0].bin_centers)))
+        #logger.info(f"old_to_new_map: {old_to_new_map}")
+        print(f"old_to_new_map: {old_to_new_index}")
+        print(f"old_to_new_map_helper: {old_to_new_map_helper}")
+        print(f"old axis: {self.axes[0].bin_edges}")
+        print(f"new axis: {new_axis.bin_edges}")
+        print(f"values: {self.values}")
+
+        new_values = _apply_rebin(old_to_new_index=old_to_new_index, values=self.values, n_bins=len(new_axis))
+        print(f"new_values: {new_values}")
+        new_variances = _apply_rebin(old_to_new_index=old_to_new_index, values=self.variances, n_bins=len(new_axis))
+
+        return type(self)(
+            axes=[new_axis],
+            values=new_values,
+            # TODO: Fix this...
+            variances=new_variances,
+            metadata={},
+        )
+
+        ## Handle the step
+        #step: Union[int, npt.NDArray[np.float64]] = selection.step
+        #if isinstance(step, Rebin):
+        #    # Extract the value if it's stored in the object.
+        #    step = step.value
+
+        #if isinstance(step, np.ndarray):
+        #    # We have an array. The new axis will be the array, but we need to check that the rebin bin
+        #    # edges match up to the start and stop.
+        #    # NOTE: We don't do bin edges validation here because that's already covered in the axes.
+        #    bin_edges = np.array(new_axis.bin_edges, copy=True)
+
+        #    # From here, we're good, so pass on the bin edges
+        #else:
+        #    # The step is either an integer step or None. In either case, we can treat it the same.
+
+        #    # First, if we're not rebinning with an array (where we ignore the passed start and stop and just
+        #    # check for consistency), then we need to ensure that the stop value is consistent.
+        #    if stop is not None:
+        #        """
+        #        If we've set an upper limit, we want to add +1 to ensure that the upper edge of the bin that contains
+        #        the value is included. If we do find_bin on a bin edge, it returns the correct value, but in that case,
+        #        we need the +1 because otherwise the slice will end one value too early (due to slicing rules).
+        #        As an example,
+
+        #        >>> a = binned_data.Axis(np.arange(1, 12))
+        #        >>> a
+        #        Axis(bin_edges=array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.]))
+        #        >>> a.find_bin(11)
+        #        10
+        #        >>> a.bin_edges[:10]
+        #        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
+
+        #        So if we wanted the stop to be at 11, we need the +1 to get the slice to contain 11
+        #        """
+        #        stop = stop + 1
+
+        #    # Pass in the values into the evaluated slice.
+        #    evaluated_slice = slice(start, stop, step)
+        #    bin_edges = np.array(self.bin_edges[evaluated_slice], copy=True)
+
+        ## Pass in the values into the evaluated slice.
+        #evaluated_slice = slice(start, stop, step)
+        #return type(self)(
+        #    axes=[new_axis],
+        #    values=self.values[...],
+        #    bin_edges=np.array(self.bin_edges[evaluated_slice], copy=True),
+        #)
+
+
+def _apply_rebin(old_to_new_index: npt.NDArray[np.float64], values: npt.NDArray[np.float64], n_bins: int) -> ...:
+    """ TODO: Fill in...
+
+    Note:
+        I would usually want to use numba here, but it's not a dependency, and it's pretty heavy to add it just for this.
+
+    TODO: Do a delayed import for numba. It doesn't hurt and avoids a direct dependency
+
+    TODO: Fill in args and returns...
+
+
+    """
+    output = np.zeros(n_bins)
+
+    # Find run lengths
+    # From: https://stackoverflow.com/a/58540073/12907985
+    loc_run_start = np.empty(len(old_to_new_index), dtype=bool)
+    loc_run_start[0] = True
+    np.not_equal(old_to_new_index[:-1], old_to_new_index[1:], out=loc_run_start[1:])
+    run_starts = np.nonzero(loc_run_start)[0]
+    run_values = old_to_new_index[loc_run_start]
+    run_lengths = np.diff(np.append(run_starts, len(old_to_new_index)))
+
+    # For each run length that is a valid
+    for run_start, v_index, run_length in zip(run_starts, run_values, run_lengths):
+        # Only sum up values which are valid indices for the output
+        if v_index < 0 or v_index >= n_bins:
+            continue
+        # Sum up all of the values that are supposed to go into the same bin
+        output[v_index] = np.sum(values[run_start:run_start+run_length])
+
+    return output

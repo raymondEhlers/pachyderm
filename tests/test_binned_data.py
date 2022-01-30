@@ -5,7 +5,7 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -25,13 +25,14 @@ def test_axis_slice_copy(caplog: Any) -> None:
 @pytest.mark.parametrize("start,stop,step,result", [  # type: ignore
     (2, None, None, np.arange(3, 12)),
     (2j, None, None, np.arange(2, 12)),
+    (2.1j, None, None, np.arange(2, 12)),
     # +1 because we need to include the upper bin edge
     (None, 6, None, np.arange(1, 7 + 1)),
     # +1 because we need to include the upper bin edge
     (None, 6j, None, np.arange(1, 6 + 1)),
     (4j, 8, None, np.arange(4, 10)),
     (None, None, 2, np.arange(1, 12, 2)),
-], ids = ["set start by bin", "set start by value", "set stop by bin", "set stop by value", "start value, stop bin", "rebin by int"])
+], ids = ["set start by bin", "set start by value", "set start by float value", "set stop by bin", "set stop by value", "start value, stop bin", "rebin by int"])
 def test_axis_slice(start: Optional[int], stop: Optional[int], step: Optional[int], result: npt.NDArray[np.int64], caplog: Any) -> None:
     axis = binned_data.Axis(bin_edges=np.arange(1, 12))
     s = slice(start, stop, step)
@@ -67,6 +68,52 @@ def test_axis_slice_rebin(start: Optional[int], stop: Optional[int], step: Optio
 
     assert sliced_axis != axis
     np.testing.assert_allclose(sliced_axis.bin_edges, result)
+
+
+@pytest.fixture
+def hists_for_rebinning() -> Tuple[npt.NDArray[np.float64], binned_data.BinnedData]:
+    _values = []
+    for i in range(2, 12):
+        # repeat i number of times
+        for _ in range((i-1)*2):
+            # offset by 0.5 to put it in the center of the bin
+            _values.append(i - 0.5)
+    values = np.array(_values, dtype=np.float64)
+
+    hist = pytest.importorskip("hist")
+    h_hist = hist.Hist(hist.axis.Regular(10, 1, 11), storage=hist.storage.Weight())
+    h_hist.fill(values)
+
+    h = binned_data.BinnedData.from_existing_data(h_hist)
+
+    return values, h
+
+
+@pytest.mark.parametrize("start,stop,step,result", [  # type: ignore
+    (2, None, None, np.arange(3, 12)),
+    (2j, None, None, np.arange(2, 12)),
+    (2.1j, None, None, np.arange(2, 12)),
+    # +1 because we need to include the upper bin edge
+    (None, 6, None, np.arange(1, 7 + 1)),
+    # +1 because we need to include the upper bin edge
+    (None, 6j, None, np.arange(1, 6 + 1)),
+    (4j, 8, None, np.arange(4, 10)),
+    (None, None, 2, np.arange(1, 12, 2)),
+], ids = ["set start by bin", "set start by value", "set start by float value", "set stop by bin", "set stop by value", "start value, stop bin", "rebin by int"])
+def test_hist_slice(hists_for_rebinning: Any, start: Optional[int], stop: Optional[int], step: Optional[int], result: npt.NDArray[np.int64], caplog: Any) -> None:
+    values, h = hists_for_rebinning
+    s = slice(start, stop, step)
+    sliced_h = h[s]
+
+    # Cross check with hist
+    hist = pytest.importorskip("hist")
+    hist_h = hist.Hist(hist.axis.Variable(sliced_h.axes[0].bin_edges))
+    hist_h.fill(values)
+    print(f"hist values: {hist_h.values()}")
+
+    np.testing.assert_allclose(sliced_h.axes[0].bin_edges, hist_h.axes[0].edges)
+    np.testing.assert_allclose(sliced_h.values, hist_h.values())
+    np.testing.assert_allclose(sliced_h.variances, hist_h.variances())
 
 
 @pytest.mark.parametrize("h", [  # type: ignore
