@@ -52,6 +52,23 @@ def test_axis_slice(start: Optional[int], stop: Optional[int], step: Optional[in
     np.testing.assert_allclose(sliced_axis.bin_edges, hist_sliced_axis.edges)
 
 
+@pytest.mark.parametrize("start,stop,step,result", [  # type: ignore
+    (None, None, binned_data.Rebin(2), np.arange(1, 12, 2)),
+    (3j, None, binned_data.Rebin(2), np.arange(3, 12, 2)),
+    (None, 9j, binned_data.Rebin(2), np.arange(1, 10, 2)),
+    (3j, 9j, binned_data.Rebin(2), np.arange(3, 10, 2)),
+    (3j, None, binned_data.Rebin(np.arange(3, 12, 2)), np.arange(3, 12, 2)),
+    (None, 9j, binned_data.Rebin(np.arange(1, 10, 2)), np.arange(1, 10, 2)),
+], ids = ["rebin by int", "rebin by int with start", "rebin by int with stop", "rebin by int with start+stop", "rebin by array with start", "rebin by array with stop"])
+def test_axis_slice_rebin(start: Optional[int], stop: Optional[int], step: Optional[int], result: npt.NDArray[np.int64], caplog: Any) -> None:
+    axis = binned_data.Axis(bin_edges=np.arange(1, 12))
+    s = slice(start, stop, step)
+    sliced_axis = axis[s]
+
+    assert sliced_axis != axis
+    np.testing.assert_allclose(sliced_axis.bin_edges, result)
+
+
 @pytest.mark.parametrize("h", [  # type: ignore
     binned_data.BinnedData(
         axes = [np.array(range(11))],

@@ -156,7 +156,7 @@ class Axis:
         # Basic validation
         # If it's just an int, it was probably an accident. Let the user know.
         if isinstance(selection, int):
-            raise ValueError("Passed an integer to getitem. This is a bit ambiguous, so if you want single values, access the bin edges directly.")
+            raise ValueError("Passed an integer to getitem. This is a bit ambiguous, so if you want single values (edges or centers), access the bin edges directly.")
 
         # Evaluate the selections, expanding the axis values if passed via complex numbers
         start = selection.start
@@ -165,6 +165,34 @@ class Axis:
             start = int(start.real) + self.find_bin(int(start.imag))
         if isinstance(stop, complex):
             stop = int(stop.real) + self.find_bin(int(stop.imag))
+
+        # Handle the step
+        step = selection.step
+        if isinstance(step, Rebin):
+            if not isinstance(step.value, int):
+                # We have an array. The new axis will be the array, but we need to check that the rebin bin
+                # edges match up to the start and stop.
+                bin_edges = step.value
+                # Validation
+                if start is not None and bin_edges[0] != self.bin_edges[start]:
+                    raise ValueError(f"Lower edge doesn't match rebin. index: {start}, value: {self.bin_edges[start]}, rebin: {bin_edges}")
+                if stop is not None and bin_edges[-1] != self.bin_edges[stop]:
+                    raise ValueError(f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}")
+
+                # Validate that the new binning lies within the old binning
+                # (ie. each new bin edge is contained in the previous binning)
+                if not set(bin_edges).issubset(self.bin_edges):
+                    raise ValueError(
+                        f"New bin edges {bin_edges} aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
+                    )
+
+                return type(self)(bin_edges=np.array(bin_edges, copy=True))
+            else:
+                # We want to rebin by a step. Pass the value through.
+                step = step.value
+
+        # If we're not rebinning (where we ignore the passed bin edges and just check for consistency),
+        # then we need to ensure that the stop value is consistent.
         if stop is not None:
             """
             If we've set an upper limit, we want to add +1 to ensure that the upper edge of the bin that contains
@@ -183,24 +211,6 @@ class Axis:
             So if we wanted the stop to be at 11, we need the +1 to get the slice to contain 11
             """
             stop = stop + 1
-
-        # Handle the step
-        step = selection.step
-        if isinstance(step, Rebin):
-            if not isinstance(step.value, int):
-                # We have an array. The new axis will be the array, but we need to check that the rebin bin
-                # edges match up to the start and stop.
-                bin_edges = step.value
-                # Validation
-                if start is not None and bin_edges[0] != self.bin_edges[start]:
-                    raise ValueError(f"Lower edge doesn't match rebin. index: {start}, value: {self.bin_edges[start]}, rebin: {bin_edges}")
-                if stop is not None and bin_edges[-1] != self.bin_edges[stop]:
-                    raise ValueError(f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}")
-
-                return type(self)(bin_edges=np.array(bin_edges, copy=True))
-            else:
-                # We want to rebin by a step. Pass the value through.
-                step = step.value
 
         # Pass in the values into the evaluated slice.
         evaluated_slice = slice(start, stop, step)
