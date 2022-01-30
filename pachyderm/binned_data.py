@@ -201,9 +201,23 @@ class Axis:
 
             # Validate that the new binning lies within the old binning
             # (ie. each new bin edge is contained in the previous binning)
-            if not set(bin_edges).issubset(self.bin_edges):
+            # NOTE: I first tried this with sets: `not set(bin_edges).issubset(self.bin_edges)`.
+            #       However, it fails due to rounding issues (ie. isclose). So we take the approach
+            #       described here: https://stackoverflow.com/a/58623261/12907985 . It's less efficient,
+            #       but should be good enough.
+            if not np.all(
+                # Require that at least one value is close for each value in bin_edges
+                np.any(
+                    # Check isclose for each value of bin_edges
+                    np.isclose(bin_edges[:, np.newaxis], self.bin_edges),
+                    axis=1
+                )
+            ):
+                #print(bin_edges.dtype, self.bin_edges.dtype)
+                #print(np.isin(bin_edges, self.bin_edges))
+                #print(np.isclose(bin_edges[-1], self.bin_edges[7]))
                 raise ValueError(
-                    f"New bin edges {bin_edges} aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
+                    f"New bin edges ({bin_edges}) aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
                 )
 
             # From here, we're good, so pass on the bin edges

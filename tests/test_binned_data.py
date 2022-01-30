@@ -22,7 +22,7 @@ def test_axis_slice_copy(caplog: Any) -> None:
     assert sliced_axis == axis
 
 
-@pytest.mark.parametrize("start,stop,step,result", [  # type: ignore
+@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [  # type: ignore
     (2, None, None, np.arange(3, 12)),
     (2j, None, None, np.arange(2, 12)),
     (2.1j, None, None, np.arange(2, 12)),
@@ -33,13 +33,13 @@ def test_axis_slice_copy(caplog: Any) -> None:
     (4j, 8, None, np.arange(4, 10)),
     (None, None, 2, np.arange(1, 12, 2)),
 ], ids = ["set start by bin", "set start by value", "set start by float value", "set stop by bin", "set stop by value", "start value, stop bin", "rebin by int"])
-def test_axis_slice(start: Optional[int], stop: Optional[int], step: Optional[int], result: npt.NDArray[np.int64], caplog: Any) -> None:
+def test_axis_slice(start: Optional[int], stop: Optional[int], step: Optional[int], expected_bin_edges: npt.NDArray[np.int64], caplog: Any) -> None:
     axis = binned_data.Axis(bin_edges=np.arange(1, 12))
     s = slice(start, stop, step)
     sliced_axis = axis[s]
 
     assert sliced_axis != axis
-    np.testing.assert_allclose(sliced_axis.bin_edges, result)
+    np.testing.assert_allclose(sliced_axis.bin_edges, expected_bin_edges)
 
     # Cross check with hist
     # NOTE: We use hist here rather than boost-histogram because it allows us to use complex numbers
@@ -53,7 +53,7 @@ def test_axis_slice(start: Optional[int], stop: Optional[int], step: Optional[in
     np.testing.assert_allclose(sliced_axis.bin_edges, hist_sliced_axis.edges)
 
 
-@pytest.mark.parametrize("start,stop,step,result", [  # type: ignore
+@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [  # type: ignore
     (None, None, binned_data.Rebin(2), np.arange(1, 12, 2)),
     (3j, None, binned_data.Rebin(2), np.arange(3, 12, 2)),
     (None, 9j, binned_data.Rebin(2), np.arange(1, 10, 2)),
@@ -61,13 +61,13 @@ def test_axis_slice(start: Optional[int], stop: Optional[int], step: Optional[in
     (3j, None, binned_data.Rebin(np.arange(3, 12, 2)), np.arange(3, 12, 2)),
     (None, 9j, binned_data.Rebin(np.arange(1, 10, 2)), np.arange(1, 10, 2)),
 ], ids = ["rebin by int", "rebin by int with start", "rebin by int with stop", "rebin by int with start+stop", "rebin by array with start", "rebin by array with stop"])
-def test_axis_slice_rebin(start: Optional[int], stop: Optional[int], step: Optional[int], result: npt.NDArray[np.int64], caplog: Any) -> None:
+def test_axis_slice_rebin(start: Optional[int], stop: Optional[int], step: Optional[int], expected_bin_edges: npt.NDArray[np.int64], caplog: Any) -> None:
     axis = binned_data.Axis(bin_edges=np.arange(1, 12))
     s = slice(start, stop, step)
     sliced_axis = axis[s]
 
     assert sliced_axis != axis
-    np.testing.assert_allclose(sliced_axis.bin_edges, result)
+    np.testing.assert_allclose(sliced_axis.bin_edges, expected_bin_edges)
 
 
 @pytest.fixture
@@ -89,7 +89,7 @@ def hists_for_rebinning() -> Tuple[npt.NDArray[np.float64], binned_data.BinnedDa
     return values, h
 
 
-@pytest.mark.parametrize("start,stop,step,result", [  # type: ignore
+@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [  # type: ignore
     (2, None, None, np.arange(3, 12)),
     (2j, None, None, np.arange(2, 12)),
     (2.1j, None, None, np.arange(2, 12)),
@@ -100,10 +100,43 @@ def hists_for_rebinning() -> Tuple[npt.NDArray[np.float64], binned_data.BinnedDa
     (4j, 8, None, np.arange(4, 10)),
     (None, None, 2, np.arange(1, 12, 2)),
 ], ids = ["set start by bin", "set start by value", "set start by float value", "set stop by bin", "set stop by value", "start value, stop bin", "rebin by int"])
-def test_hist_slice(hists_for_rebinning: Any, start: Optional[int], stop: Optional[int], step: Optional[int], result: npt.NDArray[np.int64], caplog: Any) -> None:
+def test_hist_slice(hists_for_rebinning: Any, start: Optional[int], stop: Optional[int], step: Optional[int], expected_bin_edges: npt.NDArray[np.int64], caplog: Any) -> None:
     values, h = hists_for_rebinning
     s = slice(start, stop, step)
     sliced_h = h[s]
+
+    # Cross check on bin edges
+    np.testing.assert_allclose(sliced_h.axes[0].bin_edges, expected_bin_edges)
+
+    # Cross check with hist
+    hist = pytest.importorskip("hist")
+    hist_h = hist.Hist(hist.axis.Variable(sliced_h.axes[0].bin_edges))
+    hist_h.fill(values)
+    print(f"hist values: {hist_h.values()}")
+
+    np.testing.assert_allclose(sliced_h.axes[0].bin_edges, hist_h.axes[0].edges)
+    np.testing.assert_allclose(sliced_h.values, hist_h.values())
+    np.testing.assert_allclose(sliced_h.variances, hist_h.variances())
+
+
+@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [  # type: ignore
+    (None, None, binned_data.Rebin(2), np.arange(1, 12, 2)),
+    (3j, None, binned_data.Rebin(2), np.arange(3, 12, 2)),
+    (None, 9j, binned_data.Rebin(2), np.arange(1, 10, 2)),
+    (3j, 9j, binned_data.Rebin(2), np.arange(3, 10, 2)),
+    (3j, None, binned_data.Rebin(np.arange(3, 12, 2)), np.arange(3, 12, 2)),
+    (None, 9j, binned_data.Rebin(np.arange(1, 10, 2)), np.arange(1, 10, 2)),
+    (None, None, binned_data.Rebin(np.array([2, 5, 9])), np.array([2, 5, 9])),
+    (None, None, binned_data.Rebin(np.array([1., 2, 3, 8])), np.array([1, 2, 3, 8])),
+    (None, None, binned_data.Rebin(np.array([2, 11])), np.array([2, 11])),
+], ids = ["rebin by int", "rebin by int with start", "rebin by int with stop", "rebin by int with start+stop", "rebin by array with start", "rebin by array with stop", "rebin with varied bin width, variation 1", "rebin with varied bin width, variation 2", "rebin with varied bin width, variation 3"])
+def test_hist_slice_rebin(hists_for_rebinning: Any, start: Optional[int], stop: Optional[int], step: Optional[int], expected_bin_edges: npt.NDArray[np.int64], caplog: Any) -> None:
+    values, h = hists_for_rebinning
+    s = slice(start, stop, step)
+    sliced_h = h[s]
+
+    # Cross check on bin edges
+    np.testing.assert_allclose(sliced_h.axes[0].bin_edges, expected_bin_edges)
 
     # Cross check with hist
     hist = pytest.importorskip("hist")
