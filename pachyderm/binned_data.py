@@ -11,6 +11,7 @@ import collections
 import itertools
 import logging
 import operator
+import typing
 import uuid
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
@@ -35,7 +36,7 @@ else:
 
 @attr.s(frozen=True)
 class Rebin:
-    value: Tuple[int, np.ndarray] = attr.ib()
+    value: Tuple[int, npt.NDArray[Any]] = attr.ib()
 
 
 def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
@@ -55,8 +56,13 @@ def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
     # We specify the dtype here just to be safe.
     return np.ravel(np.array(value, dtype=np.float64))
 
+@typing.overload
+def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int: ...
 
-def find_bin(bin_edges: npt.NDArray[Any], value: Union[float, npt.NDArray[Any]]) -> int:
+@typing.overload
+def find_bin(bin_edges: npt.NDArray[Any], value: npt.NDArray[Any]) -> npt.NDArray[np.int64]: ...
+
+def find_bin(bin_edges: npt.NDArray[Any], value: Union[float, npt.NDArray[Any]]) -> Union[int, npt.NDArray[np.int64]]:
     """Determine the index position where the value should be inserted.
 
     This is basically ``ROOT.TH1.FindBin(value)``, but it can used for any set of bin_edges.
@@ -75,7 +81,7 @@ def find_bin(bin_edges: npt.NDArray[Any], value: Union[float, npt.NDArray[Any]])
     # index 2, but we want to return bin 1, so we subtract one from the result.
     # NOTE: By specifying that ``side = "right"``, it find values as arr[i] <= value < arr[i - 1],
     #       which matches the ROOT convention.
-    return cast(int, np.searchsorted(bin_edges, value, side="right") - 1)
+    return np.searchsorted(bin_edges, value, side="right") - 1
 
 
 def _expand_slice_start_and_stop(axis: Axis, selection: slice) -> Tuple[Optional[int], Optional[int]]:
@@ -205,6 +211,7 @@ class Axis:
             #       However, it fails due to rounding issues (ie. isclose). So we take the approach
             #       described here: https://stackoverflow.com/a/58623261/12907985 . It's less efficient,
             #       but should be good enough.
+            # Require that all of the values are close to one value
             if not np.all(
                 # Require that at least one value is close for each value in bin_edges
                 np.any(
@@ -213,9 +220,6 @@ class Axis:
                     axis=1
                 )
             ):
-                #print(bin_edges.dtype, self.bin_edges.dtype)
-                #print(np.isin(bin_edges, self.bin_edges))
-                #print(np.isclose(bin_edges[-1], self.bin_edges[7]))
                 raise ValueError(
                     f"New bin edges ({bin_edges}) aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
                 )
@@ -367,7 +371,7 @@ def _axes_shared_memory_check(instance: "BinnedData", attribute: AxesTupleAttrib
 
     # If we found some shared memory, be certain that we save the modified object
     if found_shared_memory:
-        setattr(instance, attribute.name, value.copy())
+        setattr(instance, attribute.name, value)
 
 
 def _array_length_from_axes(axes: AxesTuple) -> int:
@@ -436,7 +440,7 @@ def _shape_array_check(instance: "BinnedData", attribute: NumpyAttribute, value:
 @attr.s(eq=False)
 class BinnedData:
     axes: AxesTuple = attr.ib(
-        converter=_axes_tuple_from_axes_sequence, validator=[_axes_shared_memory_check, _validate_axes]  # type: ignore
+        converter=_axes_tuple_from_axes_sequence, validator=[_axes_shared_memory_check, _validate_axes]
     )
     values: npt.NDArray[Any] = attr.ib(
         converter=np.asarray, validator=[_shared_memory_check, _shape_array_check, _validate_arrays]
@@ -993,11 +997,14 @@ class BinnedData:
         # TODO: Check that the values don't need to be transposed or similar.
         return (self.values, *self.axes.bin_edges)
 
-    def __getitem__(self, selection: Union[slice, Tuple[slice, ...]]) -> "BinnedData":
-        """Select a subset of data.
+    def __getitem__(self, selection: Union[int, slice]) -> "BinnedData":
+        """Select a subset of data, including rebinning.
 
         Args:
             selection: Selection of the data.
+        Returns:
+            Binned data corresponding to the data selection. Note that the user is responsible
+            for applying the selections to anything stored in the metadata.
         """
         # Basic validation
         # If it's just an int, it was probably an accident. Let the user know.
@@ -1009,111 +1016,92 @@ class BinnedData:
         # First, determine the new axis. We can just defer that to axes implementation
         new_axis = self.axes[0][selection]
 
-        ## Evaluate the selections, expanding the axis values if passed via complex numbers
-        start, stop = _expand_slice_start_and_stop(self.axes[0], selection)
-
         # Build up map from old binning to new binning
         old_to_new_index = find_bin(new_axis.bin_edges, self.axes[0].bin_centers)
-        #old_to_new_map = dict(zip(range(len(self.axes[0].bin_edges)), find_bin(new_axis.bin_edges, self.axes[0].bin_centers)))
-        old_to_new_map_helper = dict(zip(range(len(self.axes[0].bin_edges)), find_bin(new_axis.bin_edges, self.axes[0].bin_centers)))
-        #logger.info(f"old_to_new_map: {old_to_new_map}")
-        print(f"old_to_new_map: {old_to_new_index}")
-        print(f"old_to_new_map_helper: {old_to_new_map_helper}")
-        print(f"old axis: {self.axes[0].bin_edges}")
-        print(f"new axis: {new_axis.bin_edges}")
-        print(f"values: {self.values}")
+        # Unneeded, but it can be helpful to make this into a true map for debugging purposes.
+        #old_to_new_index_helper = dict(zip(range(len(self.axes[0].bin_edges)), find_bin(new_axis.bin_edges, self.axes[0].bin_centers)))
 
-        new_values = _apply_rebin(old_to_new_index=old_to_new_index, values=self.values, n_bins=len(new_axis))
-        print(f"new_values: {new_values}")
-        new_variances = _apply_rebin(old_to_new_index=old_to_new_index, values=self.variances, n_bins=len(new_axis))
+        # Select and rebin the values and variances.
+        new_values = _apply_rebin(old_to_new_index=old_to_new_index, values=self.values, n_bins_new_axis=len(new_axis))
+        new_variances = _apply_rebin(old_to_new_index=old_to_new_index, values=self.variances, n_bins_new_axis=len(new_axis))
 
         return type(self)(
             axes=[new_axis],
             values=new_values,
-            # TODO: Fix this...
             variances=new_variances,
             metadata={},
         )
 
-        ## Handle the step
-        #step: Union[int, npt.NDArray[np.float64]] = selection.step
-        #if isinstance(step, Rebin):
-        #    # Extract the value if it's stored in the object.
-        #    step = step.value
 
-        #if isinstance(step, np.ndarray):
-        #    # We have an array. The new axis will be the array, but we need to check that the rebin bin
-        #    # edges match up to the start and stop.
-        #    # NOTE: We don't do bin edges validation here because that's already covered in the axes.
-        #    bin_edges = np.array(new_axis.bin_edges, copy=True)
-
-        #    # From here, we're good, so pass on the bin edges
-        #else:
-        #    # The step is either an integer step or None. In either case, we can treat it the same.
-
-        #    # First, if we're not rebinning with an array (where we ignore the passed start and stop and just
-        #    # check for consistency), then we need to ensure that the stop value is consistent.
-        #    if stop is not None:
-        #        """
-        #        If we've set an upper limit, we want to add +1 to ensure that the upper edge of the bin that contains
-        #        the value is included. If we do find_bin on a bin edge, it returns the correct value, but in that case,
-        #        we need the +1 because otherwise the slice will end one value too early (due to slicing rules).
-        #        As an example,
-
-        #        >>> a = binned_data.Axis(np.arange(1, 12))
-        #        >>> a
-        #        Axis(bin_edges=array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10., 11.]))
-        #        >>> a.find_bin(11)
-        #        10
-        #        >>> a.bin_edges[:10]
-        #        array([ 1.,  2.,  3.,  4.,  5.,  6.,  7.,  8.,  9., 10.])
-
-        #        So if we wanted the stop to be at 11, we need the +1 to get the slice to contain 11
-        #        """
-        #        stop = stop + 1
-
-        #    # Pass in the values into the evaluated slice.
-        #    evaluated_slice = slice(start, stop, step)
-        #    bin_edges = np.array(self.bin_edges[evaluated_slice], copy=True)
-
-        ## Pass in the values into the evaluated slice.
-        #evaluated_slice = slice(start, stop, step)
-        #return type(self)(
-        #    axes=[new_axis],
-        #    values=self.values[...],
-        #    bin_edges=np.array(self.bin_edges[evaluated_slice], copy=True),
-        #)
-
-
-def _apply_rebin(old_to_new_index: npt.NDArray[np.float64], values: npt.NDArray[np.float64], n_bins: int) -> ...:
-    """ TODO: Fill in...
+def _apply_rebin(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np.float64], n_bins_new_axis: int) -> npt.NDArray[np.float64]:
+    """Apply rebinning to a set of values based on how the indices should be mapped.
 
     Note:
-        I would usually want to use numba here, but it's not a dependency, and it's pretty heavy to add it just for this.
+        This optionally uses numba if it's available. numba isn't a dependency otherwise, so it seems
+        like a pretty heavily addition just for this, especially when performance should be _so_ bad.
 
-    TODO: Do a delayed import for numba. It doesn't hurt and avoids a direct dependency
-
-    TODO: Fill in args and returns...
-
-
+    Args:
+        old_to_new_index: Array containing the mapping from the old bins to the new bins.
+            Note that the map is implicit - it's from the index of the position in old_to_new_index
+            (which is the same length as the old binning) to the index in the new binning
+            (ie. the values are the bins where the values are to be inserted in the new binning)
+        values: Values in the old binning to rebin into the new binning.
+        n_bins_new_axis: Number of bins in the output array (ie. in the new binning).
+    Returns:
+        The values mapping into the new binning.
     """
-    output = np.zeros(n_bins)
+    try:
+        import numba
+    except ImportError:
+        numba = None
 
-    # Find run lengths
+    if numba is not None:
+        f = numba.njit(_apply_rebin_implementation)
+        return f(old_to_new_index=old_to_new_index, values=values, n_bins_new_axis=n_bins_new_axis)  # type: ignore
+
+    return _apply_rebin_implementation(old_to_new_index=old_to_new_index, values=values, n_bins_new_axis=n_bins_new_axis)
+
+
+def _apply_rebin_implementation(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np.float64], n_bins_new_axis: int) -> npt.NDArray[np.float64]:
+    """Apply rebinning to a set of values based on how the indices should be mapped.
+
+    Note:
+        This is kept as a separate function so we can potentially use it with numba. See inteface
+        function `_apply_rebin`.
+
+    Args:
+        old_to_new_index: Array containing the mapping from the old bins to the new bins.
+            Note that the map is implicit - it's from the index of the position in old_to_new_index
+            to the index in the new binning (ie. the values are the bins in the new binning)
+        values: Values in the old binning to rebin into the new binning.
+        n_bins_new_axis: Number of bins in the output array (ie. in the new binning).
+    Returns:
+        The values mapping into the new binning.
+    """
+    # Setup
+    output = np.zeros(n_bins_new_axis)
+
+    # Our strategy here is to sum run_length values from run_start. This makes indexing
+    # and keeping track of each current sum much easier.
+
+    # First, find run lengths
     # From: https://stackoverflow.com/a/58540073/12907985
     loc_run_start = np.empty(len(old_to_new_index), dtype=bool)
     loc_run_start[0] = True
     np.not_equal(old_to_new_index[:-1], old_to_new_index[1:], out=loc_run_start[1:])
     run_starts = np.nonzero(loc_run_start)[0]
     run_values = old_to_new_index[loc_run_start]
-    run_lengths = np.diff(np.append(run_starts, len(old_to_new_index)))
+    run_lengths = np.diff(np.append(run_starts, len(old_to_new_index)))  # type: ignore
 
     # For each run length that is a valid
     for run_start, v_index, run_length in zip(run_starts, run_values, run_lengths):
         # Only sum up values which are valid indices for the output
-        if v_index < 0 or v_index >= n_bins:
+        # If it's below 0, it's in the underflow. If it's >= to the number of new bins,
+        # it's in the overflow. In either case, we ignore them.
+        if v_index < 0 or v_index >= n_bins_new_axis:
             continue
-        # Sum up all of the values that are supposed to go into the same bin
-        output[v_index] = np.sum(values[run_start:run_start+run_length])
+        # Sum up all of the values where the new binning index is the same. All
+        # of those values are supposed to go into the same bin
+        output[v_index] = np.sum(values[run_start:run_start + run_length])
 
     return output
