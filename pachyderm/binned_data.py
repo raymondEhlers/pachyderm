@@ -1050,48 +1050,53 @@ def _apply_rebin(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np
     Returns:
         The values mapping into the new binning.
     """
-    try:
-        import numba
-    except ImportError:
-        numba = None
+    # Our strategy here is to sum run_length values from run_start. This makes indexing
+    # and keeping track of each current sum much easier.
 
-    if numba is not None:
-        f = numba.njit(_apply_rebin_implementation)
-        return f(old_to_new_index=old_to_new_index, values=values, n_bins_new_axis=n_bins_new_axis)  # type: ignore
+    # First, find run lengths
+    # From: https://stackoverflow.com/a/58540073/12907985
+    loc_run_start = np.empty(len(old_to_new_index), dtype=np.bool_)
+    loc_run_start[0] = True
+    np.not_equal(old_to_new_index[:-1], old_to_new_index[1:], out=loc_run_start[1:])
+    run_starts = np.nonzero(loc_run_start)[0]
+    run_values = old_to_new_index[loc_run_start]
+    run_lengths = np.diff(np.append(run_starts, len(old_to_new_index)))  # type: ignore
 
-    return _apply_rebin_implementation(old_to_new_index=old_to_new_index, values=values, n_bins_new_axis=n_bins_new_axis)
+    # Only use numba if available
+    if _sum_values_for_rebin_numba is not None:
+        f = _sum_values_for_rebin_numba
+    else:
+        f = _sum_values_for_rebin
+    return f(n_bins_new_axis=n_bins_new_axis, values=values,
+             run_starts=run_starts, run_values=run_values, run_lengths=run_lengths)
 
 
-def _apply_rebin_implementation(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np.float64], n_bins_new_axis: int) -> npt.NDArray[np.float64]:
-    """Apply rebinning to a set of values based on how the indices should be mapped.
+def _sum_values_for_rebin(n_bins_new_axis: int,
+                          values: npt.NDArray[np.float64],
+                          run_starts: npt.NDArray[np.float64],
+                          run_values: npt.NDArray[np.float64],
+                          run_lengths: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """Implementation of summing up values for the rebinning
+
+    This translates the values from the old binning to the new binning.
 
     Note:
         This is kept as a separate function so we can potentially use it with numba. See inteface
         function `_apply_rebin`.
 
     Args:
-        old_to_new_index: Array containing the mapping from the old bins to the new bins.
-            Note that the map is implicit - it's from the index of the position in old_to_new_index
-            to the index in the new binning (ie. the values are the bins in the new binning)
-        values: Values in the old binning to rebin into the new binning.
         n_bins_new_axis: Number of bins in the output array (ie. in the new binning).
+        values: Values in the old binning to rebin into the new binning.
+        run_starts: The start of each run in the old binning.
+        run_values: The index in the new binning where the run starts.
+        run_lengths: The length of each run in the old binning.
+
     Returns:
-        The values mapping into the new binning.
+        The values mapped into the new binning.
     """
+
     # Setup
-    output = np.zeros(n_bins_new_axis)
-
-    # Our strategy here is to sum run_length values from run_start. This makes indexing
-    # and keeping track of each current sum much easier.
-
-    # First, find run lengths
-    # From: https://stackoverflow.com/a/58540073/12907985
-    loc_run_start = np.empty(len(old_to_new_index), dtype=bool)
-    loc_run_start[0] = True
-    np.not_equal(old_to_new_index[:-1], old_to_new_index[1:], out=loc_run_start[1:])
-    run_starts = np.nonzero(loc_run_start)[0]
-    run_values = old_to_new_index[loc_run_start]
-    run_lengths = np.diff(np.append(run_starts, len(old_to_new_index)))  # type: ignore
+    output = np.zeros(n_bins_new_axis, dtype=values.dtype)
 
     # For each run length that is a valid
     for run_start, v_index, run_length in zip(run_starts, run_values, run_lengths):
@@ -1105,3 +1110,14 @@ def _apply_rebin_implementation(old_to_new_index: npt.NDArray[np.int64], values:
         output[v_index] = np.sum(values[run_start:run_start + run_length])
 
     return output
+
+
+# Attempt to compile this function using numba if numba is available
+_sum_values_for_rebin_numba = None
+try:
+    import numba
+except ImportError:
+    numba = None
+
+if numba is not None:
+    _sum_values_for_rebin_numba = numba.njit(_sum_values_for_rebin)
