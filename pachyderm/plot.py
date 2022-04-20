@@ -374,10 +374,14 @@ class AxisConfig:
     log: bool = attr.ib(default=False)
     range: Tuple[Optional[float], Optional[float]] = attr.ib(default=None)
     font_size: Optional[float] = attr.ib(default=None)
+    tick_font_size: Optional[float] = attr.ib(default=None)
 
     def apply(self, ax: matplotlib.axes.Axes) -> None:
         if self.label:
             getattr(ax, f"set_{self.axis}label")(self.label, fontsize=self.font_size)
+            # Set the tick font size too
+            tick_font_size = self.tick_font_size if self.tick_font_size else self.font_size
+            ax.tick_params(axis=self.axis, which="major", labelsize=tick_font_size)
         if self.log:
             getattr(ax, f"set_{self.axis}scale")("log")
             # Probably need to increase the number of ticks for a log axis. We just assume that's the case.
