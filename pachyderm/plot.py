@@ -465,6 +465,8 @@ class LegendConfig:
     font_size: Optional[float] = attr.ib(default=None)
     ncol: Optional[float] = attr.ib(default=1)
     marker_label_spacing: Optional[float] = attr.ib(default=None)
+    # NOTE: Default in mpl is 0.5
+    label_spacing: Optional[float] = attr.ib(default=None)
 
     def apply(
         self,
@@ -490,6 +492,7 @@ class LegendConfig:
                 fontsize=self.font_size,
                 ncol=self.ncol,
                 handletextpad=self.marker_label_spacing,
+                labelspacing=self.label_spacing,
                 **kwargs,
             )
 
