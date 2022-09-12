@@ -27,36 +27,36 @@ downloadALICERunByRun = "pachyderm.alice.download:run_download_run_by_run_train_
 
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
-attrs = "^21.2.0"
+attrs = ">=21.2.0"
 numpy = ">=1.21"
-scipy = "^1.7.0"
-matplotlib = "^3.3.2"
-iminuit = "^2.7.0"
-numdifftools = "^0.9.40"
-"ruamel.yaml" = "^0.17.10"
+scipy = ">=1.7.0"
+matplotlib = ">=3.3.2"
+iminuit = ">=2.7.0"
+numdifftools = ">=0.9.40"
+"ruamel.yaml" = ">=0.17.10"
 # These are the docs requirements. Ideally, I would put them into the dev docs.
 # However, pep517 won't install the dev dependencies.
 # So we move it here to enable building the docs, even though it's a bit of a waste...
-Sphinx = "^4.0.3"
-recommonmark = "^0.7.1"
-sphinx-markdown-tables = {version = "^0.0.15", optional = true}
-importlib-metadata = "^4.6.1"
+Sphinx = ">=4.0.3"
+recommonmark = ">=0.7.1"
+sphinx-markdown-tables = {version = ">=0.0.15", optional = true}
+importlib-metadata = ">=4.6.1"
 
 [tool.poetry.extras]
 docs = ["Sphinx", "recommonmark", "sphinx-markdown-tables", "importlib-metadata"]
 
 [tool.poetry.group.dev.dependencies]
 uproot = ">=4"
-pre-commit = "^2.13.0"
-flake8 = "^3.9.2"
-flake8-colors = "^0.1.6"
+pre-commit = ">=2.13.0"
+flake8 = ">=3.9.2"
+flake8-colors = ">=0.1.6"
 mypy = ">=0.931"
 isort = {extras = ["toml"], version = "^5.6.4"}
-pytest = "^6.2.4"
-pytest-cov = "^2.12.1"
-pytest-mock = "^3.6.1"
-codecov = "^2.1.11"
-boost-histogram = "^1.2.1"
+pytest = ">=6.2.4"
+pytest-cov = ">=2.12.1"
+pytest-mock = ">=3.6.1"
+codecov = ">=2.1.11"
+boost-histogram = ">=1.2.1"
 black = ">=22.1.0"
 
 [tool.isort]
