@@ -65,7 +65,7 @@ def test_hist_axis_range(logging_mixin, create_hist_axis_range):
 @pytest.mark.parametrize("hist_to_test", range(0, 3), ids = ["1D", "2D", "3D"])
 def test_TH1Axis_determination(logging_mixin, create_hist_axis_range, axis_type, axis, hist_to_test, test_root_hists):
     """ Test TH1 axis determination in the HistAxisRange object. """
-    import ROOT
+    ROOT = pytest.importorskip("ROOT")
     axis_map = {
         "x_axis": ROOT.TH1.GetXaxis,
         "y_axis": ROOT.TH1.GetYaxis,
@@ -138,7 +138,7 @@ class TestsForHistAxisRange():
             This implicity tests apply_func_to_find_bin, which is fine given how often the two are used
             together (almost always).
         """
-        import ROOT
+        ROOT = pytest.importorskip("ROOT")
 
         # Setup functions
         function_map = {
@@ -177,7 +177,7 @@ class TestsForHistAxisRange():
 
     def test_disagreement_with_set_range_user(self, logging_mixin, test_sparse):
         """ Test the disagreement between SetRange and SetRangeUser when the epsilon shift is not included. """
-        import ROOT
+        ROOT = pytest.importorskip("ROOT")
 
         # Setup values
         selected_axis = SparseAxisLabels.axis_two
@@ -216,7 +216,7 @@ class TestsForHistAxisRange():
     ], ids = ["Only value", "Func only", "Func with value"])
     def test_retrieve_axis_value(self, logging_mixin, func, value, expected, test_sparse):
         """ Test retrieving axis values using apply_func_to_find_bin(). """
-        import ROOT
+        ROOT = pytest.importorskip("ROOT")
 
         # Setup functions
         function_map = {
@@ -261,7 +261,7 @@ def setup_hist_axis_range(hist_range: projectors.HistAxisRange) -> projectors.Hi
     """
     # Often, ROOT should be imported before this function is called, but we call it here just in case.
     # Plus, this allows us to be lazy in importing ROOT in the calling functions.
-    import ROOT
+    ROOT = pytest.importorskip("ROOT")
 
     # We don't want to modify the original objects, since we need them to be preserved for other tests.
     hist_range = copy.copy(hist_range)
@@ -404,7 +404,7 @@ class TestProjectorsWithRoot():
     ], ids = ["Dict observable input", "Single observable input"])
     def test_projectors(self, logging_mixin, single_observable, test_root_hists):
         """ Test creation and basic methods of the projection class. """
-        import ROOT  # noqa: F401
+        ROOT = pytest.importorskip("ROOT")  # noqa: F401
 
         # Args
         projection_name_format = "{test} world"
@@ -483,7 +483,7 @@ class TestProjectorsWithRoot():
                             use_PDCA, additional_cuts, expected_additional_cuts,
                             projection_axes, expected_projection_axes):
         """ Test projection of a TH2 to a TH1. """
-        import ROOT  # noqa: F401
+        ROOT = pytest.importorskip("ROOT")  # noqa: F401
 
         # Setup hist ranges
         if additional_cuts:
@@ -582,7 +582,7 @@ class TestProjectorsWithRoot():
                                    projection_dependent_cut_axes, expected_projection_dependent_cut_axes,
                                    projection_axes, expected_projection_axes):
         """ Test projection from a TH3 to a TH1 derived class. """
-        import ROOT  # noqa: F401
+        ROOT = pytest.importorskip("ROOT")  # noqa: F401
 
         # Setup hist ranges
         if additional_axis_cuts:
@@ -680,7 +680,7 @@ class TestProjectorsWithRoot():
                                    use_PDCA, additional_cuts, expected_additional_cuts,
                                    projection_axes, expected_projection_axes):
         """ Test projection of a TH3 into a TH2. """
-        import ROOT  # noqa: F401
+        ROOT = pytest.importorskip("ROOT")  # noqa: F401
 
         # Setup hist ranges
         if additional_cuts:
@@ -756,7 +756,7 @@ class TestProjectorsWithRoot():
     ], ids = ["Same range PDCA", "Different range PDCA"])
     def test_invalid_PDCA_axis(logging_mixin, test_root_hists, PDCA_axis):
         """ Test catching a PDCA on the same axis as the projection axis. """
-        import ROOT  # noqa: F401
+        ROOT = pytest.importorskip("ROOT")  # noqa: F401
 
         # Setup projector
         output_observable = {}
@@ -871,7 +871,7 @@ class TestsForTHnSparseProjection():
                             projection_dependent_cut_axes, expected_projection_dependent_cut_axes_counts,
                             projection_axes, expected_projection_axes_counts):
         """ Test projection of a THnSparse into a TH1. """
-        import ROOT  # noqa: F401
+        ROOT = pytest.importorskip("ROOT")  # noqa: F401
 
         # Setup hist ranges
         if additional_axis_cuts:

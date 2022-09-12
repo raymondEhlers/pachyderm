@@ -20,7 +20,7 @@ def test_root_hists() -> Any:
     Returns:
         tuple: (TH1F, TH2F, TH3F) for testing
     """
-    import ROOT
+    ROOT = pytest.importorskip("ROOT")
 
     @dataclass
     class RootHists:
@@ -51,7 +51,7 @@ def setup_non_uniform_binning() -> Any:
     Returns:
         1D histogram with non-uniform binning.
     """
-    import ROOT
+    ROOT = pytest.importorskip("ROOT")
 
     binning = np.array([0, 1, 2, 4, 5, 6], dtype = np.float64)
     hist = ROOT.TH1F("test", "test", 5, binning)
@@ -70,7 +70,7 @@ def test_sparse() -> Any:
     Returns:
         tuple: (THnSparseF, fill_value) for testing.
     """
-    import ROOT
+    ROOT = pytest.importorskip("ROOT")
 
     @dataclass
     class SparseAxis:

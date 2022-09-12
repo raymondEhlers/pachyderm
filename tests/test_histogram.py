@@ -42,7 +42,7 @@ def retrieve_root_list(test_root_hists: Any) -> Iterator[Tuple[str, Any, Any]]:
                                            ('test', Hist('test_3'))]))])}
     ```
     """
-    import ROOT
+    ROOT = pytest.importorskip("ROOT")
 
     # Create values for the test
     # We only use 1D hists so we can do the comparison effectively.
@@ -107,6 +107,7 @@ def retrieve_root_list(test_root_hists: Any) -> Iterator[Tuple[str, Any, Any]]:
 class TestOpenRootFile:
     def test_open_file(self, logging_mixin: Any, retrieve_root_list: Any) -> None:
         """ Test for context manager for opening ROOT files. """
+        ROOT = pytest.importorskip("ROOT")  # noqa: F401
         filename, root_list, expected = retrieve_root_list
 
         output: Dict[str, Any] = {}
@@ -136,6 +137,8 @@ class TestOpenRootFile:
 
     def test_failing_to_open_file(self, logging_mixin: Any) -> None:
         """ Test for raising the proper exception for a file that doesn't exist. """
+        ROOT = pytest.importorskip("ROOT")  # noqa: F401
+
         fake_filename = "fake_filename.root"
         with pytest.raises(IOError) as exception_info:
             with histogram.RootOpen(filename=fake_filename):
@@ -248,7 +251,7 @@ def setup_histogram_conversion() -> Tuple[str, str, histogram.Histogram1D]:
     if not os.path.exists(filename):
         # Need to create the initial histogram.
         # This shouldn't happen very often, as the file is stored in the repository.
-        import ROOT
+        ROOT = pytest.importorskip("ROOT")
 
         root_hist = ROOT.TH1F(hist_name, hist_name, 10, 0, 10)
         root_hist.Fill(3, 2)
@@ -296,7 +299,7 @@ def test_ROOT_hist_to_histogram(setup_histogram_conversion: Any) -> None:
     filename, hist_name, expected = setup_histogram_conversion
 
     # Setup and read histogram
-    import ROOT
+    ROOT = pytest.importorskip("ROOT")
 
     fIn = ROOT.TFile(filename, "READ")
     input_hist = fIn.Get(hist_name)
@@ -486,7 +489,7 @@ class TestWithRootHists:
         The errors are retrieved differently than for a TH1.
         """
         # Setup
-        import ROOT
+        ROOT = pytest.importorskip("ROOT")
 
         profile = ROOT.TProfile("test", "test", 10, 0, 100)
         for x in range(1000):
@@ -677,7 +680,7 @@ class HistInfo:
         This isn't very robust, which is why I'm not including it in ``Histogram1D``. However,
         something simple is sufficient for our purposes here.
         """
-        import ROOT
+        ROOT = pytest.importorskip("ROOT")
 
         hist = ROOT.TH1F("tempHist", "tempHist", len(bin_edges) - 1, bin_edges.astype(float))
         hist.Sumw2()
@@ -1090,7 +1093,7 @@ class TestIntegrateHistogram1D:
         """
         # Setup
         min_arg, max_arg, using_values = request.param
-        import ROOT
+        ROOT = pytest.importorskip("ROOT")
 
         bins = np.array([1, 2, 3, 4, 6], dtype=np.float64)
         values = np.array([5, 6, 7, 8])

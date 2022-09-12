@@ -71,7 +71,7 @@ def test_outliers_determination_from_moving_average(logging_mixin, moving_averag
 
 @pytest.fixture(params = ["2D", "3D"])
 def setup_outliers_hist(request, logging_mixin):
-    import ROOT
+    ROOT = pytest.importorskip("ROOT")
 
     # Setup
     hist3D = False
