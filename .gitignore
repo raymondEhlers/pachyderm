@@ -25,6 +25,7 @@ htmlcov/
 .py*/
 .pachyderm/
 env/
+.venv/
 .python-version
 
 # Ignore filetypes
