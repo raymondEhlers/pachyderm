@@ -267,11 +267,10 @@ class Axis:
         # Finally, we have the bin edges and we can construct the axis
         return type(self)(bin_edges=bin_edges)
 
-    # TODO: Serialize more carefully...
     @classmethod
     def to_yaml(
         cls: Type["Axis"], representer: ruamel.yaml.representer.BaseRepresenter, obj: "Axis"
-    ) -> ruamel.yaml.nodes.SequenceNode:
+    ) -> ruamel.yaml.nodes.MappingNode:
         """Encode YAML representation.
 
         For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
@@ -283,12 +282,11 @@ class Axis:
             YAML representation of the Axis object.
         """
         logger.info("==>to_yaml Axis")
-        #representation = representer.represent_sequence(f"!{cls.__name__}", obj.bin_edges)
-        representation = representer.represent_mapping(f"!{cls.__name__}", {"bin_edges": obj.bin_edges})
+        representation = representer.represent_mapping(f"!{cls.__name__}", {"bin_edges": obj.bin_edges, "serialization_version": 1})
 
         # Finally, return the represented object.
         return cast(
-            ruamel.yaml.nodes.SequenceNode,
+            ruamel.yaml.nodes.MappingNode,
             representation,
         )
 
@@ -297,24 +295,28 @@ class Axis:
         cls: Type["Axis"],
         constructor: ruamel.yaml.constructor.BaseConstructor,
         data: ruamel.yaml.nodes.MappingNode,
-    ) -> "AxesTuple":
+    ) -> "Axis":
         """Decode YAML representation.
 
         For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
 
         Args:
             constructor: Constructor from the YAML object.
-            data: YAML sequence node representing the AxesTuple object.
+            data: YAML mapping node representing the Axis object.
         Returns:
             The AxesTuple object constructed from the YAML specified values.
         """
         logger.info("==>from_yaml Axis")
         logger.info(type(data))
         logger.info(f"{data=}")
-        #kwargs = constructor.construct_mapping(data, maptyp=dict)
         kwargs = {constructor.construct_object(k): constructor.construct_object(v) for k, v in data.value}
-        logger.info(f"{kwargs=}")
-        return cls(**kwargs)
+        #logger.info(f"{kwargs=}")
+        serialization_version = kwargs.pop("serialization_version", None)
+        # Specialize for each version
+        if serialization_version == 1:
+            return cls(**kwargs)
+        else:
+            raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
         #axes = []
         #axes_kwargs = []
         #logger.info(f"{data=}")
@@ -378,10 +380,12 @@ class AxesTuple(Tuple[Axis, ...]):
     @classmethod
     def to_yaml(
         cls: Type["AxesTuple"], representer: ruamel.yaml.representer.BaseRepresenter, obj: "AxesTuple"
-    ) -> ruamel.yaml.nodes.SequenceNode:
+    ) -> ruamel.yaml.nodes.MappingNode:
         """Encode YAML representation.
 
         For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
+
+        We encode a mapping with the tuple stored in a sequence, as well as the serialization version.
 
         Args:
             representer: Representation from YAML.
@@ -390,11 +394,18 @@ class AxesTuple(Tuple[Axis, ...]):
             YAML representation of the AxesTuple object.
         """
         logger.info("==>to_yaml AxesTuple")
-        representation = representer.represent_sequence(f"!{cls.__name__}", obj)
+        representation = representer.represent_mapping(
+            f"!{cls.__name__}",
+            {
+                "obj": representer.represent_sequence("tag:yaml.org,2002:seq", obj),
+                "obj": obj,
+                "serialization_version": 1
+            }
+        )
 
         # Finally, return the represented object.
         return cast(
-            ruamel.yaml.nodes.SequenceNode,
+            ruamel.yaml.nodes.MappingNode,
             representation,
         )
 
@@ -402,7 +413,7 @@ class AxesTuple(Tuple[Axis, ...]):
     def from_yaml(
         cls: Type["AxesTuple"],
         constructor: ruamel.yaml.constructor.BaseConstructor,
-        data: ruamel.yaml.nodes.SequenceNode,
+        data: ruamel.yaml.nodes.MappingNode,
     ) -> "AxesTuple":
         """Decode YAML representation.
 
@@ -410,36 +421,53 @@ class AxesTuple(Tuple[Axis, ...]):
 
         Args:
             constructor: Constructor from the YAML object.
-            node: YAML sequence node representing the AxesTuple object.
+            node: YAML mapping node representing the AxesTuple object.
         Returns:
             The AxesTuple object constructed from the YAML specified values.
         """
         logger.info("==>from_yaml AxesTuple")
         logger.info(f"{data=}")
+        stored_mapping = {constructor.construct_object(k): v for k, v in data.value}
+        serialization_version_node = stored_mapping.pop("serialization_version", None)
+        if serialization_version_node:
+            serialization_version = constructor.construct_object(serialization_version_node)
+        else:
+            raise ValueError(f"Unable to retrieve serialization version for {cls.__name__}")
+        # Specialize for each version
         axes = []
-        axes_kwargs = []
-        for i_axis, axis_data in enumerate(data.value):
-            axes.append(constructor.construct_object(axis_data))
-        logger.info(f"{axes=}")
+        if serialization_version == 1:
+            # Extract relevant values
+            stored_obj_data = stored_mapping["obj"]
+            for axis_data in stored_obj_data.value:
+                axes.append(constructor.construct_object(axis_data))
+            return cls(axes)
+        else:
+            raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
+
+        #axes = []
+        #axes_kwargs = []
         #for i_axis, axis_data in enumerate(data.value):
-        #    logger.info(f"{axis_data=}")
-        #    for k_node, v_node in axis_data.value:
-        #        k = constructor.construct_object(k_node)
-        #        # Skip _bin_centers, which is only cached
-        #        if k != "bin_edges":
-        #            continue
-        #        v = constructor.construct_object(v_node)
-        #        axes_kwargs.append({k: v})
-        #        logger.info(f"{k=}, {v=}")
-        #for i, n in enumerate(data.value[0].value):
-        #    logger.info(f"{i}: {n=}, {type(n)}")
-        logger.info(f"{axes_kwargs=}")
-        #values = [constructor.construct_object(n) for n in data.value]
-        #logger.info(f"{[type(v) for v in values]}")
-        #logger.info(f"{values=}")
-        #return cls([Axis(**kwargs) for kwargs in axes_kwargs])
-        #return cls(values)
-        return cls(axes)
+        #    axes.append(constructor.construct_object(axis_data))
+        #logger.info(f"{axes=}")
+        ##for i_axis, axis_data in enumerate(data.value):
+        ##    logger.info(f"{axis_data=}")
+        ##    for k_node, v_node in axis_data.value:
+        ##        k = constructor.construct_object(k_node)
+        ##        # Skip _bin_centers, which is only cached
+        ##        if k != "bin_edges":
+        ##            continue
+        ##        v = constructor.construct_object(v_node)
+        ##        axes_kwargs.append({k: v})
+        ##        logger.info(f"{k=}, {v=}")
+        ##for i, n in enumerate(data.value[0].value):
+        ##    logger.info(f"{i}: {n=}, {type(n)}")
+        #logger.info(f"{axes_kwargs=}")
+        ##values = [constructor.construct_object(n) for n in data.value]
+        ##logger.info(f"{[type(v) for v in values]}")
+        ##logger.info(f"{values=}")
+        ##return cls([Axis(**kwargs) for kwargs in axes_kwargs])
+        ##return cls(values)
+        #return cls(axes)
 
 
 def _axes_tuple_from_axes_sequence(
