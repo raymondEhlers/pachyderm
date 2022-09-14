@@ -17,6 +17,7 @@ from functools import reduce
 from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
 
 import attr
+import attrs
 import numpy as np
 import numpy.typing as npt
 import ruamel.yaml
@@ -50,8 +51,16 @@ def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
         The converted numpy array.
     """
     # Check for self
-    if isinstance(value, Axis):
+    if isinstance(value, Axis) and hasattr(value, "bin_edges"):
+        logger.info("In if statement")
+        logger.info(type(value))
+        #logger.info(vars(value))
+        #logger.info(dir(value))
         value = value.bin_edges
+    logger.info("After if statement")
+    logger.info(type(value))
+    #logger.info(vars(value))
+    logger.info(dir(value))
     # Ravel to ensure that we have a standard 1D array.
     # We specify the dtype here just to be safe.
     return np.ravel(np.array(value, dtype=np.float64))
@@ -104,9 +113,11 @@ def _expand_slice_start_and_stop(axis: Axis, selection: slice) -> Tuple[Optional
     return start, stop
 
 
-@attr.s(eq=False)
+@attrs.define(eq=False)
 class Axis:
-    bin_edges: npt.NDArray[Any] = attr.ib(converter=_axis_bin_edges_converter)
+    bin_edges: npt.NDArray[Any] = attrs.field(converter=_axis_bin_edges_converter)
+    # Only for caching
+    _bin_centers: npt.NDArray[Any] = attrs.field(init=False)
 
     def __len__(self) -> int:
         """The number of bins."""
@@ -257,6 +268,71 @@ class Axis:
         return type(self)(bin_edges=bin_edges)
 
     # TODO: Serialize more carefully...
+    @classmethod
+    def to_yaml(
+        cls: Type["Axis"], representer: ruamel.yaml.representer.BaseRepresenter, obj: "Axis"
+    ) -> ruamel.yaml.nodes.SequenceNode:
+        """Encode YAML representation.
+
+        For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
+
+        Args:
+            representer: Representation from YAML.
+            obj: Axis to be converted to YAML.
+        Returns:
+            YAML representation of the Axis object.
+        """
+        logger.info("==>to_yaml Axis")
+        #representation = representer.represent_sequence(f"!{cls.__name__}", obj.bin_edges)
+        representation = representer.represent_mapping(f"!{cls.__name__}", {"bin_edges": obj.bin_edges})
+
+        # Finally, return the represented object.
+        return cast(
+            ruamel.yaml.nodes.SequenceNode,
+            representation,
+        )
+
+    @classmethod
+    def from_yaml(
+        cls: Type["Axis"],
+        constructor: ruamel.yaml.constructor.BaseConstructor,
+        data: ruamel.yaml.nodes.MappingNode,
+    ) -> "AxesTuple":
+        """Decode YAML representation.
+
+        For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
+
+        Args:
+            constructor: Constructor from the YAML object.
+            data: YAML sequence node representing the AxesTuple object.
+        Returns:
+            The AxesTuple object constructed from the YAML specified values.
+        """
+        logger.info("==>from_yaml Axis")
+        logger.info(type(data))
+        logger.info(f"{data=}")
+        #kwargs = constructor.construct_mapping(data, maptyp=dict)
+        kwargs = {constructor.construct_object(k): constructor.construct_object(v) for k, v in data.value}
+        logger.info(f"{kwargs=}")
+        return cls(**kwargs)
+        #axes = []
+        #axes_kwargs = []
+        #logger.info(f"{data=}")
+        #for i_axis, axis_data in enumerate(data.value):
+        #    axis = constructor.construct_object(axis_data)
+        #    #for k_node, v_node in axis_data.value:
+        #        #k = constructor.construct_object(k_node)
+        #        #v = constructor.construct_object(v_node)
+        #        #axes_kwargs.append({k: v})
+        #        #logger.info(f"{k=}, {v=}")
+        ##for i, n in enumerate(data.value[0].value):
+        ##    logger.info(f"{i}: {n=}, {type(n)}")
+        #logger.info(f"{axes_kwargs=}")
+        ##values = [constructor.construct_object(n) for n in data.value]
+        ##logger.info(f"{[type(v) for v in values]}")
+        ##logger.info(f"{values=}")
+        #return cls([Axis(**kwargs) for kwargs in axes_kwargs])
+        ##return cls(values)
 
 
 class AxesTuple(Tuple[Axis, ...]):
@@ -313,6 +389,7 @@ class AxesTuple(Tuple[Axis, ...]):
         Returns:
             YAML representation of the AxesTuple object.
         """
+        logger.info("==>to_yaml AxesTuple")
         representation = representer.represent_sequence(f"!{cls.__name__}", obj)
 
         # Finally, return the represented object.
@@ -337,8 +414,32 @@ class AxesTuple(Tuple[Axis, ...]):
         Returns:
             The AxesTuple object constructed from the YAML specified values.
         """
-        values = [constructor.construct_object(n) for n in data.value]
-        return cls(values)
+        logger.info("==>from_yaml AxesTuple")
+        logger.info(f"{data=}")
+        axes = []
+        axes_kwargs = []
+        for i_axis, axis_data in enumerate(data.value):
+            axes.append(constructor.construct_object(axis_data))
+        logger.info(f"{axes=}")
+        #for i_axis, axis_data in enumerate(data.value):
+        #    logger.info(f"{axis_data=}")
+        #    for k_node, v_node in axis_data.value:
+        #        k = constructor.construct_object(k_node)
+        #        # Skip _bin_centers, which is only cached
+        #        if k != "bin_edges":
+        #            continue
+        #        v = constructor.construct_object(v_node)
+        #        axes_kwargs.append({k: v})
+        #        logger.info(f"{k=}, {v=}")
+        #for i, n in enumerate(data.value[0].value):
+        #    logger.info(f"{i}: {n=}, {type(n)}")
+        logger.info(f"{axes_kwargs=}")
+        #values = [constructor.construct_object(n) for n in data.value]
+        #logger.info(f"{[type(v) for v in values]}")
+        #logger.info(f"{values=}")
+        #return cls([Axis(**kwargs) for kwargs in axes_kwargs])
+        #return cls(values)
+        return cls(axes)
 
 
 def _axes_tuple_from_axes_sequence(
