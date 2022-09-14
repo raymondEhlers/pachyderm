@@ -51,16 +51,8 @@ def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
         The converted numpy array.
     """
     # Check for self
-    if isinstance(value, Axis) and hasattr(value, "bin_edges"):
-        logger.info("In if statement")
-        logger.info(type(value))
-        #logger.info(vars(value))
-        #logger.info(dir(value))
+    if isinstance(value, Axis):
         value = value.bin_edges
-    logger.info("After if statement")
-    logger.info(type(value))
-    #logger.info(vars(value))
-    logger.info(dir(value))
     # Ravel to ensure that we have a standard 1D array.
     # We specify the dtype here just to be safe.
     return np.ravel(np.array(value, dtype=np.float64))
@@ -281,7 +273,7 @@ class Axis:
         Returns:
             YAML representation of the Axis object.
         """
-        logger.info("==>to_yaml Axis")
+        # We want to include a serialization version so we can do a schema evolution later if necessary
         representation = representer.represent_mapping(f"!{cls.__name__}", {"bin_edges": obj.bin_edges, "serialization_version": 1})
 
         # Finally, return the represented object.
@@ -304,37 +296,15 @@ class Axis:
             constructor: Constructor from the YAML object.
             data: YAML mapping node representing the Axis object.
         Returns:
-            The AxesTuple object constructed from the YAML specified values.
+            The Axis object constructed from the YAML specified values.
         """
-        logger.info("==>from_yaml Axis")
-        logger.info(type(data))
-        logger.info(f"{data=}")
         kwargs = {constructor.construct_object(k): constructor.construct_object(v) for k, v in data.value}
-        #logger.info(f"{kwargs=}")
         serialization_version = kwargs.pop("serialization_version", None)
         # Specialize for each version
         if serialization_version == 1:
             return cls(**kwargs)
         else:
             raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
-        #axes = []
-        #axes_kwargs = []
-        #logger.info(f"{data=}")
-        #for i_axis, axis_data in enumerate(data.value):
-        #    axis = constructor.construct_object(axis_data)
-        #    #for k_node, v_node in axis_data.value:
-        #        #k = constructor.construct_object(k_node)
-        #        #v = constructor.construct_object(v_node)
-        #        #axes_kwargs.append({k: v})
-        #        #logger.info(f"{k=}, {v=}")
-        ##for i, n in enumerate(data.value[0].value):
-        ##    logger.info(f"{i}: {n=}, {type(n)}")
-        #logger.info(f"{axes_kwargs=}")
-        ##values = [constructor.construct_object(n) for n in data.value]
-        ##logger.info(f"{[type(v) for v in values]}")
-        ##logger.info(f"{values=}")
-        #return cls([Axis(**kwargs) for kwargs in axes_kwargs])
-        ##return cls(values)
 
 
 class AxesTuple(Tuple[Axis, ...]):
@@ -424,14 +394,16 @@ class AxesTuple(Tuple[Axis, ...]):
         Returns:
             The AxesTuple object constructed from the YAML specified values.
         """
-        logger.info("==>from_yaml AxesTuple")
-        logger.info(f"{data=}")
+        # Setup
         stored_mapping = {constructor.construct_object(k): v for k, v in data.value}
         serialization_version_node = stored_mapping.pop("serialization_version", None)
+
+        # Validation + construction
         if serialization_version_node:
             serialization_version = constructor.construct_object(serialization_version_node)
         else:
             raise ValueError(f"Unable to retrieve serialization version for {cls.__name__}")
+
         # Specialize for each version
         axes = []
         if serialization_version == 1:
@@ -442,31 +414,6 @@ class AxesTuple(Tuple[Axis, ...]):
             return cls(axes)
         else:
             raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
-
-        #axes = []
-        #axes_kwargs = []
-        #for i_axis, axis_data in enumerate(data.value):
-        #    axes.append(constructor.construct_object(axis_data))
-        #logger.info(f"{axes=}")
-        ##for i_axis, axis_data in enumerate(data.value):
-        ##    logger.info(f"{axis_data=}")
-        ##    for k_node, v_node in axis_data.value:
-        ##        k = constructor.construct_object(k_node)
-        ##        # Skip _bin_centers, which is only cached
-        ##        if k != "bin_edges":
-        ##            continue
-        ##        v = constructor.construct_object(v_node)
-        ##        axes_kwargs.append({k: v})
-        ##        logger.info(f"{k=}, {v=}")
-        ##for i, n in enumerate(data.value[0].value):
-        ##    logger.info(f"{i}: {n=}, {type(n)}")
-        #logger.info(f"{axes_kwargs=}")
-        ##values = [constructor.construct_object(n) for n in data.value]
-        ##logger.info(f"{[type(v) for v in values]}")
-        ##logger.info(f"{values=}")
-        ##return cls([Axis(**kwargs) for kwargs in axes_kwargs])
-        ##return cls(values)
-        #return cls(axes)
 
 
 def _axes_tuple_from_axes_sequence(
