@@ -393,12 +393,11 @@ class AxesTuple(Tuple[Axis, ...]):
         Returns:
             YAML representation of the AxesTuple object.
         """
-        logger.info("==>to_yaml AxesTuple")
+        # We want to include a serialization version so we can do a schema evolution later if necessary
         representation = representer.represent_mapping(
             f"!{cls.__name__}",
             {
-                "obj": representer.represent_sequence("tag:yaml.org,2002:seq", obj),
-                "obj": obj,
+                "obj": list(obj),
                 "serialization_version": 1
             }
         )
