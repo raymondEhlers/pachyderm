@@ -62,16 +62,15 @@ def test_Histogram1D_with_yaml(logging_mixin: Any) -> None:
     assert input_hist == output_hist
 
 @pytest.mark.parametrize(
-    "axes, values",
+    "axes",
     [  # type: ignore
-        ([np.linspace(0, 10, 11)], np.linspace(2, 20, 10)),
-        ([np.linspace(0, 10, 11), np.linspace(0, 20, 21)], np.linspace(2, 20, 10)),
+        ([np.linspace(0, 10, 11)]),
+        ([np.linspace(0, 10, 11), np.linspace(0, 20, 21)]),
     ],
     ids=["1D", "2D"],
 )
 def test_binned_data_with_yaml(logging_mixin: Any,
                                axes: List[npt.NDArray[np.float64]],
-                               values: npt.NDArray[np.float64],
                                ) -> None:
     """ Test writing and then reading BinnedData via YAML.
 
@@ -82,22 +81,24 @@ def test_binned_data_with_yaml(logging_mixin: Any,
     y = yaml.yaml(modules_to_register = [binned_data])
     #y = yaml.yaml(classes_to_register = [binned_data.Axis, binned_data.AxesTuple, binned_data.BinnedData])
 
-    # Determine the values based on the input axes
+    # Determine the values based on the input axes for convenience.
     # By doing this, we can derive the test values and variances with the right shape, and we don't have to worry
-    # overly much about the exact values. We'll just multiply them be some factors (picking 2 arbitrarily) to ensure
-    # that they're not identical (which might cause us to miss a serialization issue)
-    # NOTE: Remember that this needs to be calculated with bin centers, not bin_edges!
-    #       Let's just use AxesTuples to help
+    # overly much about the exact values, nor how we would generate them correctly.
+    # NOTE: Remember that this needs to be calculated with bin centers, not bin edges! In the spirit of integration tests,
+    #       we can use AxesTuples to help
     bin_centers = binned_data.AxesTuple([binned_data.Axis(v) for v in axes]).bin_centers
-    logger.info(f"{bin_centers=}")
+    # Specifies an array with a value across each point. As of September 2922, I don't fully understand the return values here,
+    # but they give me the desired shape and the values vary, which is enough.
     mesh_grids = np.meshgrid(*bin_centers)
-    logger.info(f"{mesh_grids[0].T * 2=}")
+
     # Test hist
     logger.info((mesh_grids[0].T * 2).size)
     logger.info(mesh_grids[0].T * 2)
     input_hist = binned_data.BinnedData(
         # Trick with the axes just to test directly passing a numpy array as well as a list
         axes=axes if len(axes) > 0 else axes[0],
+        # We'll just multiply them be some factors (picking 2 arbitrarily) to ensure that they're not identical
+        # (which might cause us to miss a serialization issue if it was uniform).
         values=mesh_grids[0].T * 2,
         variances=(mesh_grids[0].T * 2) ** 2,
     )
