@@ -6,9 +6,10 @@
 
 import logging
 from io import StringIO
-from typing import Any
+from typing import Any, List
 
 import numpy as np
+import numpy.typing as npt
 import pytest  # noqa: F401
 
 from pachyderm import binned_data, histogram, yaml
@@ -60,7 +61,18 @@ def test_Histogram1D_with_yaml(logging_mixin: Any) -> None:
     # Check the result
     assert input_hist == output_hist
 
-def test_binned_data_with_yaml(logging_mixin: Any) -> None:
+@pytest.mark.parametrize(
+    "axes, values",
+    [  # type: ignore
+        ([np.linspace(0, 10, 11)], np.linspace(2, 20, 10)),
+        ([np.linspace(0, 10, 11), np.linspace(0, 20, 21)], np.linspace(2, 20, 10)),
+    ],
+    ids=["1D", "2D"],
+)
+def test_binned_data_with_yaml(logging_mixin: Any,
+                               axes: List[npt.NDArray[np.float64]],
+                               values: npt.NDArray[np.float64],
+                               ) -> None:
     """ Test writing and then reading BinnedData via YAML.
 
     This ensures that writing BinnedData can be done successfully.
@@ -69,10 +81,25 @@ def test_binned_data_with_yaml(logging_mixin: Any) -> None:
     # YAML object
     y = yaml.yaml(modules_to_register = [binned_data])
     #y = yaml.yaml(classes_to_register = [binned_data.Axis, binned_data.AxesTuple, binned_data.BinnedData])
+
+    # Determine the values based on the input axes
+    # By doing this, we can derive the test values and variances with the right shape, and we don't have to worry
+    # overly much about the exact values. We'll just multiply them be some factors (picking 2 arbitrarily) to ensure
+    # that they're not identical (which might cause us to miss a serialization issue)
+    # NOTE: Remember that this needs to be calculated with bin centers, not bin_edges!
+    #       Let's just use AxesTuples to help
+    bin_centers = binned_data.AxesTuple([binned_data.Axis(v) for v in axes]).bin_centers
+    logger.info(f"{bin_centers=}")
+    mesh_grids = np.meshgrid(*bin_centers)
+    logger.info(f"{mesh_grids[0].T * 2=}")
     # Test hist
+    logger.info((mesh_grids[0].T * 2).size)
+    logger.info(mesh_grids[0].T * 2)
     input_hist = binned_data.BinnedData(
-        axes = np.linspace(0, 10, 11), values = np.linspace(2, 20, 10),
-        variances = np.linspace(2, 20, 10)
+        # Trick with the axes just to test directly passing a numpy array as well as a list
+        axes=axes if len(axes) > 0 else axes[0],
+        values=mesh_grids[0].T * 2,
+        variances=(mesh_grids[0].T * 2) ** 2,
     )
     # Access "bin_centers" since it is generated but then stored in the Axis class. This could disrupt YAML, so
     # we should explicitly test it.
@@ -83,3 +110,4 @@ def test_binned_data_with_yaml(logging_mixin: Any) -> None:
 
     # Check the result
     assert input_hist == output_hist
+
