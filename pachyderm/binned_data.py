@@ -437,12 +437,12 @@ def _axes_shared_memory_check(instance: "BinnedData", attribute: AxesTupleAttrib
     # Ensure the axes don't point to one another (which can cause issues when performing operations in place).
     found_shared_memory = False
     for a_i, b_i in itertools.combinations(range(len(value)), 2):
-        if np.may_share_memory(value[a_i].bin_edges, value[b_i].bin_edges):  # type: ignore
+        if np.may_share_memory(value[a_i].bin_edges, value[b_i].bin_edges):
             found_shared_memory = True
             logger.warning(
                 f"Axis at index {a_i} shares memory with axis at index {b_i}. Copying axis {a_i}!"
             )
-            value[a_i] = value[a_i].copy()
+            value[a_i] = value[a_i].copy()  # type: ignore
 
     # If we found some shared memory, be certain that we save the modified object
     if found_shared_memory:
@@ -486,7 +486,7 @@ def _shared_memory_check(instance: "BinnedData", attribute: NumpyAttribute, valu
     # Check the other values.
     for other_name, other_value in arrays.items():
         # logger.debug(f"{attribute.name}: Checking {other_name} for shared memory.")
-        if np.may_share_memory(value, other_value):  # type: ignore
+        if np.may_share_memory(value, other_value):
             logger.warning(
                 f"Object '{other_name}' shares memory with object '{attribute.name}'. Copying '{attribute}'!"
             )
@@ -566,11 +566,13 @@ class BinnedData:
         new += other
         return new
 
-    def __radd__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
+    def __radd__(self: "BinnedData", other: Union[int, "BinnedData"]) -> "BinnedData":
         """For use with sum(...)."""
         if other == 0:
             return self
         else:
+            # Help out mypy
+            assert not isinstance(other, int)
             return self + other
 
     def __iadd__(self: "BinnedData", other: "BinnedData") -> "BinnedData":
@@ -775,7 +777,7 @@ class BinnedData:
                 f"\n\tValues: {values}"
             )
         # x errors are consistent, so we can create bin edges from them.
-        bin_edges = np.append(possible_low_bin_edges, possible_high_bin_edges[-1])  # type: ignore
+        bin_edges = np.append(possible_low_bin_edges, possible_high_bin_edges[-1])
 
         # If the errors agree, we can just store them in a standard binned data.
         # Otherwise, we have to use the metadata.
@@ -802,7 +804,7 @@ class BinnedData:
         return cls(
             axes=hist.axes.edges,
             values=view.value,
-            variances=np.copy(view.variance),  # type: ignore
+            variances=np.copy(view.variance),
             metadata=metadata,
         )
 
@@ -1135,14 +1137,14 @@ def _apply_rebin(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np
     np.not_equal(old_to_new_index[:-1], old_to_new_index[1:], out=loc_run_start[1:])
     run_starts = np.nonzero(loc_run_start)[0]
     run_values = old_to_new_index[loc_run_start]
-    run_lengths = np.diff(np.append(run_starts, len(old_to_new_index)))  # type: ignore
+    run_lengths = np.diff(np.append(run_starts, len(old_to_new_index)))
 
     # Only use numba if available
     if _sum_values_for_rebin_numba is not None:
         f = _sum_values_for_rebin_numba
     else:
         f = _sum_values_for_rebin
-    return f(n_bins_new_axis=n_bins_new_axis, values=values,
+    return f(n_bins_new_axis=n_bins_new_axis, values=values,  # type: ignore
              run_starts=run_starts, run_values=run_values, run_lengths=run_lengths)
 
 
