@@ -372,7 +372,7 @@ class AxisConfig:
     axis: str = attr.ib(validator=[_validate_axis_name])
     label: str = attr.ib(default="")
     log: bool = attr.ib(default=False)
-    range: Tuple[Optional[float], Optional[float]] = attr.ib(default=None)
+    range: Optional[Tuple[Optional[float], Optional[float]]] = attr.ib(default=None)
     font_size: Optional[float] = attr.ib(default=None)
     tick_font_size: Optional[float] = attr.ib(default=None)
 
