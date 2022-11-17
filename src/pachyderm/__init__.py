@@ -5,7 +5,10 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
+__version__ = "3.0"
+
 __all__ = [
+    "__version__",
     "alice",
     "binned_data",
     "fit",

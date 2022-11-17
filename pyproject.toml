@@ -22,7 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
 ]
-version = "3.0"
+dynamic = ["version"]
 include = [
     "pachyderm/py.typed",
     "pachyderm/alice/datasets/*.yaml",
@@ -63,13 +63,36 @@ dev = [
 downloadALICEDataset = "pachyderm.alice.download:run_dataset_download"
 downloadALICERunByRun = "pachyderm.alice.download:run_download_run_by_run_train_output"
 
+[tool.hatch]
+version.path = "src/pachyderm/__init__.py"
+
+[tool.mypy]
+files = "src"
+python_version = "3.7"
+warn_unused_configs = true
+strict = true
+show_error_codes = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+warn_unreachable = true
+
+[tool.black]
+line-length = 120
+target-version = ["py36"]
+
 [tool.isort]
 profile = "black"
 line_length = 120
 skip = ["docs/conf.py"]
 skip_glob = ".*"
 
-[tool.black]
-line-length = 120
-target-version = ["py36"]
-
+[tool.pylint]
+master.py-version = "3.7"
+master.ignore-paths= ["src/pachyderm/_version.py"]
+reports.output-format = "colorized"
+similarities.ignore-imports = "yes"
+messages_control.disable = [
+  "design",
+  "fixme",
+  "line-too-long",
+  "wrong-import-position",
+]
