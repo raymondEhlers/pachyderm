@@ -27,6 +27,8 @@ htmlcov/
 env/
 .venv/
 .python-version
+# tools
+.pdm.toml
 
 # Ignore filetypes
 *.root
