@@ -18,9 +18,9 @@ authors = [
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
 ]
 dynamic = ["version"]
 include = [
@@ -48,7 +48,6 @@ dev = [
     "uproot >=4",
     "pre-commit >=2.13.0",
     "flake8 >=3.9.2",
-    "flake8-colors >=0.1.6",
     "mypy >=0.931",
     "pytest >=6.2.4",
     "pytest-cov >=2.12.1",
@@ -68,9 +67,10 @@ version.path = "src/pachyderm/__init__.py"
 
 [tool.mypy]
 files = "src"
-python_version = "3.7"
+python_version = "3.8"
 warn_unused_configs = true
 strict = true
+ignore_missing_imports = true
 show_error_codes = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 warn_unreachable = true
@@ -86,7 +86,7 @@ skip = ["docs/conf.py"]
 skip_glob = ".*"
 
 [tool.pylint]
-master.py-version = "3.7"
+master.py-version = "3.8"
 master.ignore-paths= ["src/pachyderm/_version.py"]
 reports.output-format = "colorized"
 similarities.ignore-imports = "yes"
