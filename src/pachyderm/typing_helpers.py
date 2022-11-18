@@ -24,7 +24,7 @@ try:
     TFile = ROOT.TFile
 except ImportError:
     # It doesn't like the possibility of redefining this, so we need to tell ``mypy`` to ignore it.
-    Hist = Any  # type: ignore
+    Hist = Any  # type: ignore[misc]
     Axis = Any
     Canvas = Any
     TFile = Any

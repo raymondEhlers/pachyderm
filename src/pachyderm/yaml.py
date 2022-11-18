@@ -144,7 +144,7 @@ def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, da
     # Create a bytes object, dump to it, encode the bytes to a str, and then write them.
     # It's less transparent when physically reading it, but it should avoid encoding issues.
     b = BytesIO()
-    np.save(b, data)  # type: ignore
+    np.save(b, data)
     b.seek(0)
     # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
     return cast(
@@ -198,7 +198,7 @@ def numpy_array_from_yaml(
         b = data.value.encode("utf-8")
         # Requires explicitly allowing pickle to load arrays. This used to be default True,
         # so our risk hasn't changed.
-        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)  # type: ignore
+        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)
     return return_value
 
 
@@ -222,7 +222,7 @@ def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, 
     # Create a bytes object, dump to it, encode the bytes to a str, and then write them.
     # It's less transparent when physically reading it, but it should avoid encoding issues.
     b = BytesIO()
-    np.save(b, data)  # type: ignore
+    np.save(b, data)
     b.seek(0)
     # The representer is seen by mypy as Any, so we need to explicitly note that it's a str.
     return cast(
@@ -273,7 +273,7 @@ def numpy_float64_from_yaml(
         b = data.value.encode("utf-8")
         # Requires explicitly allowing pickle to load arrays. This used to be default True,
         # so our risk hasn't changed.
-        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)  # type: ignore
+        return_value = np.load(BytesIO(base64.decodebytes(b)), allow_pickle=True)
     return return_value
 
 

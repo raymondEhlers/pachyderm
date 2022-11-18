@@ -354,7 +354,7 @@ class OutliersRemovalManager:
                 )
             )
 
-        outliers_start_index: int = np.max(outliers_indices)  # type: ignore
+        outliers_start_index: int = np.max(outliers_indices)
         logger.debug(f"outliers_start_index: {outliers_start_index}")
 
         for hist_name, hist in hists.items():

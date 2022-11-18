@@ -472,7 +472,7 @@ class HistProjector:
             axis_type = self.projection_axes[0].axis_type.value
         except ValueError:
             # Seems that we received an int, so just use that value
-            axis_type = self.axis_type  # type: ignore
+            axis_type = self.axis_type  # type: ignore[attr-defined]
 
         projection_func = projection_func_map[axis_type]
 

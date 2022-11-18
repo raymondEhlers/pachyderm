@@ -237,7 +237,7 @@ def error_boxes(
         # Default to 10% of the distance between the two points.
         x_errors = (x_data[1:] - x_data[:-1]) * 0.1
         # Use the last width for the final point. (This is a bit of a hack).
-        x_errors = np.append(x_errors, x_errors[-1])  # type: ignore
+        x_errors = np.append(x_errors, x_errors[-1])
         logger.debug(f"x_errors: {x_errors}")
         # Help out mypy...
         assert x_errors is not None

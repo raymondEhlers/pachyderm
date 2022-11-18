@@ -280,7 +280,7 @@ class Histogram1D:
         # Ensure they don't point to one another (which can cause issues when performing
         # operations in place).
         for (a_name, a), (b_name, b) in itertools.combinations(arrays.items(), 2):
-            if np.may_share_memory(a, b):  # type: ignore
+            if np.may_share_memory(a, b):
                 logger.warning(f"Object '{b_name}' shares memory with object '{a_name}'. Copying object '{b_name}'!")
                 setattr(self, b_name, b.copy())
 
@@ -878,7 +878,7 @@ class Histogram1D:
             # Retrieve the stats and store them in the metadata.
             # They are useful for calculating histogram properties (mean, variance, etc).
             stats = np.array([0, 0, 0, 0], dtype=np.float64)
-            hist.GetStats(np.ctypeslib.as_ctypes(stats))  # type: ignore
+            hist.GetStats(np.ctypeslib.as_ctypes(stats))
             # Return values are (each one is a single float):
             # [1], [2], [3], [4]
             # [1]: total_sum_w: Sum of weights (equal to np.sum(y) if unscaled)
@@ -999,7 +999,7 @@ def get_array_from_hist2D(
         x_range = np.array([hist.GetXaxis().GetBinCenter(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
         y_range = np.array([hist.GetYaxis().GetBinCenter(i) for i in range(1, hist.GetYaxis().GetNbins() + 1)])
 
-    X, Y = np.meshgrid(x_range, y_range)  # type: ignore
+    X, Y = np.meshgrid(x_range, y_range)
 
     return (X, Y, hist_array)
 
