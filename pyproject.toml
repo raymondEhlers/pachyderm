@@ -96,3 +96,24 @@ messages_control.disable = [
   "line-too-long",
   "wrong-import-position",
 ]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
+log_cli_level = "INFO"
+testpaths = [
+  "tests",
+]
+
+[tool.check-manifest]
+ignore = [
+  ".github/**",
+  "docs/**",
+  ".pre-commit-config.yaml",
+  ".readthedocs.yml",
+  "src/*/_version.py",
+  "noxfile.py",
+]
+
