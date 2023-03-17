@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-
 """ Functionality related to binned data.
 
-.. codeauthor:: Ramyond Ehlers <raymond.ehlers@cern.ch>, ORNL
+.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
 from __future__ import annotations
@@ -1158,7 +1157,7 @@ def _sum_values_for_rebin(n_bins_new_axis: int,
     This translates the values from the old binning to the new binning.
 
     Note:
-        This is kept as a separate function so we can potentially use it with numba. See inteface
+        This is kept as a separate function so we can potentially use it with numba. See interface
         function `_apply_rebin`.
 
     Args:
