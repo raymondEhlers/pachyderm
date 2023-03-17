@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
-import attr
+import attrs
 import matplotlib
 import matplotlib.axes
 import matplotlib.colors
@@ -362,19 +362,19 @@ gStyle->SetPalette(NCont + 1, colors);*/
     return s
 
 
-def _validate_axis_name(instance: "AxisConfig", attribute: attr.Attribute[str], value: str) -> None:
+def _validate_axis_name(instance: "AxisConfig", attribute: attrs.Attribute[str], value: str) -> None:
     if value not in ["x", "y", "z"]:
         raise ValueError("Invalid axis name: {value}")
 
 
-@attr.s
+@attrs.define
 class AxisConfig:
-    axis: str = attr.ib(validator=[_validate_axis_name])
-    label: str = attr.ib(default="")
-    log: bool = attr.ib(default=False)
-    range: Optional[Tuple[Optional[float], Optional[float]]] = attr.ib(default=None)
-    font_size: Optional[float] = attr.ib(default=None)
-    tick_font_size: Optional[float] = attr.ib(default=None)
+    axis: str = attrs.field(validator=[_validate_axis_name])
+    label: str = attrs.field(default="")
+    log: bool = attrs.field(default=False)
+    range: Optional[Tuple[Optional[float], Optional[float]]] = attrs.field(default=None)
+    font_size: Optional[float] = attrs.field(default=None)
+    tick_font_size: Optional[float] = attrs.field(default=None)
 
     def apply(self, ax: matplotlib.axes.Axes) -> None:
         if self.label:
@@ -403,14 +403,14 @@ class AxisConfig:
             getattr(ax, f"set_{self.axis}lim")([min_range, max_range])
 
 
-@attr.s
+@attrs.define
 class TextConfig:
-    text: str = attr.ib()
-    x: float = attr.ib()
-    y: float = attr.ib()
-    alignment: Optional[str] = attr.ib(default=None)
-    color: Optional[str] = attr.ib(default="black")
-    font_size: Optional[float] = attr.ib(default=None)
+    text: str = attrs.field()
+    x: float = attrs.field()
+    y: float = attrs.field()
+    alignment: Optional[str] = attrs.field(default=None)
+    color: Optional[str] = attrs.field(default="black")
+    font_size: Optional[float] = attrs.field(default=None)
 
     def apply(self, ax: matplotlib.axes.Axes) -> None:
         # Some reasonable defaults
@@ -457,16 +457,16 @@ class TextConfig:
         )
 
 
-@attr.s
+@attrs.define
 class LegendConfig:
-    location: str = attr.ib(default=None)
+    location: str = attrs.field(default=None)
     # Takes advantage of the fact that None will use the default.
-    anchor: Optional[Tuple[float, float]] = attr.ib(default=None)
-    font_size: Optional[float] = attr.ib(default=None)
-    ncol: Optional[float] = attr.ib(default=1)
-    marker_label_spacing: Optional[float] = attr.ib(default=None)
+    anchor: Optional[Tuple[float, float]] = attrs.field(default=None)
+    font_size: Optional[float] = attrs.field(default=None)
+    ncol: Optional[float] = attrs.field(default=1)
+    marker_label_spacing: Optional[float] = attrs.field(default=None)
     # NOTE: Default in mpl is 0.5
-    label_spacing: Optional[float] = attr.ib(default=None)
+    label_spacing: Optional[float] = attrs.field(default=None)
 
     def apply(
         self,
@@ -509,11 +509,11 @@ def _ensure_sequence_of_text_config(value: Union[TextConfig, Sequence[TextConfig
     return value
 
 
-@attr.s
+@attrs.define
 class Panel:
-    axes: Sequence[AxisConfig] = attr.ib(converter=_ensure_sequence_of_axis_config)
-    text: Sequence[TextConfig] = attr.ib(converter=_ensure_sequence_of_text_config, factory=list)
-    legend: LegendConfig = attr.ib(default=None)
+    axes: Sequence[AxisConfig] = attrs.field(converter=_ensure_sequence_of_axis_config)
+    text: Sequence[TextConfig] = attrs.field(converter=_ensure_sequence_of_text_config, factory=list)
+    legend: LegendConfig = attrs.field(default=None)
 
     def apply(
         self,
@@ -532,9 +532,9 @@ class Panel:
             self.legend.apply(ax, legend_handles=legend_handles, legend_labels=legend_labels)
 
 
-@attr.s
+@attrs.define
 class Figure:
-    edge_padding: Mapping[str, float] = attr.ib(factory=dict)
+    edge_padding: Mapping[str, float] = attrs.field(factory=dict)
 
     def apply(self, fig: matplotlib.figure.Figure) -> None:
         # It shouldn't hurt to align the labels if there's only one.
@@ -562,11 +562,11 @@ def _ensure_sequence_of_panels(value: Union[Panel, Sequence[Panel]]) -> Sequence
     return value
 
 
-@attr.s
+@attrs.define
 class PlotConfig:
-    name: str = attr.ib()
-    panels: Sequence[Panel] = attr.ib(converter=_ensure_sequence_of_panels)
-    figure: Figure = attr.ib(factory=Figure)
+    name: str = attrs.field()
+    panels: Sequence[Panel] = attrs.field(converter=_ensure_sequence_of_panels)
+    figure: Figure = attrs.field(factory=Figure)
 
     def apply(
         self,
