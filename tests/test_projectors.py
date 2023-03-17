@@ -47,13 +47,12 @@ def test_hist_axis_range(logging_mixin, create_hist_axis_range):
     assert obj.min_val == object_args["min_val"]
     assert obj.max_val == object_args["max_val"]
 
-    # Test repr and str to esnure that they are up to date.
+    # Test repr and str to ensure that they are up to date.
     assert repr(obj) == "HistAxisRange(name = {name!r}, axis_type = {axis_type}, min_val = {min_val!r}, max_val = {max_val!r})".format(**object_args)
     assert str(obj) == "HistAxisRange: name: {name}, axis_type: {axis_type}, min_val: {min_val}, max_val: {max_val}".format(**object_args)
     # Assert that the dict is equal so we don't miss anything in the repr or str representations.
     assert obj.__dict__ == object_args
 
-@pytest.mark.ROOT
 @pytest.mark.parametrize("axis_type, axis", [
     (projectors.TH1AxisType.x_axis, "x_axis"),
     (projectors.TH1AxisType.y_axis, "y_axis"),
@@ -74,7 +73,7 @@ def test_TH1Axis_determination(logging_mixin, create_hist_axis_range, axis_type,
     axis = axis_map[axis]
     # Get the HistAxisRange object
     obj, object_args = create_hist_axis_range
-    # Insert the proepr axis type
+    # Insert the proper axis type
     obj.axis_type = axis_type
     # Determine the test hist
     hist = dataclasses.astuple(test_root_hists)[hist_to_test]
@@ -82,11 +81,10 @@ def test_TH1Axis_determination(logging_mixin, create_hist_axis_range, axis_type,
     # Check that the axis retrieved by the specified function is the same
     # as that retrieved by the HistAxisRange object.
     # NOTE: GetZaxis() (for example) is still valid for a TH1. It is a minimal axis
-    #       object with 1 bin. So it is fine to check for equivalnce for axes that
+    #       object with 1 bin. So it is fine to check for equivalence for axes that
     #       don't really make sense in terms of a hist's dimensions.
     assert axis(hist) == obj.axis(hist)
 
-@pytest.mark.ROOT
 @pytest.mark.parametrize("axis_selection", [
     SparseAxisLabels.axis_two,
     SparseAxisLabels.axis_four,
@@ -95,6 +93,7 @@ def test_TH1Axis_determination(logging_mixin, create_hist_axis_range, axis_type,
 ], ids = ["axis_two", "axis_four", "axis_five", "number for axis one", "number for axis two", "number for axis three"])
 def test_THn_axis_determination(logging_mixin, axis_selection, create_hist_axis_range, test_sparse):
     """ Test THn axis determination in the HistAxisRange object. """
+    ROOT = pytest.importorskip("ROOT")
     # Retrieve sparse.
     sparse, _ = test_sparse
     # Retrieve object and setup.
@@ -104,7 +103,6 @@ def test_THn_axis_determination(logging_mixin, axis_selection, create_hist_axis_
     axis_value = axis_selection.value if isinstance(axis_selection, enum.Enum) else axis_selection
     assert sparse.GetAxis(axis_value) == obj.axis(sparse)
 
-@pytest.mark.ROOT
 class TestsForHistAxisRange():
     """ Tests for HistAxisRange which require ROOT. """
     @pytest.mark.parametrize("min_val, max_val, min_val_func, max_val_func, expected_func", [
@@ -132,10 +130,10 @@ class TestsForHistAxisRange():
         that selection as expected.
 
         Note:
-            It doens't matter whether we operate on TH1 or THn, since they both set ranges on TAxis.
+            It doesn't matter whether we operate on TH1 or THn, since they both set ranges on TAxis.
 
         Note:
-            This implicity tests apply_func_to_find_bin, which is fine given how often the two are used
+            This implicitly tests apply_func_to_find_bin, which is fine given how often the two are used
             together (almost always).
         """
         ROOT = pytest.importorskip("ROOT")
@@ -395,7 +393,6 @@ def check_and_get_projection(single_observable: bool,
 
     return proj
 
-@pytest.mark.ROOT
 class TestProjectorsWithRoot():
     """ Tests for projectors for TH1 derived histograms. """
     @pytest.mark.parametrize("single_observable", [
@@ -838,7 +835,6 @@ sparse_hist_axis_ranges_restricted = [
         max_val = 8),
 ]
 
-@pytest.mark.ROOT
 class TestsForTHnSparseProjection():
     """ Tests for projectors for THnSparse derived histograms. """
     @pytest.mark.parametrize("single_observable", [

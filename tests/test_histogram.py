@@ -103,8 +103,8 @@ def retrieve_root_list(test_root_hists: Any) -> Iterator[Tuple[str, Any, Any]]:
     l1.Clear()
 
 
-@pytest.mark.ROOT
 class TestOpenRootFile:
+    ROOT = pytest.importorskip("ROOT")
     def test_open_file(self, logging_mixin: Any, retrieve_root_list: Any) -> None:
         """ Test for context manager for opening ROOT files. """
         ROOT = pytest.importorskip("ROOT")  # noqa: F401
@@ -147,8 +147,8 @@ class TestOpenRootFile:
         assert "Failed" in exception_info.value.args[0] and f"{fake_filename}" in exception_info.value.args[0]
 
 
-@pytest.mark.ROOT
-class TestRetrievingHistgramsFromAList:
+class TestRetrievingHistogramsFromAList:
+    ROOT = pytest.importorskip("ROOT")
     def test_get_histograms_in_file(self, logging_mixin: Any, retrieve_root_list: Any) -> None:
         """ Test for retrieving all of the histograms in a ROOT file. """
         (filename, root_list, expected) = retrieve_root_list
@@ -293,9 +293,10 @@ def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1
     return True
 
 
-@pytest.mark.ROOT  # type: ignore
 def test_ROOT_hist_to_histogram(setup_histogram_conversion: Any) -> None:
     """ Check conversion of a read in ROOT file via ROOT to a Histogram object. """
+    # Setup
+    ROOT = pytest.importorskip("ROOT")
     filename, hist_name, expected = setup_histogram_conversion
 
     # Setup and read histogram
@@ -334,14 +335,14 @@ def test_histogram1D_to_from_existing_histogram(logging_mixin: Any) -> None:
 
     h_output = histogram.Histogram1D.from_existing_hist(h_input)
 
-    # Use explict equality check because they really are the same histograms.
+    # Use explicit equality check because they really are the same histograms.
     assert h_output is h_input
 
 
-@pytest.mark.ROOT  # type: ignore
 def test_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
     """ Test derived histogram properties (mean, std. dev, variance, etc). """
     # Setup
+    ROOT = pytest.importorskip("ROOT")
     h_root = test_root_hists.hist1D
     h = histogram.Histogram1D.from_existing_hist(h_root)
 
@@ -353,10 +354,10 @@ def test_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
     assert np.isclose(h.variance, h_root.GetStdDev() ** 2)
 
 
-@pytest.mark.ROOT  # type: ignore
 def test_recalculated_derived_properties(logging_mixin: Any, test_root_hists: Any) -> None:
     """ Test derived histogram properties (mean, std. dev, variance, etc). """
     # Setup
+    ROOT = pytest.importorskip("ROOT")
     h_root = test_root_hists.hist1D
     h = histogram.Histogram1D.from_existing_hist(h_root)
     stats = histogram.calculate_binned_stats(h.bin_edges, h.y, h.errors_squared)
@@ -428,8 +429,8 @@ def test_hist_identical_arrays(logging_mixin: Any) -> None:
     assert np.may_share_memory(h.y, h.errors_squared) is False
 
 
-@pytest.mark.ROOT
 class TestWithRootHists:
+    ROOT = pytest.importorskip("ROOT")
     def test_get_array_from_hist(self, logging_mixin: Any, test_root_hists: Any) -> None:
         """Test getting numpy arrays from a 1D hist.
 
@@ -761,10 +762,10 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.ROOT  # type: ignore
     def test_compare_addition_to_ROOT(self, setup_addition: Any) -> None:
         """ Compare the result of ``Histogram1D`` addition vs ROOT. """
         # Setup
+        ROOT = pytest.importorskip("ROOT")
         h1_info, h2_info, expected, h1, h2 = setup_addition
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
         h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
@@ -834,10 +835,10 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.ROOT  # type: ignore
     def test_compare_subtraction_to_ROOT(self, setup_subtraction: Any) -> None:
         """ Compare the result of ``Histogram1D`` subtraction vs ROOT. """
         # Setup
+        ROOT = pytest.importorskip("ROOT")
         h1_info, h2_info, expected, h1, h2 = setup_subtraction
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
         h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
@@ -892,10 +893,10 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.ROOT  # type: ignore
     def test_compare_multiplication_to_ROOT(self, setup_multiplication: Any) -> None:
         """ Compare the result of ``Histogram1D`` multiplication vs ROOT. """
         # Setup
+        ROOT = pytest.importorskip("ROOT")
         h1_info, h2_info, expected, h1, h2 = setup_multiplication
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
         h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
@@ -944,10 +945,10 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.ROOT  # type: ignore
     def test_compare_scalar_multiplication_to_ROOT(self, setup_scalar_multiplication: Any) -> None:
         """ Compare the results of ``Histogram1D`` multiplication vs ROOT. """
         # Setup
+        ROOT = pytest.importorskip("ROOT")
         h1_info, scalar, expected, h1 = setup_scalar_multiplication
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
@@ -1001,10 +1002,10 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.ROOT  # type: ignore
     def test_compare_division_to_ROOT(self, setup_division: Any) -> None:
         """ Compare the result of ``Histogram1D`` division vs ROOT. """
         # Setup
+        ROOT = pytest.importorskip("ROOT")
         h1_info, h2_info, expected, h1, h2 = setup_division
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
         h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
@@ -1053,10 +1054,10 @@ class TestHistogramOperators:
         assert np.allclose(h3.y, expected.y)
         assert np.allclose(h3.errors_squared, expected.errors_squared)
 
-    @pytest.mark.ROOT  # type: ignore
     def test_compare_scalar_division_to_ROOT(self, setup_scalar_division: Any) -> None:
         """ Compare the results of ``Histogram1D`` division vs ROOT. """
         # Setup
+        ROOT = pytest.importorskip("ROOT")
         h1_info, scalar, expected, h1 = setup_scalar_division
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
@@ -1068,13 +1069,13 @@ class TestHistogramOperators:
         assert check_hist(h1_root, h3)
 
 
-@pytest.mark.ROOT
 class TestIntegrateHistogram1D:
     """Test for counting and integrating bins stored in a ``Histogram1D``.
 
     These tests require ROOT because we compare against ROOT to check that the values
     are correct.
     """
+    ROOT = pytest.importorskip("ROOT")
 
     @pytest.fixture(
         params=[  # type: ignore

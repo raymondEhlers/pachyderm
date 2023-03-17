@@ -17,9 +17,9 @@ from pachyderm import projectors, remove_outliers
 # Setup logger
 logger = logging.getLogger(__name__)
 
-@pytest.mark.ROOT
 def test_mean_and_median(logging_mixin, test_root_hists):
     """ Test calculating the mean and median of a histogram. """
+    ROOT = pytest.importorskip("ROOT")
     hist = test_root_hists.hist1D
     for i in range(1, 11):
         hist.SetBinContent(i, i)
@@ -134,8 +134,9 @@ def setup_outliers_hist(request, logging_mixin):
     # Cleanup
     del hist
 
-@pytest.mark.ROOT
 class TestOutliersRemovalIntegration:
+    ROOT = pytest.importorskip("ROOT")
+
     @pytest.mark.parametrize("remove_entries", [
         False,
         True,
