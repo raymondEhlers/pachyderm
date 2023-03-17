@@ -22,7 +22,7 @@ def test_axis_slice_copy(caplog: Any) -> None:
     assert sliced_axis == axis
 
 
-@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [  # type: ignore
+@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [
     (2, None, None, np.arange(3, 12)),
     (2j, None, None, np.arange(2, 12)),
     (2.1j, None, None, np.arange(2, 12)),
@@ -53,7 +53,7 @@ def test_axis_slice(start: Optional[int], stop: Optional[int], step: Optional[in
     np.testing.assert_allclose(sliced_axis.bin_edges, hist_sliced_axis.edges)
 
 
-@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [  # type: ignore
+@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [
     (None, None, binned_data.Rebin(2), np.arange(1, 12, 2)),
     (3j, None, binned_data.Rebin(2), np.arange(3, 12, 2)),
     (None, 9j, binned_data.Rebin(2), np.arange(1, 10, 2)),
@@ -89,7 +89,7 @@ def hists_for_rebinning() -> Tuple[npt.NDArray[np.float64], binned_data.BinnedDa
     return values, h
 
 
-@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [  # type: ignore
+@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [
     (2, None, None, np.arange(3, 12)),
     (2j, None, None, np.arange(2, 12)),
     (2.1j, None, None, np.arange(2, 12)),
@@ -119,7 +119,7 @@ def test_hist_slice(hists_for_rebinning: Any, start: Optional[int], stop: Option
     np.testing.assert_allclose(sliced_h.variances, hist_h.variances())
 
 
-@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [  # type: ignore
+@pytest.mark.parametrize("start,stop,step,expected_bin_edges", [
     (None, None, binned_data.Rebin(2), np.arange(1, 12, 2)),
     (3j, None, binned_data.Rebin(2), np.arange(3, 12, 2)),
     (None, 9j, binned_data.Rebin(2), np.arange(1, 10, 2)),
@@ -149,7 +149,7 @@ def test_hist_slice_rebin(hists_for_rebinning: Any, start: Optional[int], stop: 
     np.testing.assert_allclose(sliced_h.variances, hist_h.variances())
 
 
-@pytest.mark.parametrize("h", [  # type: ignore
+@pytest.mark.parametrize("h", [
     binned_data.BinnedData(
         axes = [np.array(range(11))],
         values = np.array(range(10)),
@@ -192,7 +192,7 @@ def test_conversion_and_projection_with_boost_histogram(logging_mixin: Any, h: b
 
     print(h)
 
-@pytest.mark.parametrize("h", [  # type: ignore
+@pytest.mark.parametrize("h", [
     binned_data.BinnedData(
         axes = [np.array(range(11))],
         values = np.array(range(10)),

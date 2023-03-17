@@ -36,7 +36,7 @@ else:
 
 @attr.s(frozen=True)
 class Rebin:
-    value: Tuple[int, npt.NDArray[Any]] = attr.ib()
+    value: int | npt.NDArray[Any] = attr.ib()
 
 
 def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
@@ -192,7 +192,7 @@ class Axis:
         start, stop = _expand_slice_start_and_stop(self, selection)
 
         # Handle the step
-        step: Union[int, npt.NDArray[np.float64]] = selection.step
+        step: int | npt.NDArray[np.float64] | Rebin = selection.step
         if isinstance(step, Rebin):
             # Extract the value if it's stored in the object.
             step = step.value
@@ -335,7 +335,7 @@ class AxesTuple(Tuple[Axis, ...]):
         # but if it becomes problematic, we can instead use the more specific:
         # if isinstance(axes, (Axis, np.ndarray)):
         if not isinstance(values, collections.abc.Iterable) or (isinstance(values, np.ndarray) and values.ndim == 1):
-            values = [axes]  # type: ignore
+            values = [axes]  # type: ignore[assignment]
         # Help out mypy
         assert isinstance(values, collections.abc.Iterable)
         return cls([Axis(a) for a in values])
@@ -441,7 +441,7 @@ def _axes_shared_memory_check(instance: "BinnedData", attribute: AxesTupleAttrib
             logger.warning(
                 f"Axis at index {a_i} shares memory with axis at index {b_i}. Copying axis {a_i}!"
             )
-            value[a_i] = value[a_i].copy()  # type: ignore
+            value[a_i] = value[a_i].copy()  # type: ignore[index]
 
     # If we found some shared memory, be certain that we save the modified object
     if found_shared_memory:
@@ -895,7 +895,7 @@ class BinnedData:
                 # 12 * 12 + 12 + 1 = 157
                 3: lambda axes: (len(axes[0]) + 2) * (len(axes[1]) + 2) + (len(axes[0]) + 2) + 1,
             }
-            first_non_overflow_bin = first_non_overflow_bin_map[len(axes)](axes)  # type: ignore
+            first_non_overflow_bin = first_non_overflow_bin_map[len(axes)](axes)  # type: ignore[no-untyped-call]
             if not np.isclose(variances.flatten()[0], hist.GetBinError(first_non_overflow_bin) ** 2):
                 raise ValueError("Sumw2 errors don't seem to represent bin errors!")
 
@@ -1143,7 +1143,7 @@ def _apply_rebin(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np
         f = _sum_values_for_rebin_numba
     else:
         f = _sum_values_for_rebin
-    return f(n_bins_new_axis=n_bins_new_axis, values=values,  # type: ignore
+    return f(n_bins_new_axis=n_bins_new_axis, values=values,  # type: ignore [no-any-return]
              run_starts=run_starts, run_values=run_values, run_lengths=run_lengths)
 
 
