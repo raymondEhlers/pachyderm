@@ -35,6 +35,7 @@ def test_root_hists() -> Any:
     # Define the hist to use for testing
     hist = ROOT.TH1F("test", "test", 10, 0, 1)
     hist.Fill(.1)
+
     hist2D = ROOT.TH2F("test2", "test2", 10, 0, 1, 10, 0, 20)
     hist2D.Fill(.1, 1)
     hist3D = ROOT.TH3F("test3", "test3", 10, 0, 1, 10, 0, 20, 10, 0, 100)

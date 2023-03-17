@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterator, Tuple
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 import uproot
 
@@ -24,7 +25,7 @@ from pachyderm.typing_helpers import Hist
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def retrieve_root_list(test_root_hists: Any) -> Iterator[Tuple[str, Any, Any]]:
     """Create an set of lists to load for a ROOT file.
 
@@ -224,7 +225,7 @@ class TestRetrievingHistogramsFromAList:
         assert output == expected
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def setup_histogram_conversion() -> Tuple[str, str, histogram.Histogram1D]:
     """Setup expected values for histogram conversion tests.
 
@@ -675,7 +676,7 @@ class HistInfo:
             errors_squared=self.errors_squared,
         )
 
-    def convert_to_ROOT_hist(self, bin_edges: np.array) -> Hist:
+    def convert_to_ROOT_hist(self, bin_edges: npt.NDArray[np.float64]) -> Hist:
         """Convert these stored values in a ROOT.TH1F.
 
         This isn't very robust, which is why I'm not including it in ``Histogram1D``. However,
@@ -683,7 +684,7 @@ class HistInfo:
         """
         ROOT = pytest.importorskip("ROOT")
 
-        hist = ROOT.TH1F("tempHist", "tempHist", len(bin_edges) - 1, bin_edges.astype(float))
+        hist = ROOT.TH1F("tempHist", "tempHist", len(bin_edges) - 1, bin_edges.astype(np.float64))
         hist.Sumw2()
 
         # Exclude under- and overflow
