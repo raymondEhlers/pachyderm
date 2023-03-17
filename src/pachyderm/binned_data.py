@@ -158,7 +158,7 @@ class Axis:
         """
         return find_bin(self.bin_edges, value)
 
-    def copy(self: "Axis") -> "Axis":
+    def copy(self: Axis) -> Axis:
         """Copies the object.
 
         In principle, this should be the same as ``copy.deepcopy(...)``, at least when this was written in
@@ -173,7 +173,7 @@ class Axis:
             return np.allclose(self.bin_edges, other.bin_edges)
         return False
 
-    def __getitem__(self, selection: Union[int, slice]) -> "Axis":
+    def __getitem__(self, selection: Union[int, slice]) -> Axis:
         """Select a subset of the axis.
 
         Args:
@@ -259,7 +259,7 @@ class Axis:
 
     @classmethod
     def to_yaml(
-        cls: Type["Axis"], representer: ruamel.yaml.representer.BaseRepresenter, obj: "Axis"
+        cls: Type[Axis], representer: ruamel.yaml.representer.BaseRepresenter, obj: Axis
     ) -> ruamel.yaml.nodes.MappingNode:
         """Encode YAML representation.
 
@@ -282,10 +282,10 @@ class Axis:
 
     @classmethod
     def from_yaml(
-        cls: Type["Axis"],
+        cls: Type[Axis],
         constructor: ruamel.yaml.constructor.BaseConstructor,
         data: ruamel.yaml.nodes.MappingNode,
-    ) -> "Axis":
+    ) -> Axis:
         """Decode YAML representation.
 
         For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
@@ -324,8 +324,8 @@ class AxesTuple(Tuple[Axis, ...]):
 
     @classmethod
     def from_axes(
-        cls: Type["AxesTuple"], axes: Union[Axis, Sequence[Axis], npt.NDArray[Any], Sequence[npt.NDArray[Any]]]
-    ) -> "AxesTuple":
+        cls: Type[AxesTuple], axes: Union[Axis, Sequence[Axis], npt.NDArray[Any], Sequence[npt.NDArray[Any]]]
+    ) -> AxesTuple:
         values = axes
         # Convert to a list if necessary
         # Ideally, we want to check for anything that isn't a collection, and convert it to one if it's not.
@@ -347,7 +347,7 @@ class AxesTuple(Tuple[Axis, ...]):
 
     @classmethod
     def to_yaml(
-        cls: Type["AxesTuple"], representer: ruamel.yaml.representer.BaseRepresenter, obj: "AxesTuple"
+        cls: Type[AxesTuple], representer: ruamel.yaml.representer.BaseRepresenter, obj: AxesTuple
     ) -> ruamel.yaml.nodes.MappingNode:
         """Encode YAML representation.
 
@@ -378,10 +378,10 @@ class AxesTuple(Tuple[Axis, ...]):
 
     @classmethod
     def from_yaml(
-        cls: Type["AxesTuple"],
+        cls: Type[AxesTuple],
         constructor: ruamel.yaml.constructor.BaseConstructor,
         data: ruamel.yaml.nodes.MappingNode,
-    ) -> "AxesTuple":
+    ) -> AxesTuple:
         """Decode YAML representation.
 
         For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.

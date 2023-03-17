@@ -16,7 +16,7 @@ from pachyderm import binned_data, histogram, yaml
 
 logger = logging.getLogger(__name__)
 
-def dump_to_string_and_retrieve(input_object: Any, y: yaml.ruamel.yaml.YAML = None) -> Any:
+def dump_to_string_and_retrieve(input_object: Any, y: yaml.ruamel.yaml.YAML = None) -> Any:  # type: ignore[name-defined]
     """ Dump the given input object via YAML and then retrieve it for comparison.
 
     Args:
@@ -63,7 +63,7 @@ def test_Histogram1D_with_yaml(logging_mixin: Any) -> None:
 
 @pytest.mark.parametrize(
     "axes",
-    [  # type: ignore
+    [
         ([np.linspace(0, 10, 11)]),
         ([np.linspace(0, 10, 11), np.linspace(0, 20, 21)]),
     ],
