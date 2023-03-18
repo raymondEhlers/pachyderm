@@ -595,24 +595,15 @@ class BinnedData:
         else:
             raise ValueError(f"Unable to retrieve serialization version for {cls.__name__}")
 
-        import pprint
-        pprint.pprint(stored_mapping)
-
         # Specialize for each version
         if serialization_version == 1:
             # Convert the mapping into the relevant objects
             # Extract relevant values
             stored_data = {
                 k: constructor.construct_object(stored_mapping[k])
-                for k in ["axes", "values", "variances", "metadata"]
+                # We can blindly loop because we already popped the version
+                for k in list(stored_mapping.keys())
             }
-            #stored_data = {
-            #    "axes": stored_mapping["axes"],
-            #    "values": stored_mapping["values"],
-            #    "variances": stored_mapping["variances"],
-            #    "metadata": stored_mapping["metadata"],
-            #}
-            logger.info(f"{stored_data=}")
             return cls(**stored_data)
         else:
             raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
