@@ -535,6 +535,88 @@ class BinnedData:
         _shared_memory_check(self, "variances", self.variances)
         _shape_array_check(self, "variances", self.variances)
 
+    @classmethod
+    def to_yaml(
+        cls: Type[BinnedData], representer: ruamel.yaml.representer.BaseRepresenter, obj: BinnedData
+    ) -> ruamel.yaml.nodes.MappingNode:
+        """Encode YAML representation.
+
+        For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
+
+        We encode a mapping with the tuple stored in a sequence, as well as the serialization version.
+
+        Args:
+            representer: Representation from YAML.
+            data: AxesTuple to be converted to YAML.
+        Returns:
+            YAML representation of the AxesTuple object.
+        """
+        # We want to include a serialization version so we can do a schema evolution later if necessary
+        representation = representer.represent_mapping(
+            f"!{cls.__name__}",
+            {
+                "axes": obj.axes,
+                "values": obj.values,
+                "variances": obj.variances,
+                "metadata": obj.metadata,
+                "serialization_version": 1,
+            }
+        )
+
+        # Finally, return the represented object.
+        return cast(
+            ruamel.yaml.nodes.MappingNode,
+            representation,
+        )
+
+    @classmethod
+    def from_yaml(
+        cls: Type[BinnedData],
+        constructor: ruamel.yaml.constructor.BaseConstructor,
+        data: ruamel.yaml.nodes.MappingNode,
+    ) -> BinnedData:
+        """Decode YAML representation.
+
+        For some reason, YAML doesn't encode this object properly, so we have to tell it how to do so.
+
+        Args:
+            constructor: Constructor from the YAML object.
+            node: YAML mapping node representing the BinnedData object.
+        Returns:
+            The BinnedData object constructed from the YAML specified values.
+        """
+        # Setup
+        stored_mapping = {constructor.construct_object(k): v for k, v in data.value}
+        serialization_version_node = stored_mapping.pop("serialization_version", None)
+
+        # Validation + construction
+        if serialization_version_node:
+            serialization_version = constructor.construct_object(serialization_version_node)
+        else:
+            raise ValueError(f"Unable to retrieve serialization version for {cls.__name__}")
+
+        import pprint
+        pprint.pprint(stored_mapping)
+
+        # Specialize for each version
+        if serialization_version == 1:
+            # Convert the mapping into the relevant objects
+            # Extract relevant values
+            stored_data = {
+                k: constructor.construct_object(stored_mapping[k])
+                for k in ["axes", "values", "variances", "metadata"]
+            }
+            #stored_data = {
+            #    "axes": stored_mapping["axes"],
+            #    "values": stored_mapping["values"],
+            #    "variances": stored_mapping["variances"],
+            #    "metadata": stored_mapping["metadata"],
+            #}
+            logger.info(f"{stored_data=}")
+            return cls(**stored_data)
+        else:
+            raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
+
     @property
     def axis(self) -> Axis:
         """Returns the single axis when the binned data is 1D.
