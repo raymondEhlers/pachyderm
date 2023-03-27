@@ -467,6 +467,10 @@ class LegendConfig:
     marker_label_spacing: Optional[float] = attrs.field(default=None)
     # NOTE: Default in mpl is 0.5
     label_spacing: Optional[float] = attrs.field(default=None)
+    # NOTE: Default in mpl is 2.0
+    column_spacing: Optional[float] = attrs.field(default=None)
+    handle_height: Optional[float] = attrs.field(default=None)
+    handler_map: dict[str, Any] = attrs.field(factory=dict)
 
     def apply(
         self,
@@ -493,6 +497,9 @@ class LegendConfig:
                 ncol=self.ncol,
                 handletextpad=self.marker_label_spacing,
                 labelspacing=self.label_spacing,
+                columnspacing=self.column_spacing,
+                handleheight=self.handle_height,
+                handler_map=(self.handler_map if self.handler_map else None),
                 **kwargs,
             )
 
@@ -513,7 +520,7 @@ def _ensure_sequence_of_text_config(value: Union[TextConfig, Sequence[TextConfig
 class Panel:
     axes: Sequence[AxisConfig] = attrs.field(converter=_ensure_sequence_of_axis_config)
     text: Sequence[TextConfig] = attrs.field(converter=_ensure_sequence_of_text_config, factory=list)
-    legend: LegendConfig = attrs.field(default=None)
+    legend: LegendConfig | None = attrs.field(default=None)
 
     def apply(
         self,
