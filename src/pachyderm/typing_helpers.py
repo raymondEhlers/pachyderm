@@ -7,7 +7,6 @@
 
 from typing import Any, Union
 
-
 try:
     import ROOT
 

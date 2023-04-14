@@ -14,7 +14,6 @@ import subprocess
 from pathlib import Path
 from typing import List, Union
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +46,7 @@ def local_md5(fname: Union[Path, str]) -> str:
 
     # Calculate md5 sum
     hash_md5 = hashlib.md5()
-    with open(fname, "rb") as f:
+    with fname.open("rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
@@ -72,11 +71,11 @@ def grid_md5(gridfile: Union[Path, str]) -> str:
     while errorstate:
         errorstate = False
         result = subprocess.run(
-            ["alien.py", "md5sum", str(gridfile)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+            ["alien.py", "md5sum", str(gridfile)], capture_output=True, check=True
         )
         gb_out = result.stdout.decode()
         # Check that the command ran successfully
-        if gb_out.startswith("Error") or gb_out.startswith("Warning") or "CheckErrorStatus" in gb_out:
+        if gb_out.startswith(("Error", "Warning")) or "CheckErrorStatus" in gb_out:
             errorstate = True
 
     return gb_out.split("\t")[0]
@@ -104,7 +103,7 @@ def check_output_file(inputfile: Union[Path, str], outputfile: Union[Path, str],
             # Incorrect MD5 sum - probably a corrupted output file.
             outputfile.unlink()
             return False
-        else:
+        else:  # noqa: RET505
             if verbose:
                 logger.info(f"Output file {outputfile} (was) copied correctly")
             return True
@@ -135,7 +134,7 @@ def copy_from_alien(inputfile: Union[Path, str], outputfile: Union[Path, str]) -
     logger.info(f"Copying {inputfile} to {outputfile}")
     outputfile.parent.mkdir(mode=0o755, exist_ok=True, parents=True)
     process = subprocess.run(
-        ["alien_cp", str(inputfile), f"file://{outputfile}"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        ["alien_cp", str(inputfile), f"file://{outputfile}"], capture_output=True
     )
     if process.returncode:
         # Process failed. Return false so we can try again.
@@ -164,7 +163,7 @@ def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
     while errorstate:
         # Grab the list of files from alien via alien_ls
         logger.debug("Searching for files on AliEn...")
-        process = subprocess.run(["alien_ls", str(input_dir)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        process = subprocess.run(["alien_ls", str(input_dir)], capture_output=True)
 
         # Extract the files from the output.
         errorstate = False
@@ -172,7 +171,7 @@ def list_alien_dir(input_dir: Union[Path, str]) -> List[str]:
         if process.returncode == 0:
             # Only process if the command itself didn't report an issue via the return code.
             for d in process.stdout.decode().split("\n"):
-                if d.startswith("Error") or d.startswith("Warning"):
+                if d.startswith(("Error", "Warning")):
                     errorstate = True
                     break
                 # Remove leading and trailing whitespace.

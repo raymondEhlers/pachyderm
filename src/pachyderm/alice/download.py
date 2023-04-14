@@ -7,6 +7,8 @@ Based on code from Markus Fasel's download train run-by-run output in parallel s
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 
+from __future__ import annotations
+
 import abc
 import argparse
 import itertools
@@ -16,26 +18,18 @@ import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Mapping, Optional, Sequence, Type, TypeVar, Union
+from typing import Any, Iterable, Mapping, Sequence, TypeVar, Union
 
 from pachyderm import yaml
 from pachyderm.alice import utils
-
 
 try:
     import importlib.resources as resources
 except ImportError:
     # Try the back ported package.
-    import importlib_resources as resources  # type: ignore
+    import importlib_resources as resources  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
-
-# Work around typing issues in python 3.6
-# If only supporting 3.7+, we can add `from __future__ import annotations` and just use the more detailed definition
-if TYPE_CHECKING:
-    FilePairQueue = queue.Queue[Union["FilePair", None]]
-else:
-    FilePairQueue = queue.Queue
 
 # Use 4 threads by default in order to keep number of network request at an acceptable level
 NTHREADS: int = 4
@@ -53,8 +47,8 @@ class FilePair:
         n_tries: Number of attempts to copy the source file.
     """
 
-    source: Union[Path, str]
-    target: Union[Path, str]
+    source: Path | str
+    target: Path | str
     n_tries: int = 0
 
     def __post_init__(self) -> None:
@@ -62,6 +56,8 @@ class FilePair:
         self.source = Path(self.source)
         self.target = Path(self.target)
 
+
+FilePairQueue = queue.Queue[Union[FilePair, None]]
 
 class QueueFiller(threading.Thread, abc.ABC):
     """Fill file pairs into the queue.
@@ -103,7 +99,7 @@ class QueueFiller(threading.Thread, abc.ABC):
         """
         # If less than the max pool size, no need to wait.
         if self._queue.qsize() < self._queue.maxsize:
-            return None
+            return
         # Pool full, wait until half empty
         empty_limit = self._queue.maxsize / 2
         while self._queue.qsize() > empty_limit:
@@ -162,7 +158,7 @@ class DataSet:
     file_type: str
     search_path: Path
     filename: str
-    selections: Dict[str, Any] = field(default_factory=dict)
+    selections: dict[str, Any] = field(default_factory=dict)
 
     @property
     def is_data(self) -> bool:
@@ -188,7 +184,7 @@ class DataSet:
 
     @classmethod
     def from_specification(
-        cls: Type[_T], period: str, system: str, year: int, file_types: Dict[str, Dict[str, str]], **selections: Any
+        cls: type[_T], period: str, system: str, year: int, file_types: dict[str, dict[str, str]], **selections: Any
     ) -> _T:
         """Initializes the DataSet from a specification stored in a YAML file.
 
@@ -236,7 +232,7 @@ class DataSet:
         )
 
 
-def _extract_dataset_from_yaml(period: str, datasets_path: Optional[Union[Path, str]] = None) -> DataSet:
+def _extract_dataset_from_yaml(period: str, datasets_path: Path | str | None = None) -> DataSet:
     """Extract the datasets from YAML.
 
     Args:
@@ -251,7 +247,7 @@ def _extract_dataset_from_yaml(period: str, datasets_path: Optional[Union[Path, 
     filename = f"{period}.yaml"
     if datasets_path:
         datasets_path = Path(datasets_path) / filename
-        with open(datasets_path, "r") as f:
+        with datasets_path.open() as f:
             file_contents = f.read()
     else:
         file_contents = resources.read_text("pachyderm.alice.datasets", filename)
@@ -266,10 +262,10 @@ def _extract_dataset_from_yaml(period: str, datasets_path: Optional[Union[Path, 
         period=period, **dataset_information["parameters"], **dataset_information["selections"]
     )
 
-    return dataset
+    return dataset  # noqa: RET504
 
 
-def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[Dict[str, Any]]:
+def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[dict[str, Any]]:
     """Find all permutations of combinations of selections.
 
     This is useful for passing the selections as kwargs to a function (perhaps for formatting).
@@ -376,7 +372,8 @@ def download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool = 
     # Check that we have a valid alien-token.
     # Otherwise, the other calls to the grid will silently fail.
     if not utils.valid_alien_token():
-        raise RuntimeError("AliEn token doesn't appear to be valid. Please check!")
+        _msg = "AliEn token doesn't appear to be valid. Please check!"
+        raise RuntimeError(_msg)
 
     # Start filling the queue
     queue_filler.start()
@@ -384,7 +381,7 @@ def download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool = 
     workers = []
     n_threads = int(NTHREADS / 2) if fewer_threads else NTHREADS
     logger.info(f"Using {n_threads} threads to download files.")
-    for i in range(0, n_threads):
+    for _i in range(0, n_threads):
         worker = CopyHandler(q=q)
         worker.start()
         workers.append(worker)
@@ -461,7 +458,7 @@ class DatasetDownloadFiller(QueueFiller):
     """
 
     def __init__(
-        self, dataset: DataSet, output_dir: Union[Path, str], *args: FilePairQueue, **kwargs: FilePairQueue
+        self, dataset: DataSet, output_dir: Path | str, *args: FilePairQueue, **kwargs: FilePairQueue
     ) -> None:
         super().__init__(*args, **kwargs)
         self.dataset = dataset
@@ -513,8 +510,8 @@ class DatasetDownloadFiller(QueueFiller):
 
 
 def download_dataset(
-    period: str, output_dir: Union[Path, str], fewer_threads: bool, datasets_path: Optional[Union[Path, str]] = None
-) -> List[Path]:
+    period: str, output_dir: Path | str, fewer_threads: bool, datasets_path: Path | str | None = None
+) -> list[Path]:
     """Download files from the given dataset with the provided selections.
 
     Args:
@@ -554,7 +551,7 @@ def download_dataset(
     suffix = ""
     if ".zip" in dataset.filename:
         suffix = "#AliAOD.root" if dataset.file_type == "AOD" else "#AliESDs.root"
-    with open(filelist, "w") as f:
+    with filelist.open("w") as f:
         # One file per line.
         f.write("\n".join([f"{p}{suffix}" for p in period_files]))
     return period_files
@@ -610,7 +607,7 @@ def run_dataset_download() -> None:
         fewer_threads=args.fewerThreads,
         datasets_path=args.datasets,
     )
-    print(output)
+    print(output)  # noqa: T201
 
 
 class RunByRunTrainOutputFiller(QueueFiller):
@@ -627,7 +624,7 @@ class RunByRunTrainOutputFiller(QueueFiller):
 
     def __init__(
         self,
-        output_dir: Union[Path, str],
+        output_dir: Path | str,
         train_run: int,
         legotrain: str,
         dataset: str,
@@ -670,7 +667,7 @@ class RunByRunTrainOutputFiller(QueueFiller):
         if self._pt_hard_bin:
             grid_base = grid_base / str(self._pt_hard_bin)
 
-        return grid_base
+        return grid_base  # noqa: RET504
 
     def _process(self) -> None:
         logger.info(f"Searching output files in train directory {self._grid_base}")
@@ -688,13 +685,13 @@ class RunByRunTrainOutputFiller(QueueFiller):
             logger.info(f"run_dir: {run_dir}")
 
             data = utils.list_alien_dir(run_dir)
-            if not self._lego_train.split("/")[0] in data:
+            if self._lego_train.split("/")[0] not in data:
                 logger.error(f"PWG directory {self._lego_train.split('/')[0]} was not found for run {r}")
                 continue
 
             lego_trains_dir = run_dir / self._lego_train.split("/")[0]
             lego_trains = utils.list_alien_dir(lego_trains_dir)
-            if not self._lego_train.split("/")[1] in lego_trains:
+            if self._lego_train.split("/")[1] not in lego_trains:
                 logger.error(f"Train {self._lego_train.split('/')[1]} not found in PWG directory for run {r}")
                 continue
 
@@ -723,7 +720,7 @@ class RunByRunTrainOutputFiller(QueueFiller):
 
 
 def download_run_by_run_train_output(
-    outputpath: Union[Path, str],
+    outputpath: Path | str,
     trainrun: int,
     legotrain: str,
     dataset: str,

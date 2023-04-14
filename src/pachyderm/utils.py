@@ -13,7 +13,6 @@ from typing import Any, Mapping, Sequence, Union
 import numpy as np
 import numpy.typing as npt
 
-
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -43,7 +42,7 @@ def moving_average(arr: npt.NDArray[Any], n: int = 3) -> npt.NDArray[Any]:
 
 
 def recursive_getattr(obj: Any, attr: str, *args: Any) -> Any:
-    """Recursive ``getattar``.
+    """Recursive ``getattr``.
 
     This can be used as a drop in for the standard ``getattr(...)``. Credit to:
     https://stackoverflow.com/a/31174427
@@ -60,11 +59,11 @@ def recursive_getattr(obj: Any, attr: str, *args: Any) -> Any:
     def _getattr(obj_recurse: Any, attr_recurse: str) -> Any:
         return getattr(obj_recurse, attr_recurse, *args)
 
-    return functools.reduce(_getattr, [obj] + attr.split("."))
+    return functools.reduce(_getattr, [obj, *attr.split(".")])
 
 
 def recursive_setattr(obj: Any, attr: str, val: Any) -> Any:
-    """Recusrive ``setattr``.
+    """Recursive ``setattr``.
 
     This can be used as a drop in for the standard ``setattr(...)``. Credit to:
     https://stackoverflow.com/a/31174427
@@ -93,10 +92,10 @@ def recursive_getitem(d: Mapping[str, Any], keys: Union[str, Sequence[str]]) -> 
     Returns:
         The object stored under the keys.
     Raises:
-        KeyError: If one of the keys isnt' found.
+        KeyError: If one of the keys isn't found.
     """
     # If only a string, then just just return the item
     if isinstance(keys, str):
         return d[keys]
-    else:
+    else:  # noqa: RET505
         return functools.reduce(operator.getitem, keys, d)

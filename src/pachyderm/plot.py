@@ -8,15 +8,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Mapping, Sequence
 
 import attrs
-import matplotlib
 import matplotlib.axes
 import matplotlib.colors
 import numpy as np
 import numpy.typing as npt
-
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -31,7 +29,7 @@ def configure(non_interactive: bool = True) -> None:
     """Configure matplotlib according to my (biased) specification.
 
     As a high level summary, this is a combination of a number of seaborn settings, along with
-    my own tweaks. By calling this function, the matplotlilb ``rcParams`` will be modified according
+    my own tweaks. By calling this function, the matplotlib ``rcParams`` will be modified according
     to these settings.
 
     Up to this point, the settings have been configured by importing the `jet_hadron.plot.base`
@@ -171,7 +169,7 @@ def configure(non_interactive: bool = True) -> None:
         "font.size": 18.0,
         "legend.fontsize": 18.0,
         # Set the possible sans serif fonts. These are the ones made available in seaborn.
-        "font.sans-serif": ["Arial", "DejaVu Sans", "Liberation " "Sans", "Bitstream Vera Sans", "sans-serif"],
+        "font.sans-serif": ["Arial", "DejaVu Sans", "Liberation Sans", "Bitstream Vera Sans", "sans-serif"],
         # Make the grid lines light grey and slightly larger.
         "grid.color": light_grey,
         "grid.linewidth": 1.0,
@@ -210,8 +208,8 @@ def error_boxes(
     x_data: npt.NDArray[Any],
     y_data: npt.NDArray[Any],
     y_errors: npt.NDArray[Any],
-    x_errors: Optional[npt.NDArray[Any]] = None,
-    **kwargs: Union[str, float],
+    x_errors: npt.NDArray[Any] | None = None,
+    **kwargs: str | float,
 ) -> matplotlib.collections.PatchCollection:
     """Plot error boxes for the given data.
 
@@ -244,15 +242,14 @@ def error_boxes(
 
     # Validate input data.
     if len(x_data) != len(y_data):
-        raise ValueError(f"Length of x_data and y_data doesn't match! x_data: {len(x_data)}, y_data: {len(y_data)}")
+        _msg = f"Length of x_data and y_data doesn't match! x_data: {len(x_data)}, y_data: {len(y_data)}"
+        raise ValueError(_msg)
     if len(x_errors.T) != len(x_data):
-        raise ValueError(
-            f"Length of x_data and x_errors doesn't match! x_data: {len(x_data)}, x_errors: {len(x_errors)}"
-        )
+        _msg = f"Length of x_data and x_errors doesn't match! x_data: {len(x_data)}, x_errors: {len(x_errors)}"
+        raise ValueError(_msg)
     if len(y_errors.T) != len(y_data):
-        raise ValueError(
-            f"Length of y_data and y_errors doesn't match! y_data: {y_data.shape}, y_errors: {y_errors.shape}"
-        )
+        _msg = f"Length of y_data and y_errors doesn't match! y_data: {y_data.shape}, y_errors: {y_errors.shape}"
+        raise ValueError(_msg)
 
     # Default arguments
     if "alpha" not in kwargs:
@@ -266,8 +263,8 @@ def error_boxes(
         # For the errors, we want to support symmetric and asymmetric errors.
         # Thus, for asymmetric errors, we sum up the distance, but for symmetric
         # errors, we want to take * 2 of the error.
-        xerr = np.atleast_1d(xerr)
-        yerr = np.atleast_1d(yerr)
+        xerr = np.atleast_1d(xerr)  # noqa: PLW2901
+        yerr = np.atleast_1d(yerr)  # noqa: PLW2901
         # logger.debug(f"yerr: {yerr}")
         r = matplotlib.patches.Rectangle(
             (x - xerr[0], y - yerr[0]),
@@ -287,8 +284,8 @@ def error_boxes(
 
 
 def convert_mpl_color_scheme_to_ROOT(
-    name: Optional[str] = None,
-    cmap: Optional[Union[matplotlib.colors.ListedColormap, matplotlib.colors.LinearSegmentedColormap]] = None,
+    name: str | None = None,
+    cmap: matplotlib.colors.ListedColormap | matplotlib.colors.LinearSegmentedColormap | None = None,
     reversed: bool = False,
     n_values_to_cut_from_top: int = 0,
 ) -> str:
@@ -306,7 +303,8 @@ def convert_mpl_color_scheme_to_ROOT(
 
     # Validation
     if name is None and cmap is None:
-        raise ValueError("Must pass the name of a colormap to retrieve from MPL or an existing colormap.")
+        _msg = "Must pass the name of a colormap to retrieve from MPL or an existing colormap."
+        raise ValueError(_msg)
     # We select on the passed cmap rather than the name because we might use the name later.
     if cmap is None:
         color_scheme = matplotlib.cm.get_cmap(name)
@@ -343,7 +341,7 @@ def convert_mpl_color_scheme_to_ROOT(
     def listing_array(arr: npt.NDArray[Any]) -> str:
         return ", ".join(str(v) for v in arr)
 
-    s = f"""
+    return f"""
 const Int_t NRGBs = {n_colors};
 const Int_t NCont = 99;
 Int_t colors[NRGBs] = {{0}};
@@ -359,12 +357,12 @@ gStyle->SetNumberContours(NCont);*/
 }}
 gStyle->SetPalette(NCont + 1, colors);*/
 """
-    return s
 
 
-def _validate_axis_name(instance: "AxisConfig", attribute: attrs.Attribute[str], value: str) -> None:
+def _validate_axis_name(instance: AxisConfig, attribute: attrs.Attribute[str], value: str) -> None:  # noqa: ARG001
     if value not in ["x", "y", "z"]:
-        raise ValueError("Invalid axis name: {value}")
+        _msg = f"Invalid axis name: {value}"
+        raise ValueError(_msg)
 
 
 @attrs.define
@@ -372,9 +370,9 @@ class AxisConfig:
     axis: str = attrs.field(validator=[_validate_axis_name])
     label: str = attrs.field(default="")
     log: bool = attrs.field(default=False)
-    range: Optional[Tuple[Optional[float], Optional[float]]] = attrs.field(default=None)
-    font_size: Optional[float] = attrs.field(default=None)
-    tick_font_size: Optional[float] = attrs.field(default=None)
+    range: tuple[float | None, float | None] | None = attrs.field(default=None)
+    font_size: float | None = attrs.field(default=None)
+    tick_font_size: float | None = attrs.field(default=None)
 
     def apply(self, ax: matplotlib.axes.Axes) -> None:
         if self.label:
@@ -408,9 +406,9 @@ class TextConfig:
     text: str = attrs.field()
     x: float = attrs.field()
     y: float = attrs.field()
-    alignment: Optional[str] = attrs.field(default=None)
-    color: Optional[str] = attrs.field(default="black")
-    font_size: Optional[float] = attrs.field(default=None)
+    alignment: str | None = attrs.field(default=None)
+    color: str | None = attrs.field(default="black")
+    font_size: float | None = attrs.field(default=None)
 
     def apply(self, ax: matplotlib.axes.Axes) -> None:
         # Some reasonable defaults
@@ -420,26 +418,26 @@ class TextConfig:
             self.alignment = f"{ud} {lr}"
 
         alignments = {
-            "upper right": dict(
-                horizontalalignment="right",
-                verticalalignment="top",
-                multialignment="right",
-            ),
-            "upper left": dict(
-                horizontalalignment="left",
-                verticalalignment="top",
-                multialignment="left",
-            ),
-            "lower right": dict(
-                horizontalalignment="right",
-                verticalalignment="bottom",
-                multialignment="right",
-            ),
-            "lower left": dict(
-                horizontalalignment="left",
-                verticalalignment="bottom",
-                multialignment="left",
-            ),
+            "upper right": {
+                "horizontalalignment": "right",
+                "verticalalignment": "top",
+                "multialignment": "right",
+            },
+            "upper left": {
+                "horizontalalignment": "left",
+                "verticalalignment": "top",
+                "multialignment": "left",
+            },
+            "lower right": {
+                "horizontalalignment": "right",
+                "verticalalignment": "bottom",
+                "multialignment": "right",
+            },
+            "lower left": {
+                "horizontalalignment": "left",
+                "verticalalignment": "bottom",
+                "multialignment": "left",
+            },
         }
         alignment_kwargs = alignments[self.alignment]
 
@@ -461,22 +459,22 @@ class TextConfig:
 class LegendConfig:
     location: str = attrs.field(default=None)
     # Takes advantage of the fact that None will use the default.
-    anchor: Optional[Tuple[float, float]] = attrs.field(default=None)
-    font_size: Optional[float] = attrs.field(default=None)
-    ncol: Optional[float] = attrs.field(default=1)
-    marker_label_spacing: Optional[float] = attrs.field(default=None)
+    anchor: tuple[float, float] | None = attrs.field(default=None)
+    font_size: float | None = attrs.field(default=None)
+    ncol: float | None = attrs.field(default=1)
+    marker_label_spacing: float | None = attrs.field(default=None)
     # NOTE: Default in mpl is 0.5
-    label_spacing: Optional[float] = attrs.field(default=None)
+    label_spacing: float | None = attrs.field(default=None)
     # NOTE: Default in mpl is 2.0
-    column_spacing: Optional[float] = attrs.field(default=None)
-    handle_height: Optional[float] = attrs.field(default=None)
+    column_spacing: float | None = attrs.field(default=None)
+    handle_height: float | None = attrs.field(default=None)
     handler_map: dict[str, Any] = attrs.field(factory=dict)
 
     def apply(
         self,
         ax: matplotlib.axes.Axes,
-        legend_handles: Optional[Sequence[matplotlib.container.ErrorbarContainer]] = None,
-        legend_labels: Optional[Sequence[str]] = None,
+        legend_handles: Sequence[matplotlib.container.ErrorbarContainer] | None = None,
+        legend_labels: Sequence[str] | None = None,
     ) -> None:
         if self.location:
             kwargs = {}
@@ -504,16 +502,16 @@ class LegendConfig:
             )
 
 
-def _ensure_sequence_of_axis_config(value: Union[AxisConfig, Sequence[AxisConfig]]) -> Sequence[AxisConfig]:
+def _ensure_sequence_of_axis_config(value: AxisConfig | Sequence[AxisConfig]) -> Sequence[AxisConfig]:
     if isinstance(value, AxisConfig):
         value = [value]
-    return value
+    return value  # noqa: RET504
 
 
-def _ensure_sequence_of_text_config(value: Union[TextConfig, Sequence[TextConfig]]) -> Sequence[TextConfig]:
+def _ensure_sequence_of_text_config(value: TextConfig | Sequence[TextConfig]) -> Sequence[TextConfig]:
     if isinstance(value, TextConfig):
         value = [value]
-    return value
+    return value  # noqa: RET504
 
 
 @attrs.define
@@ -525,8 +523,8 @@ class Panel:
     def apply(
         self,
         ax: matplotlib.axes.Axes,
-        legend_handles: Optional[Sequence[matplotlib.container.ErrorbarContainer]] = None,
-        legend_labels: Optional[Sequence[str]] = None,
+        legend_handles: Sequence[matplotlib.container.ErrorbarContainer] | None = None,
+        legend_labels: Sequence[str] | None = None,
     ) -> None:
         # Axes
         for axis in self.axes:
@@ -549,24 +547,24 @@ class Figure:
 
         # Adjust the layout.
         fig.tight_layout()
-        adjust_default_args = dict(
+        adjust_default_args = {
             # Reduce spacing between subplots
-            hspace=0,
-            wspace=0,
+            "hspace": 0,
+            "wspace": 0,
             # Reduce external spacing
-            left=0.10,
-            bottom=0.105,
-            right=0.98,
-            top=0.98,
-        )
+            "left": 0.10,
+            "bottom": 0.105,
+            "right": 0.98,
+            "top": 0.98,
+        }
         adjust_default_args.update(self.edge_padding)
         fig.subplots_adjust(**adjust_default_args)
 
 
-def _ensure_sequence_of_panels(value: Union[Panel, Sequence[Panel]]) -> Sequence[Panel]:
+def _ensure_sequence_of_panels(value: Panel | Sequence[Panel]) -> Sequence[Panel]:
     if isinstance(value, Panel):
         value = [value]
-    return value
+    return value  # noqa: RET504
 
 
 @attrs.define
@@ -578,25 +576,26 @@ class PlotConfig:
     def apply(
         self,
         fig: matplotlib.figure.Figure,
-        ax: Optional[matplotlib.axes.Axes] = None,
-        axes: Optional[Sequence[matplotlib.axes.Axes]] = None,
-        legend_handles: Optional[Sequence[matplotlib.container.ErrorbarContainer]] = None,
-        legend_labels: Optional[Sequence[str]] = None,
+        ax: matplotlib.axes.Axes | None = None,
+        axes: Sequence[matplotlib.axes.Axes] | None = None,
+        legend_handles: Sequence[matplotlib.container.ErrorbarContainer] | None = None,
+        legend_labels: Sequence[str] | None = None,
     ) -> None:
         # Validation
         if ax is None and axes is None:
-            raise TypeError("Must pass the axis or axes of the figure.")
+            _msg = "Must pass the axis or axes of the figure."
+            raise TypeError(_msg)
         if ax is not None and axes is not None:
-            raise TypeError("Cannot pass both a single axis and multiple axes.")
+            _msg = "Cannot pass both a single axis and multiple axes."
+            raise TypeError(_msg)
         # If we just have a single axis, wrap it up into a list so we can process it along with our panels.
         if ax is not None:
             axes = [ax]
         # Help out mypy...
         assert axes is not None
         if len(axes) != len(self.panels):
-            raise ValueError(
-                f"Must have the same number of axes and panels. Passed axes: {axes}, panels: {self.panels}"
-            )
+            _msg = f"Must have the same number of axes and panels. Passed axes: {axes}, panels: {self.panels}"
+            raise ValueError(_msg)
 
         # Finally, we can actually apply the stored properties.
         # Apply panels to the axes.

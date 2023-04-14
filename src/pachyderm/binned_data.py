@@ -13,13 +13,12 @@ import operator
 import typing
 import uuid
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Sequence, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, cast
 
 import attrs
 import numpy as np
 import numpy.typing as npt
 import ruamel.yaml
-
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,7 @@ def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int: ...
 @typing.overload
 def find_bin(bin_edges: npt.NDArray[Any], value: npt.NDArray[Any]) -> npt.NDArray[np.int64]: ...
 
-def find_bin(bin_edges: npt.NDArray[Any], value: Union[float, npt.NDArray[Any]]) -> Union[int, npt.NDArray[np.int64]]:
+def find_bin(bin_edges: npt.NDArray[Any], value: float | npt.NDArray[Any]) -> int | npt.NDArray[np.int64]:
     """Determine the index position where the value should be inserted.
 
     This is basically ``ROOT.TH1.FindBin(value)``, but it can used for any set of bin_edges.
@@ -83,7 +82,7 @@ def find_bin(bin_edges: npt.NDArray[Any], value: Union[float, npt.NDArray[Any]])
     return np.searchsorted(bin_edges, value, side="right") - 1
 
 
-def _expand_slice_start_and_stop(axis: Axis, selection: slice) -> Tuple[Optional[int], Optional[int]]:
+def _expand_slice_start_and_stop(axis: Axis, selection: slice) -> tuple[int | None, int | None]:
     """Expand out the start and stop values for a slice.
 
     Args:
@@ -173,7 +172,7 @@ class Axis:
             return np.allclose(self.bin_edges, other.bin_edges)
         return False
 
-    def __getitem__(self, selection: Union[int, slice]) -> Axis:
+    def __getitem__(self, selection: int | slice) -> Axis:
         """Select a subset of the axis.
 
         Args:
@@ -185,7 +184,8 @@ class Axis:
         # Basic validation
         # If it's just an int, it was probably an accident. Let the user know.
         if isinstance(selection, int):
-            raise ValueError("Passed an integer to getitem. This is a bit ambiguous, so if you want single values (edges or centers), access the bin edges directly.")
+            _msg = "Passed an integer to getitem. This is a bit ambiguous, so if you want single values (edges or centers), access the bin edges directly."
+            raise ValueError(_msg)
 
         # Evaluate the selections, expanding the axis values if passed via complex numbers
         start, stop = _expand_slice_start_and_stop(self, selection)
@@ -202,9 +202,11 @@ class Axis:
             bin_edges = np.array(step, copy=True)
             # Validation
             if start is not None and bin_edges[0] != self.bin_edges[start]:
-                raise ValueError(f"Lower edge doesn't match rebin. index: {start}, value: {self.bin_edges[start]}, rebin: {bin_edges}")
+                _msg = f"Lower edge doesn't match rebin. index: {start}, value: {self.bin_edges[start]}, rebin: {bin_edges}"
+                raise ValueError(_msg)
             if stop is not None and bin_edges[-1] != self.bin_edges[stop]:
-                raise ValueError(f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}")
+                _msg = f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}"
+                raise ValueError(_msg)
 
             # Validate that the new binning lies within the old binning
             # (ie. each new bin edge is contained in the previous binning)
@@ -221,9 +223,8 @@ class Axis:
                     axis=1
                 )
             ):
-                raise ValueError(
-                    f"New bin edges ({bin_edges}) aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
-                )
+                _msg = f"New bin edges ({bin_edges}) aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
+                raise ValueError(_msg)
 
             # From here, we're good, so pass on the bin edges
         else:
@@ -259,7 +260,7 @@ class Axis:
 
     @classmethod
     def to_yaml(
-        cls: Type[Axis], representer: ruamel.yaml.representer.BaseRepresenter, obj: Axis
+        cls: type[Axis], representer: ruamel.yaml.representer.BaseRepresenter, obj: Axis
     ) -> ruamel.yaml.nodes.MappingNode:
         """Encode YAML representation.
 
@@ -282,7 +283,7 @@ class Axis:
 
     @classmethod
     def from_yaml(
-        cls: Type[Axis],
+        cls: type[Axis],
         constructor: ruamel.yaml.constructor.BaseConstructor,
         data: ruamel.yaml.nodes.MappingNode,
     ) -> Axis:
@@ -301,30 +302,31 @@ class Axis:
         # Specialize for each version
         if serialization_version == 1:
             return cls(**kwargs)
-        else:
-            raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
+        else:  # noqa: RET505
+            _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
+            raise ValueError(_msg)
 
 
 class AxesTuple(Tuple[Axis, ...]):
     @property
-    def bin_edges(self) -> Tuple[npt.NDArray[Any], ...]:
+    def bin_edges(self) -> tuple[npt.NDArray[Any], ...]:
         return tuple(a.bin_edges for a in self)
 
     @property
-    def bin_widths(self) -> Tuple[npt.NDArray[Any], ...]:
+    def bin_widths(self) -> tuple[npt.NDArray[Any], ...]:
         return tuple(a.bin_widths for a in self)
 
     @property
-    def bin_centers(self) -> Tuple[npt.NDArray[Any], ...]:
+    def bin_centers(self) -> tuple[npt.NDArray[Any], ...]:
         return tuple(a.bin_centers for a in self)
 
     @property
-    def shape(self) -> Tuple[int, ...]:
+    def shape(self) -> tuple[int, ...]:
         return tuple(len(a) for a in self)
 
     @classmethod
     def from_axes(
-        cls: Type[AxesTuple], axes: Union[Axis, Sequence[Axis], npt.NDArray[Any], Sequence[npt.NDArray[Any]]]
+        cls: type[AxesTuple], axes: Axis | Sequence[Axis] | npt.NDArray[Any] | Sequence[npt.NDArray[Any]]
     ) -> AxesTuple:
         values = axes
         # Convert to a list if necessary
@@ -347,7 +349,7 @@ class AxesTuple(Tuple[Axis, ...]):
 
     @classmethod
     def to_yaml(
-        cls: Type[AxesTuple], representer: ruamel.yaml.representer.BaseRepresenter, obj: AxesTuple
+        cls: type[AxesTuple], representer: ruamel.yaml.representer.BaseRepresenter, obj: AxesTuple
     ) -> ruamel.yaml.nodes.MappingNode:
         """Encode YAML representation.
 
@@ -378,7 +380,7 @@ class AxesTuple(Tuple[Axis, ...]):
 
     @classmethod
     def from_yaml(
-        cls: Type[AxesTuple],
+        cls: type[AxesTuple],
         constructor: ruamel.yaml.constructor.BaseConstructor,
         data: ruamel.yaml.nodes.MappingNode,
     ) -> AxesTuple:
@@ -400,7 +402,8 @@ class AxesTuple(Tuple[Axis, ...]):
         if serialization_version_node:
             serialization_version = constructor.construct_object(serialization_version_node)
         else:
-            raise ValueError(f"Unable to retrieve serialization version for {cls.__name__}")
+            _msg = f"Unable to retrieve serialization version for {cls.__name__}"
+            raise ValueError(_msg)
 
         # Specialize for each version
         axes = []
@@ -410,12 +413,13 @@ class AxesTuple(Tuple[Axis, ...]):
             for axis_data in stored_obj_data.value:
                 axes.append(constructor.construct_object(axis_data))
             return cls(axes)
-        else:
-            raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
+        else:  # noqa: RET505
+            _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
+            raise ValueError(_msg)
 
 
 def _axes_tuple_from_axes_sequence(
-    axes: Union[Axis, Sequence[Axis], npt.NDArray[Any], Sequence[npt.NDArray[Any]]]
+    axes: Axis | Sequence[Axis] | npt.NDArray[Any] | Sequence[npt.NDArray[Any]]
 ) -> AxesTuple:
     """Workaround for mypy issue in creating an AxesTuple from axes.
 
@@ -455,19 +459,21 @@ def _validate_axes(instance: BinnedData, attribute: AxesTupleAttribute, value: A
     array_length = _array_length_from_axes(value)
     for other_name, other_value in [("values", instance.values), ("variances", instance.variances)]:
         if array_length != other_value.size:
-            raise ValueError(
+            _msg = (
                 f"Length of {attribute.name} does not match expected length of the {other_name}."
                 f" len({attribute.name}) = {array_length}, expected length from '{other_name}': {len(other_value)}."
             )
+            raise ValueError(_msg)
 
 
 def _validate_arrays(instance: BinnedData, attribute: NumpyAttribute, value: npt.NDArray[Any]) -> None:
     expected_length = _array_length_from_axes(instance.axes)
     if value.size != expected_length:
-        raise ValueError(
+        _msg = (
             f"Length of {attribute} does not match expected length."
             f" len({attribute}) = {len(value)}, expected length: {expected_length}."
         )
+        raise ValueError(_msg)
 
 
 def _shared_memory_check(instance: BinnedData, attribute_name: str, value: npt.NDArray[Any]) -> None:
@@ -505,9 +511,8 @@ def _shape_array_check(instance: BinnedData, attribute_name: str , value: npt.ND
             setattr(instance, attribute_name, value.T)
         else:
             # Otherwise, something is entirely wrong. Just let the user know.
-            raise ValueError(
-                f"Shape of {attribute_name} mismatches axes. {attribute_name:}.shape: {value.shape}, axes.shape: {instance.axes.shape}"
-            )
+            _msg = f"Shape of {attribute_name} mismatches axes. {attribute_name:}.shape: {value.shape}, axes.shape: {instance.axes.shape}"
+            raise ValueError(_msg)
 
 
 @attrs.define(eq=False)
@@ -521,7 +526,7 @@ class BinnedData:
     variances: npt.NDArray[Any] = attrs.field(
         converter=np.asarray, validator=[_validate_arrays],
     )
-    metadata: Dict[str, Any] = attrs.field(factory=dict)
+    metadata: dict[str, Any] = attrs.field(factory=dict)
 
     def __attrs_post_init__(self) -> None:
         # Validation
@@ -537,7 +542,7 @@ class BinnedData:
 
     @classmethod
     def to_yaml(
-        cls: Type[BinnedData], representer: ruamel.yaml.representer.BaseRepresenter, obj: BinnedData
+        cls: type[BinnedData], representer: ruamel.yaml.representer.BaseRepresenter, obj: BinnedData
     ) -> ruamel.yaml.nodes.MappingNode:
         """Encode YAML representation.
 
@@ -571,7 +576,7 @@ class BinnedData:
 
     @classmethod
     def from_yaml(
-        cls: Type[BinnedData],
+        cls: type[BinnedData],
         constructor: ruamel.yaml.constructor.BaseConstructor,
         data: ruamel.yaml.nodes.MappingNode,
     ) -> BinnedData:
@@ -593,7 +598,8 @@ class BinnedData:
         if serialization_version_node:
             serialization_version = constructor.construct_object(serialization_version_node)
         else:
-            raise ValueError(f"Unable to retrieve serialization version for {cls.__name__}")
+            _msg = f"Unable to retrieve serialization version for {cls.__name__}"
+            raise ValueError(_msg)
 
         # Specialize for each version
         if serialization_version == 1:
@@ -605,8 +611,9 @@ class BinnedData:
                 for k in list(stored_mapping.keys())
             }
             return cls(**stored_data)
-        else:
-            raise ValueError(f"Unknown serialization version {serialization_version} for {cls.__name__}")
+        else:  # noqa: RET505
+            _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
+            raise ValueError(_msg)
 
     @property
     def axis(self) -> Axis:
@@ -618,7 +625,8 @@ class BinnedData:
             The axis.
         """
         if len(self.axes) != 1:
-            raise ValueError(f"Calling axis is only valid for one axis. There are {len(self.axes)} axes.")
+            _msg = f"Calling axis is only valid for one axis. There are {len(self.axes)} axes."
+            raise ValueError(_msg)
         return self.axes[0]
 
     @property
@@ -649,11 +657,11 @@ class BinnedData:
         new += other
         return new
 
-    def __radd__(self: BinnedData, other: Union[int, BinnedData]) -> BinnedData:
+    def __radd__(self: BinnedData, other: int | BinnedData) -> BinnedData:
         """For use with sum(...)."""
         if other == 0:
             return self
-        else:
+        else:  # noqa: RET505
             # Help out mypy
             assert not isinstance(other, int)
             return self + other
@@ -661,11 +669,12 @@ class BinnedData:
     def __iadd__(self: BinnedData, other: BinnedData) -> BinnedData:
         """Handles ``a += b``."""
         if self.axes != other.axes:
-            raise TypeError(
+            _msg = (
                 f"Binning is different for given binned data, so cannot be added!"
                 f" len(self.axes): {len(self.axes)}, len(other.axes): {len(other.axes)}."
                 f" axes: {self.axes}, other axes: {other.axes}."
             )
+            raise TypeError(_msg)
         self.values += other.values
         self.variances += other.variances
         return self
@@ -679,22 +688,23 @@ class BinnedData:
     def __isub__(self: BinnedData, other: BinnedData) -> BinnedData:
         """Handles ``a -= b``."""
         if self.axes != other.axes:
-            raise TypeError(
+            _msg = (
                 f"Binning is different for given binned data, so cannot be subtracted!"
                 f" len(self.axes): {len(self.axes)}, len(other.axes): {len(other.axes)}."
                 f" axes: {self.axes}, other axes: {other.axes}."
             )
+            raise TypeError(_msg)
         self.values -= other.values
         self.variances += other.variances
         return self
 
-    def __mul__(self: BinnedData, other: Union[BinnedData, npt.NDArray[Any], float]) -> BinnedData:
+    def __mul__(self: BinnedData, other: BinnedData | npt.NDArray[Any] | float) -> BinnedData:
         """Handles ``a = b * c``."""
         new = self.copy()
         new *= other
         return new
 
-    def __imul__(self: BinnedData, other: Union[BinnedData, npt.NDArray[Any], float]) -> BinnedData:
+    def __imul__(self: BinnedData, other: BinnedData | npt.NDArray[Any] | float) -> BinnedData:
         """Handles ``a *= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
@@ -707,11 +717,12 @@ class BinnedData:
             assert isinstance(other, type(self))
             # Validation
             if self.axes != other.axes:
-                raise TypeError(
+                _msg = (
                     f"Binning is different for given binned data, so cannot be multiplied!"
                     f" len(self.axes): {len(self.axes)}, len(other.axes): {len(other.axes)}."
                     f" axes: {self.axes}, other axes: {other.axes}."
                 )
+                raise TypeError(_msg)
             # NOTE: We need to calculate the errors_squared first because the depend on the existing y values
             # Errors are from ROOT::TH1::Multiply(const TH1 *h1)
             # NOTE: This is just error propagation, simplified with a = b * c!
@@ -719,13 +730,13 @@ class BinnedData:
             self.values *= other.values
         return self
 
-    def __truediv__(self: BinnedData, other: Union[BinnedData, npt.NDArray[Any], float]) -> BinnedData:
+    def __truediv__(self: BinnedData, other: BinnedData | npt.NDArray[Any] | float) -> BinnedData:
         """Handles ``a = b / c``."""
         new = self.copy()
         new /= other
         return new
 
-    def __itruediv__(self: BinnedData, other: Union[BinnedData, npt.NDArray[Any], float]) -> BinnedData:
+    def __itruediv__(self: BinnedData, other: BinnedData | npt.NDArray[Any] | float) -> BinnedData:
         """Handles ``a /= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
@@ -737,11 +748,12 @@ class BinnedData:
             assert isinstance(other, type(self))
             # Validation
             if self.axes != other.axes:
-                raise TypeError(
+                _msg = (
                     f"Binning is different for given binned data, so cannot be divided!"
                     f" len(self.axes): {len(self.axes)}, len(other.axes): {len(other.axes)}."
                     f" axes: {self.axes}, other axes: {other.axes}."
                 )
+                raise TypeError(_msg)
             # Errors are from ROOT::TH1::Divide(const TH1 *h1)
             # NOTE: This is just error propagation, simplified with a = b / c!
             # NOTE: We need to calculate the variances first before setting values because the variances depend on
@@ -782,7 +794,7 @@ class BinnedData:
         return all(agreement) and axes_agree and metadata_agree
 
     @classmethod
-    def from_hepdata(cls: Type[BinnedData], hist: Mapping[str, Any]) -> List[BinnedData]:
+    def from_hepdata(cls: type[BinnedData], hist: Mapping[str, Any]) -> list[BinnedData]:  # noqa: ARG003
         """Convert (a set) of HEPdata histogram(s) to BinnedData objects.
 
         Will include any information that the extraction function extracts and returns.
@@ -802,23 +814,23 @@ class BinnedData:
         Returns:
             List of Histogram1D constructed from the input HEPdata.
         """
-        ...
-        raise NotImplementedError("Not yet implemented.")
+        _msg = "Not yet implemented."
+        raise NotImplementedError(_msg)
 
     @classmethod
-    def _from_uproot3(cls: Type[BinnedData], hist: Any) -> BinnedData:
+    def _from_uproot3(cls: type[BinnedData], hist: Any) -> BinnedData:
         """Convert from uproot read histogram to BinnedData."""
         # All of these methods should excludes underflow and overflow bins
         bin_edges = hist.edges
         values = hist.values
         variances = hist.variances
 
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         return cls(axes=bin_edges, values=values, variances=variances, metadata=metadata)
 
     @classmethod
-    def _from_uproot4(cls: Type[BinnedData], hist: Any) -> BinnedData:
+    def _from_uproot4(cls: type[BinnedData], hist: Any) -> BinnedData:
         """Convert from uproot4 to BinnedData.
 
         Cannot just use the boost_histogram conversion because it includes flow bins.
@@ -829,7 +841,7 @@ class BinnedData:
         variances = hist.variances(flow=False)
         bin_edges = [axis.edges(flow=False) for axis in hist.axes]
 
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         return cls(
             axes=bin_edges,
@@ -839,7 +851,7 @@ class BinnedData:
         )
 
     @classmethod
-    def _from_tgraph(cls: Type[BinnedData], hist: Any) -> BinnedData:
+    def _from_tgraph(cls: type[BinnedData], hist: Any) -> BinnedData:
         """Convert from uproot4 TGraphAsymmetricErrors to BinnedData.
 
         We have to make a number of assumptions here, but it seems that it should work
@@ -853,12 +865,13 @@ class BinnedData:
         possible_low_bin_edges = bin_centers - x_errors_low
         possible_high_bin_edges = bin_centers + x_errors_high
         if not np.allclose(possible_low_bin_edges[1:], possible_high_bin_edges[:-1]):
-            raise ValueError(
+            _msg = (
                 "Bin edges in graph are inconsistent. Please fix this and try again."
                 f"\n\tLow: {possible_low_bin_edges}"
                 f"\n\tHigh: {possible_high_bin_edges}"
                 f"\n\tValues: {values}"
             )
+            raise ValueError(_msg)
         # x errors are consistent, so we can create bin edges from them.
         bin_edges = np.append(possible_low_bin_edges, possible_high_bin_edges[-1])
 
@@ -879,10 +892,10 @@ class BinnedData:
         )
 
     @classmethod
-    def _from_boost_histogram(cls: Type[BinnedData], hist: Any) -> BinnedData:
+    def _from_boost_histogram(cls: type[BinnedData], hist: Any) -> BinnedData:
         """Convert from boost histogram to BinnedData."""
         view = hist.view()
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         return cls(
             axes=hist.axes.edges,
@@ -892,7 +905,7 @@ class BinnedData:
         )
 
     @classmethod
-    def _from_ROOT(cls: Type[BinnedData], hist: Any) -> BinnedData:
+    def _from_ROOT(cls: type[BinnedData], hist: Any) -> BinnedData:
         """Convert TH1, TH2, or TH3 histogram to BinnedData.
 
         Note:
@@ -907,10 +920,7 @@ class BinnedData:
         # Determine the number of dimensions
         # TProfile
         if "TProfile" in class_name:
-            if "TProfile" == class_name:
-                n_dim = 1
-            else:
-                n_dim = int(class_name[-1])
+            n_dim = 1 if class_name == "TProfile" else int(class_name[-1])
         else:
             # TH*D
             n_dim = int(class_name[2])
@@ -950,7 +960,7 @@ class BinnedData:
         # Specifically, to get the appropriate shape for the arrays, we need to reshape in the opposite
         # order of the axes, and then transpose.
         # NOTE: These operations _do not_ commute.
-        shape = tuple((len(a) for a in reversed(axes)))
+        shape = tuple(len(a) for a in reversed(axes))
         bins_without_flow_mask = np.array(
             [not (hist.IsBinUnderflow(i) or hist.IsBinOverflow(i)) for i in range(hist.GetNcells())]
         )
@@ -973,7 +983,7 @@ class BinnedData:
             first_non_overflow_bin_map = {
                 # Using 10 ((by 10) by 10) as an example, to derive the specific values below, and then generalizing.
                 # 1
-                1: lambda axes: 1,
+                1: lambda axes: 1,  # noqa: ARG005
                 # 12 + 1 = 13
                 2: lambda axes: (len(axes[0]) + 2) + 1,
                 # 12 * 12 + 12 + 1 = 157
@@ -981,9 +991,10 @@ class BinnedData:
             }
             first_non_overflow_bin = first_non_overflow_bin_map[len(axes)](axes)  # type: ignore[no-untyped-call]
             if not np.isclose(variances.flatten()[0], hist.GetBinError(first_non_overflow_bin) ** 2):
-                raise ValueError("Sumw2 errors don't seem to represent bin errors!")
+                _msg = "Sumw2 errors don't seem to represent bin errors!"
+                raise ValueError(_msg)
 
-        metadata: Dict[str, Any] = {}
+        metadata: dict[str, Any] = {}
 
         return cls(
             axes=axes,
@@ -994,7 +1005,7 @@ class BinnedData:
 
     @classmethod
     def from_existing_data(
-        cls: Type[BinnedData], binned_data: Any, return_copy_if_already_converted: bool = True
+        cls: type[BinnedData], binned_data: Any, return_copy_if_already_converted: bool = True
     ) -> BinnedData:
         """Convert an existing histogram.
 
@@ -1011,7 +1022,7 @@ class BinnedData:
             if return_copy_if_already_converted:
                 logger.debug(f"Passed binned data is already a {cls.__name__}. Returning a copy of the object.")
                 return binned_data.copy()
-            else:
+            else:  # noqa: RET505
                 logger.warning(f"Passed binned data is already a {cls.__name__}. Returning the existing object.")
                 return binned_data
 
@@ -1049,16 +1060,14 @@ class BinnedData:
         """
         try:
             import ROOT  # pyright: ignore [reportMissingImports]
-        except ImportError:
-            raise RuntimeError("Unable to import ROOT. Please ensure that ROOT is installed and in your $PYTHONPATH.")
+        except ImportError as e:
+            _msg = "Unable to import ROOT. Please ensure that ROOT is installed and in your $PYTHONPATH."
+            raise RuntimeError(_msg) from e
 
         # Setup
         # We usually want to be entirely certain that the ROOT arrays are not pointing at the same memory
         # as the current hist, so we make a copy. We basically always want to copy.
-        if copy:
-            h = self.from_existing_data(self)
-        else:
-            h = self
+        h = self.from_existing_data(self) if copy else self
 
         unique_name = str(uuid.uuid4())
         name = h.metadata.get("name", unique_name)
@@ -1070,7 +1079,8 @@ class BinnedData:
         if len(h.axes) <= 3:
             h_ROOT = getattr(ROOT, f"TH{len(h.axes)}D")(*args)
         else:
-            raise RuntimeError(f"Asking to create hist with {len(h.axes)} > 3 dimensions.")
+            _msg = f"Asking to create hist with {len(h.axes)} > 3 dimensions."
+            raise RuntimeError(_msg)
 
         # We have to keep track on the bin index by hand, because ROOT.
         # NOTE: The transpose is extremely import! Without it, the arrays aren't in the order
@@ -1081,7 +1091,8 @@ class BinnedData:
         for value, error in zip(h.values.T.flatten(), h.errors.T.flatten()):
             # Sanity check.
             if i >= h_ROOT.GetNcells():
-                raise ValueError("Indexing is wrong...")
+                _msg = "Indexing is wrong..."
+                raise ValueError(_msg)
 
             # Need to advance to the next bin that we care about.
             # We don't want to naively increment and continue because then we should histogram values.
@@ -1108,8 +1119,9 @@ class BinnedData:
         """
         try:
             import boost_histogram as bh
-        except ImportError:
-            raise RuntimeError("Unable to import boost histogram. Please install it to export to a boost histogram.")
+        except ImportError as e:
+            _msg = "Unable to import boost histogram. Please install it to export to a boost histogram."
+            raise RuntimeError(_msg) from e
 
         # It seems to copy by default, so we don't need to do it ourselves.
 
@@ -1138,7 +1150,8 @@ class BinnedData:
         """
         # Validation
         if len(self.axes) > 1:
-            raise ValueError(f"Can only convert to 1D histogram. Given {len(self.axes)} axes")
+            _msg = f"Can only convert to 1D histogram. Given {len(self.axes)} axes"
+            raise ValueError(_msg)
 
         from pachyderm import histogram
 
@@ -1148,7 +1161,7 @@ class BinnedData:
             errors_squared=self.variances,
         )
 
-    def to_numpy(self) -> Tuple[npt.NDArray[Any], ...]:
+    def to_numpy(self) -> tuple[npt.NDArray[Any], ...]:
         """Convert to a numpy histogram.
 
         Returns:
@@ -1157,7 +1170,7 @@ class BinnedData:
         # TODO: Check that the values don't need to be transposed or similar.
         return (self.values, *self.axes.bin_edges)
 
-    def __getitem__(self, selection: Union[int, slice]) -> BinnedData:
+    def __getitem__(self, selection: int | slice) -> BinnedData:
         """Select a subset of data, including rebinning.
 
         Args:
@@ -1169,9 +1182,11 @@ class BinnedData:
         # Basic validation
         # If it's just an int, it was probably an accident. Let the user know.
         if isinstance(selection, int):
-            raise ValueError("Passed an integer to getitem. This is a bit ambiguous, so if you want single values, access the values directly.")
+            _msg = "Passed an integer to getitem. This is a bit ambiguous, so if you want single values, access the values directly."
+            raise ValueError(_msg)
         if len(self.axes) > 1:
-            raise NotImplementedError("Not yet implemented for more than 1D")
+            _msg = "Not yet implemented for more than 1D"
+            raise NotImplementedError(_msg)
 
         # First, determine the new axis. We can just defer that to axes implementation
         new_axis = self.axes[0][selection]
@@ -1223,11 +1238,8 @@ def _apply_rebin(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np
     run_lengths = np.diff(np.append(run_starts, len(old_to_new_index)))
 
     # Only use numba if available
-    if _sum_values_for_rebin_numba is not None:
-        f = _sum_values_for_rebin_numba
-    else:
-        f = _sum_values_for_rebin
-    return f(n_bins_new_axis=n_bins_new_axis, values=values,  # type: ignore [no-any-return]
+    f = _sum_values_for_rebin_numba if _sum_values_for_rebin_numba is not None else _sum_values_for_rebin
+    return f(n_bins_new_axis=n_bins_new_axis, values=values,  # type: ignore[no-any-return]
              run_starts=run_starts, run_values=run_values, run_lengths=run_lengths)
 
 

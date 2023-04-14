@@ -45,7 +45,6 @@ import numpy as np
 import numpy.typing as npt
 import ruamel.yaml
 
-
 logger = logging.getLogger(__name__)
 
 # Typing helpers
@@ -235,7 +234,7 @@ def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, 
 
 
 def numpy_float64_from_yaml(
-    constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.ScalarNode
+    constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.ScalarNode  # noqa: ARG001
 ) -> np.float64:
     """Read an float64 from YAML to numpy.
 
@@ -305,7 +304,7 @@ def enum_to_yaml(
 
 
 def enum_from_yaml(
-    cls: Type[T_EnumFromYAML], constructor: ruamel.yaml.constructor.BaseConstructor, node: ruamel.yaml.nodes.ScalarNode
+    cls: Type[T_EnumFromYAML], constructor: ruamel.yaml.constructor.BaseConstructor, node: ruamel.yaml.nodes.ScalarNode  # noqa: ARG001
 ) -> T_EnumFromYAML:
     """Decode YAML representation.
 
