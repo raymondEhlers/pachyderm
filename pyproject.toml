@@ -56,6 +56,7 @@ dev = [
     "boost-histogram >=1.2.1",
     "black >=22.1.0",
     "isort >= 5.10",
+    "ruff>=0.0.209",
 ]
 
 [project.scripts]
@@ -79,11 +80,60 @@ warn_unreachable = true
 line-length = 120
 target-version = ["py36"]
 
-[tool.isort]
-profile = "black"
-line_length = 120
-skip = ["docs/conf.py"]
-skip_glob = ".*"
+[tool.ruff]
+exclude = [
+    '.git',
+    '.env',
+    '.env3',
+    '.py3.7',
+    '.venv',
+    'env',
+    '__pycache__',
+    'bak',
+    'build',
+    'dist',
+]
+line-length = 120
+select = [
+    "E", "F", "W", # flake8
+    "C901",        # mccabe
+    "B", "B904",   # flake8-bugbear
+    "I",           # isort
+    "ARG",         # flake8-unused-arguments
+    "C4",          # flake8-comprehensions
+    "EM",          # flake8-errmsg
+    "ICN",         # flake8-import-conventions
+    "ISC",         # flake8-implicit-str-concat
+    "PGH",         # pygrep-hooks
+    "PIE",         # flake8-pie
+    "PL",          # pylint
+    "PT",          # flake8-pytest-style
+    "PTH",         # flake8-use-pathlib
+    "RET",         # flake8-return
+    "RUF",         # Ruff-specific
+    "SIM",         # flake8-simplify
+    "T20",         # flake8-print
+    "UP",          # pyupgrade
+    "YTT",         # flake8-2020
+]
+ignore = [
+    "E501",
+    "E722",
+    "RUF001",  # Unicode chars
+    "PLR",
+]
+unfixable = [
+    "T20",  # Removes print statements
+    "F841", # Removes unused variables
+]
+target-version = 'py38'
+
+[tool.ruff.mccabe]
+max-complexity = 12
+
+[tool.ruff.isort]
+known-first-party = ["mammoth", "mammoth_cpp"]
+
 
 [tool.pylint]
 master.py-version = "3.8"
