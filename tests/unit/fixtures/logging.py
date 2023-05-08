@@ -14,7 +14,7 @@ import pytest
 # This is not ideal, but fine for simple tests.
 logging_level = logging.DEBUG
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def logging_mixin(caplog: Any) -> None:
     """ Logging mixin to capture logging messages from modules.
 

@@ -30,7 +30,7 @@ try:
     import importlib.metadata as importlib_metadata
 except ImportError:
     # Use the backport if the standard version isn't available.
-    import importlib_metadata
+    import importlib_metadata  # pyright: ignore[reportMissingImports]
 # The short X.Y version
 version = importlib_metadata.version("pachyderm")
 # The full version, including alpha/beta/rc tags

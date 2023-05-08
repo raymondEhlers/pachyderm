@@ -68,7 +68,7 @@ testFloatAnchorValue: *testFloat
 # Test for float override indirection
 testFloatRef: &testFloatAnchor [3.1]
 testFloatAnchorIndirection: *testFloatAnchor
-# Bools
+# bool
 testBool: false
 testList: [1, 2]
 testDict:
@@ -109,7 +109,7 @@ def basic_config_exception(data):
 def override_data(config):
     """ Helper function to override the configuration.
 
-    It can print the configuration before and after overridding the options if enabled.
+    It can print the configuration before and after overriding the options if enabled.
 
     Args:
         config (CommentedMap): dict-like object containing the configuration to be overridden.
@@ -153,7 +153,7 @@ def test_override_with_basic_config(logging_mixin, basic_config):
 def test_basic_anchor_override(logging_mixin, basic_config):
     """ Test overriding with an anchor.
 
-    When an anchor refernce is overridden, we expect that the anchor value is updated.
+    When an anchor reference is overridden, we expect that the anchor value is updated.
     """
     (basic_config, yaml_string) = basic_config
     basic_config = override_data(basic_config)
@@ -255,7 +255,7 @@ hello:
 def data_simplification_config():
     """ Simple YAML config to test the data simplification functionality of the generic_config module.
 
-    It povides example configurations entries for numbers, str, list, and dict.
+    It provides example configurations entries for numbers, str, list, and dict.
 
     Args:
         None
@@ -556,7 +556,7 @@ def test_apply_formatting_to_iterable_types(logging_mixin, formatting_config):
 
     assert config["list"] == ["noFormat", 2, "b1"]
     assert config["dict"] == {"noFormat": "hello", "format": "{}{}".format(formatting_dict["a"], formatting_dict["c"])}
-    # NOTE: The extra str() call is because the formated string needs to be compared against a str.
+    # NOTE: The extra str() call is because the formatted string needs to be compared against a str.
     assert config["dict2"]["dict"] == {"str": "do nothing", "format": str(formatting_dict["c"])}
 
 def test_apply_formatting_skip_latex(logging_mixin, formatting_config):

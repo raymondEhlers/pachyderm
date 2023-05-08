@@ -26,8 +26,8 @@ def setup_equality_mixin() -> Tuple[Any, Any]:
             self.aList = aList
             self.aDict = aDict
 
-    # Define some test values. We want them to be complciated enough
-    # that we can test comparion of all of the relevant types.
+    # Define some test values. We want them to be complicated enough
+    # that we can test comparison of all of the relevant types.
     aNumber = 10.3
     aString = "hello world"
     aList = [1, 2, 3, {"hello": "world"}]
@@ -51,7 +51,7 @@ def test_equality_mixin(logging_mixin: Any, setup_equality_mixin: Any) -> None:
 
     # Modify the test class to make the classes unequal.
     # (We will work through a simple shift of the elements one member forward).
-    # (I would do this with a paramterization, but I don't see any straightforward
+    # (I would do this with a parameterization, but I don't see any straightforward
     # way to do it, so this will be fine)
     test_class.aNumber = expected_class.aDict
     assert test_class != expected_class
@@ -76,7 +76,7 @@ def test_equality_mixin(logging_mixin: Any, setup_equality_mixin: Any) -> None:
     test_class.aDict = expected_class.aDict
 
 def test_equality_mixin_against_other_classes(logging_mixin: Any, setup_equality_mixin: Any) -> None:
-    """ Test the quality mixin against other classes, for which comparions are not implemented. """
+    """ Test the quality mixin against other classes, for which comparisons are not implemented. """
     test_class, expected_class = setup_equality_mixin
 
     # Create a dataclass object to compare against.

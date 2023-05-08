@@ -8,7 +8,7 @@
 from typing import Any, Union
 
 try:
-    import ROOT
+    import ROOT  # pyright: ignore [reportMissingImports]
 
     # Tell ROOT to ignore command line options so args are passed to python
     # NOTE: Must be immediately after import ROOT and it must be called the first time ROOT is imported!

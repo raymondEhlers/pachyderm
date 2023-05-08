@@ -62,12 +62,12 @@ def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxi
     Args:
         hist: Histogram to check for outliers.
         outliers_removal_axis: Axis along which outliers removal will be performed. Usually
-            the particle level aixs.
+            the particle level axis.
     Returns:
         The histogram to check for outliers.
     """
     # Setup the projector
-    import ROOT
+    import ROOT  # pyright: ignore [reportMissingImports]
 
     if isinstance(hist, (ROOT.TH2, ROOT.TH3)):
         projection_information: Dict[str, Any] = {}
@@ -135,7 +135,7 @@ def _determine_outliers_index(
         ROOT (ie 1-indexed) index of the histogram axes where the outliers begin.
     """
     # Validation
-    import ROOT
+    import ROOT  # pyright: ignore [reportMissingImports]
 
     if isinstance(hist, (ROOT.TH2, ROOT.TH3, ROOT.THnBase)):
         raise ValueError(
@@ -255,7 +255,7 @@ def _remove_outliers_from_hist(
         hist: Histogram to check for outliers.
         outliers_start_index: Index in the truth axis where outliers begin.
         outliers_removal_axis: Axis along which outliers removal will be performed. Usually
-            the particle level aixs.
+            the particle level axis.
     Returns:
         None. The histogram is modified in place.
     """
@@ -266,7 +266,7 @@ def _remove_outliers_from_hist(
         x = ctypes.c_int(0)
         y = ctypes.c_int(0)
         z = ctypes.c_int(0)
-        # Maps axis to valaues
+        # Maps axis to values
         # This is kind of dumb, but it works.
         outliers_removal_axis_values: Dict[OutliersRemovalAxis, ctypes.c_int] = {
             projectors.TH1AxisType.x_axis: x,
@@ -305,7 +305,7 @@ class OutliersRemovalManager:
 
         Args:
             outliers_removal_axis: Axis along which outliers removal will be performed. Usually
-                the particle level aixs.
+                the particle level axis.
             hist: Histogram to check for outliers. Either this or ``hists`` must be specified.
             hists: Histograms to check for outliers. Either this or ``hist`` must be specified.
             mean_fractional_difference_limit: Max fractional difference of mean after outliers

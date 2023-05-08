@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
         np.array([6, 9, 12, 15, 18, 21, 24, 27])),
     ((3, np.array([10, 9, 8, 7, 6, 5, 4, 3, 2, 1])),
         np.array([27, 24, 21, 18, 15, 12, 9, 6]))
-], ids = ["n = 3 trianglur values", "n = 4 triangular values", "n = 3 increasing values", "n = 3 decreasing values"])
+], ids = ["n = 3 triangular values", "n = 4 triangular values", "n = 3 increasing values", "n = 3 decreasing values"])
 def test_moving_average(logging_mixin, inputs, expected):
     """ Test the moving average calculation. """
     (n, arr) = inputs
@@ -53,7 +53,7 @@ def test_recursive_getattr(logging_mixin, mocker, path, expected):
     # Check the returned value
     assert expected == utils.recursive_getattr(obj, path)
 
-def test_recursive_getattr_defualt_value(logging_mixin: Any, mocker: Any) -> None:
+def test_recursive_getattr_default_value(logging_mixin: Any, mocker: Any) -> None:
     """ Test for retrieving a default value with getattr. """
     obj = mocker.MagicMock(spec = ["sole_attr"])
     assert "default_value" == utils.recursive_getattr(obj, "nonexistent_attr", "default_value")

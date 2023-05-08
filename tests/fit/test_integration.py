@@ -39,7 +39,7 @@ def dump_to_string_and_retrieve(input_object: Any, y: yaml.ruamel.yaml.YAML = No
 
     return output_object
 
-def pedestal(x: Union[np.ndarray, float], pedestal: float) -> Union[np.ndarray]:
+def pedestal(x: Union[np.ndarray, float], pedestal: float) -> Union[np.ndarray, float]:
     return pedestal
 
 class PedestalFit(pachyderm.fit.Fit):

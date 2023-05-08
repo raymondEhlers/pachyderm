@@ -32,9 +32,9 @@ class RootOpen(ContextManager[_T_ContextManager]):
     """Very simple helper to open root files."""
 
     def __init__(self, filename: Union[Path, str], mode: str = "read"):
-        import ROOT
+        import ROOT  # pyright: ignore [reportMissingImports]
 
-        # Valdiate as a path
+        # Validate as a path
         self.filename = Path(filename)
         self.mode = mode
         self.f = ROOT.TFile.Open(str(self.filename), self.mode)
@@ -46,7 +46,7 @@ class RootOpen(ContextManager[_T_ContextManager]):
 
     def __exit__(
         self,
-        execption_type: Optional[Type[BaseException]],
+        exception_type: Optional[Type[BaseException]],
         exception_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
@@ -131,7 +131,7 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
     Returns:
         None: Changes in the dict are reflected in the output_dict which was passed.
     """
-    import ROOT
+    import ROOT  # pyright: ignore [reportMissingImports]
 
     # Store TH1 or THn
     if isinstance(obj, ROOT.TH1) or isinstance(obj, ROOT.THnBase):
@@ -965,7 +965,7 @@ def get_array_from_hist2D(
     # The hist_array was linear, so we need to shape it into our expected 2D values.
     hist_array = hist_array.reshape(shape)
     # Transpose the array to better match expectations
-    # In particular, by transposing the array, it means that ``thist_array[1][0]`` gives the 2nd x
+    # In particular, by transposing the array, it means that ``hist_array[1][0]`` gives the 2nd x
     # value (x_index = 1) and the 1st y value (y_index = 1). This is as we would expect. This is also
     # the same convention as used by root_numpy
     hist_array = hist_array.T

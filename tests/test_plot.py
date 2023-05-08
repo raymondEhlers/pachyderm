@@ -12,13 +12,13 @@ import pytest
 
 import pachyderm.plot as pplot
 
-@pytest.fixture  # type: ignore
+@pytest.fixture
 def reset_matplotlib_options(logging_mixin: Any) -> None:
     """ Setup for matplotlib options testing by resetting the options. """
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
 def test_restore_default_configuration(reset_matplotlib_options: Any) -> None:
-    """ Test for reseting the plotting configuration. """
+    """ Test for resetting the plotting configuration. """
     # Modify the parameters
     matplotlib.rcParams["text.usetex"] = True
     # Check that it was set correctly (so that our restore actually does something)
@@ -43,10 +43,10 @@ def test_plot_configuration(reset_matplotlib_options: Any) -> None:
     # Check that they've changed.
     # Of course, these are just proxies for the rest of the values
     assert matplotlib.rcParams["text.usetex"] is True
-    assert matplotlib.rcParams["legend.fontsize"] == 18.0
+    assert matplotlib.rcParams["legend.fontsize"] == 18.0  # type: ignore[unreachable]
 
     # NOTE: Unfortunately, we cannot actually plot with the current settings because:
-    #        - Plotting requires LaTeX, which is not available in testing envrionments (travis, etc).
+    #        - Plotting requires LaTeX, which is not available in testing environments (travis, etc).
     #        - pytest-mpl will reset the style to the default before the comparison, and we don't set
     #          the style in a way that plays nice with their method for setting the style.
     #       So skip plotting and rely on our assertions above.

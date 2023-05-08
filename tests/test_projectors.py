@@ -161,12 +161,12 @@ class TestsForHistAxisRange():
             axis_type = selected_axis,
             min_val = min_val_func(min_val),
             max_val = max_val_func(max_val))
-        # Applys the restriction to the sparse.
+        # Apply the restriction to the sparse.
         obj.apply_range_set(sparse)
         ax = sparse.GetAxis(selected_axis.value)
 
         # Unfortunately, equality comparison doesn't work for TAxis...
-        # GetXmin() and GetXmax() aren't restircted by SetRange(), so instead use GetFirst() and GetLast()
+        # GetXmin() and GetXmax() aren't restricted by SetRange(), so instead use GetFirst() and GetLast()
         assert ax.GetFirst() == expected_axis.GetFirst()
         assert ax.GetLast() == expected_axis.GetLast()
         # Sanity check that the overall axis still agrees
@@ -182,7 +182,7 @@ class TestsForHistAxisRange():
         min_val = 2
         max_val = 8
         sparse, _ = test_sparse
-        # Detemine expected value (must be first to avoid interfering with applying the axis range)
+        # Determine expected value (must be first to avoid interfering with applying the axis range)
         expected_axis = sparse.GetAxis(selected_axis.value).Clone("axis2")
         expected_axis.SetRangeUser(min_val, max_val)
 
@@ -191,12 +191,12 @@ class TestsForHistAxisRange():
             axis_type = selected_axis,
             min_val = projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.FindBin, min_val),
             max_val = projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.FindBin, max_val))
-        # Applys the restriction to the sparse.
+        # Apply the restriction to the sparse.
         obj.apply_range_set(sparse)
         ax = sparse.GetAxis(selected_axis.value)
 
         # Unfortunately, equality comparison doesn't work for TAxis...
-        # GetXmin() and GetXmax() aren't restircted by SetRange(), so instead use GetFirst() and GetLast()
+        # GetXmin() and GetXmax() aren't restricted by SetRange(), so instead use GetFirst() and GetLast()
         # The lower bin will still agree.
         assert ax.GetFirst() == expected_axis.GetFirst()
         # The upper bin will not.

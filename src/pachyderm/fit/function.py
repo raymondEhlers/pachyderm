@@ -37,7 +37,7 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
 
-    # Don't specify the function arguments to work aorund a mypy bug.
+    # Don't specify the function arguments to work around a mypy bug.
     # For an unclear reason, it won't properly detect the number of arguments.
     _operation: Callable[..., float]
     _call_function: Callable[..., float]
@@ -70,7 +70,7 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
             Value(s) of the functions when evaluated with the given input values.
         """
         # We add in the x values into the function arguments here so we don't have to play tricks later
-        # to get the function argumment indices correct.
+        # to get the function argument indices correct.
         return fit_base.call_list_of_callables_with_operation(
             self._operation, self.functions, self.argument_positions, *[x, *merged_args]  # type: ignore
         )

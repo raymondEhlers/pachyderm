@@ -19,7 +19,7 @@ from pachyderm import yaml
 
 logger = logging.getLogger(__name__)
 
-def dump_and_load_yaml(yml: yaml.ruamel.yaml.YAML, input_value: List[Any]) -> Any:
+def dump_and_load_yaml(yml: yaml.ruamel.yaml.YAML, input_value: List[Any]) -> Any:  # type: ignore[name-defined]
     """ Perform a dump and load YAML loop. """
     # Read and write to a temp file for convenience.
     with tempfile.TemporaryFile() as f:

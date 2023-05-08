@@ -276,7 +276,7 @@ def _key_index_iter(self: Any) -> Iterator[Tuple[str, Any]]:
 def create_key_index_object(key_index_name: str, iterables: Mapping[str, Any]) -> Any:
     """Create a ``KeyIndex`` class based on the passed attributes.
 
-    This is wrapped into a helper function to allow for the ``__itter__`` to be specified for the object.
+    This is wrapped into a helper function to allow for the ``__iter__`` to be specified for the object.
     Further, this allows it to be called outside the package when it is needed in analysis tasks.
 
     Args:

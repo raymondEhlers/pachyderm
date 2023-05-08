@@ -248,7 +248,7 @@ class StandaloneCostFunction(CostFunctionBase):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        # Check that we have the proper input data. This isn't very pythnoic, but it's
+        # Check that we have the proper input data. This isn't very pythonic, but it's
         # important that have the data in the proper format.
         assert isinstance(self.data, np.ndarray)
 
@@ -288,7 +288,7 @@ class DataComparisonCostFunction(CostFunctionBase):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        # Check that we have the proper input data. This isn't very pythnoic, but it's
+        # Check that we have the proper input data. This isn't very pythonic, but it's
         # important that have the data in the proper format.
         assert isinstance(self.data, histogram.Histogram1D)
 
@@ -452,7 +452,7 @@ def _log_likelihood(data: npt.NDArray[Any], f: Callable[..., float], *args: floa
         It returns a float, but numba can't handle cast. So we return ``Any`` and then cast the result.
 
     Args:
-        data: Data points (raw data, not histogramed).
+        data: Data points (raw data, not histogrammed).
         f: Fit function.
         args: Fit function arguments.
     Returns:

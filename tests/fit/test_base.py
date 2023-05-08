@@ -27,7 +27,7 @@ def test_func_code(logging_mixin: Any, simple_test_functions: Any) -> None:
     func_code_2 = fit_base.FuncCode.from_function(func_1)
     assert func_code == func_code_2
 
-@pytest.mark.parametrize("function_list_names, expected_result, expected_argument_positions", [  # type: ignore
+@pytest.mark.parametrize("function_list_names, expected_result, expected_argument_positions", [
     ([1, 2], ["x", "a", "b", "c", "d"], [[0, 1, 2], [0, 3, 4]]),
     ([2, 1], ["x", "c", "d", "a", "b"], [[0, 1, 2], [0, 3, 4]]),
 ], ids = ["1, 2", "2, 1"])
@@ -41,7 +41,7 @@ def test_merge_func_code(logging_mixin: Any, simple_test_functions: Any,
     assert result == expected_result
     assert argument_positions == expected_argument_positions
 
-@pytest.mark.parametrize("function_list_names", [  # type: ignore
+@pytest.mark.parametrize("function_list_names", [
     (1, 2),
     (2, 1),
 ], ids = ["1, 2", "2, 1"])

@@ -194,7 +194,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
 
         Since YAML won't handle function very nicely, we convert them to strings and then check them
         on conversion from YAML as a cross check that recreating the object hasn't gone wrong. This
-        also requires all functions to be recreatable on object initialization.
+        also requires all functions to be re-creatable on object initialization.
 
         Args:
             representer: Representation from YAML.
