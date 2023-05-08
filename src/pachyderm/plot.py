@@ -213,7 +213,7 @@ def error_boxes(
 ) -> matplotlib.collections.PatchCollection:
     """Plot error boxes for the given data.
 
-    Inpsired by: https://matplotlib.org/gallery/statistics/errorbars_and_boxes.html and
+    Inspired by: https://matplotlib.org/gallery/statistics/errorbars_and_boxes.html and
     https://github.com/HDembinski/pyik/blob/217ae25bbc316c7a209a1a4a1ce084f6ca34276b/pyik/mplext.py#L138
 
     Note:
