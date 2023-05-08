@@ -475,31 +475,32 @@ class LegendConfig:
         ax: matplotlib.axes.Axes,
         legend_handles: Sequence[matplotlib.container.ErrorbarContainer] | None = None,
         legend_labels: Sequence[str] | None = None,
-    ) -> None:
-        if self.location:
-            kwargs = {}
-            if legend_handles:
-                kwargs["handles"] = legend_handles
-            if legend_labels:
-                kwargs["labels"] = legend_labels
+    ) -> matplotlib.axes.Legend | None:
+        if not self.location:
+            return None
+        kwargs = {}
+        if legend_handles:
+            kwargs["handles"] = legend_handles
+        if legend_labels:
+            kwargs["labels"] = legend_labels
 
-            ax.legend(
-                loc=self.location,
-                bbox_to_anchor=self.anchor,
-                # If we specify an anchor, we want to reduce an additional padding
-                # to ensure that we have accurate placement.
-                borderaxespad=(0 if self.anchor else None),
-                borderpad=(0 if self.anchor else None),
-                frameon=False,
-                fontsize=self.font_size,
-                ncol=self.ncol,
-                handletextpad=self.marker_label_spacing,
-                labelspacing=self.label_spacing,
-                columnspacing=self.column_spacing,
-                handleheight=self.handle_height,
-                handler_map=(self.handler_map if self.handler_map else None),
-                **kwargs,
-            )
+        return ax.legend(
+            loc=self.location,
+            bbox_to_anchor=self.anchor,
+            # If we specify an anchor, we want to reduce an additional padding
+            # to ensure that we have accurate placement.
+            borderaxespad=(0 if self.anchor else None),
+            borderpad=(0 if self.anchor else None),
+            frameon=False,
+            fontsize=self.font_size,
+            ncol=self.ncol,
+            handletextpad=self.marker_label_spacing,
+            labelspacing=self.label_spacing,
+            columnspacing=self.column_spacing,
+            handleheight=self.handle_height,
+            handler_map=(self.handler_map if self.handler_map else None),
+            **kwargs,
+        )
 
 
 def _ensure_sequence_of_axis_config(value: AxisConfig | Sequence[AxisConfig]) -> Sequence[AxisConfig]:
