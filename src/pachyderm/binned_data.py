@@ -1060,6 +1060,10 @@ class BinnedData:
         """
         try:
             import ROOT  # pyright: ignore [reportMissingImports]
+            # NOTE: This is really important to avoid a deadlock (appears to be on taking the gil according to lldb).
+            #       In principle, it's redundant after the first import, but calling anything on the ROOT module deadlocks
+            #       it's really annoying for debugging! So we just always call it.
+            ROOT.gROOT.SetBatch(True)
         except ImportError as e:
             _msg = "Unable to import ROOT. Please ensure that ROOT is installed and in your $PYTHONPATH."
             raise RuntimeError(_msg) from e
