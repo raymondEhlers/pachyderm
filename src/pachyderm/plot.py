@@ -25,7 +25,7 @@ def restore_defaults() -> None:
     matplotlib.rcParams.update(matplotlib.rcParamsDefault)
 
 
-def configure(non_interactive: bool = True) -> None:
+def configure(disable_interactive_backend: bool = False) -> None:
     """Configure matplotlib according to my (biased) specification.
 
     As a high level summary, this is a combination of a number of seaborn settings, along with
@@ -110,7 +110,7 @@ def configure(non_interactive: bool = True) -> None:
     see: https://gist.github.com/matthewfeickert/84245837f09673b2e7afea929c016904
 
     Args:
-        non_interactive: If True, configure the MPL backend to be non-interactive.
+        disable_interactive_backend: If True, configure the MPL backend to be non-interactive.
             This should make loading a bit more efficient, since I rarely use the GUI.
     Returns:
         None. The current matplotlib ``rcParams`` are modified.
@@ -121,7 +121,7 @@ def configure(non_interactive: bool = True) -> None:
     # NOTE: I elect not to label with dark grey instead of black. It's not clear to me
     #       why that might be preferable here.
 
-    if non_interactive:
+    if disable_interactive_backend:
         matplotlib.use("agg")
 
     # Setup the LaTeX preamble
