@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Plotting styling and utilities.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University + Oak Ridge National Lab
@@ -265,11 +263,13 @@ def error_boxes(
         # errors, we want to take * 2 of the error.
         xerr = np.atleast_1d(xerr)  # noqa: PLW2901
         yerr = np.atleast_1d(yerr)  # noqa: PLW2901
-        # logger.debug(f"yerr: {yerr}")
+        # NOTE: All of the calls to float are necessary to avoid the points being incorrectly
+        #       interpreted as something like np arrays, which will cause the creation of the
+        #       PatchCollection to fail. It's clunky, but this works, so good enough.
         r = matplotlib.patches.Rectangle(
-            (x - xerr[0], y - yerr[0]),
-            xerr.sum() if len(xerr) == 2 else xerr * 2,
-            yerr.sum() if len(yerr) == 2 else yerr * 2,
+            (float(x - xerr[0]), float(y - yerr[0])),
+            float(xerr.sum() if len(xerr) == 2 else xerr * 2),
+            float(yerr.sum() if len(yerr) == 2 else yerr * 2),
         )
         error_boxes.append(r)
 
