@@ -409,8 +409,9 @@ class TextConfig:
     alignment: str | None = attrs.field(default=None)
     color: str | None = attrs.field(default="black")
     font_size: float | None = attrs.field(default=None)
+    text_kwargs: dict[str, Any] = attrs.field(factory=dict)
 
-    def apply(self, ax: matplotlib.axes.Axes) -> None:
+    def apply(self, ax_or_fig: matplotlib.axes.Axes | matplotlib.figure.Figure) -> None:
         # Some reasonable defaults
         if self.alignment is None:
             ud = "upper" if self.y >= 0.5 else "lower"
@@ -439,19 +440,22 @@ class TextConfig:
                 "multialignment": "left",
             },
         }
-        alignment_kwargs = alignments[self.alignment]
+        kwargs = alignments[self.alignment]
+        if not isinstance(ax_or_fig, matplotlib.figure.Figure):
+            # We always want to place using normalized coordinates.
+            # In the rare case that we don't want to, we can place by hand.
+            kwargs["transform"] = ax_or_fig.transAxes
+        # finally, merge in the rest of the text kwargs
+        kwargs = {**kwargs, **self.text_kwargs}
 
         # Finally, draw the text.
-        ax.text(
+        ax_or_fig.text(
             self.x,
             self.y,
             self.text,
             color=self.color,
             fontsize=self.font_size,
-            # We always want to place using normalized coordinates.
-            # In the rare case that we don't want to, we can place by hand.
-            transform=ax.transAxes,
-            **alignment_kwargs,
+            **kwargs
         )
 
 
@@ -503,6 +507,17 @@ class LegendConfig:
         )
 
 
+@attrs.define
+class TitleConfig:
+    text: str = attrs.field()
+    size: float | None = attrs.field(default=None)
+
+    def apply(
+        self, ax: matplotlib.axes.Axes,
+    ) -> None:
+        ax.set_title(self.text, fontsize=self.size)
+
+
 def _ensure_sequence_of_axis_config(value: AxisConfig | Sequence[AxisConfig]) -> Sequence[AxisConfig]:
     if isinstance(value, AxisConfig):
         value = [value]
@@ -520,6 +535,7 @@ class Panel:
     axes: Sequence[AxisConfig] = attrs.field(converter=_ensure_sequence_of_axis_config)
     text: Sequence[TextConfig] = attrs.field(converter=_ensure_sequence_of_text_config, factory=list)
     legend: LegendConfig | None = attrs.field(default=None)
+    title: TitleConfig | None = attrs.field(default=None)
 
     def apply(
         self,
@@ -536,13 +552,21 @@ class Panel:
         # Legend
         if self.legend is not None:
             self.legend.apply(ax, legend_handles=legend_handles, legend_labels=legend_labels)
+        # Title
+        if self.title is not None:
+            self.title.apply(ax=ax)
 
 
 @attrs.define
 class Figure:
     edge_padding: Mapping[str, float] = attrs.field(factory=dict)
+    text: Sequence[TextConfig] = attrs.field(converter=_ensure_sequence_of_text_config, factory=list)
 
     def apply(self, fig: matplotlib.figure.Figure) -> None:
+        # Add text
+        for text in self.text:
+            text.apply(fig)
+
         # It shouldn't hurt to align the labels if there's only one.
         fig.align_ylabels()
 
