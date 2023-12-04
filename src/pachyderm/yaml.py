@@ -82,7 +82,7 @@ def yaml(
     yaml = register_module_classes(yaml=yaml, modules=modules_to_register)
     yaml = register_classes(yaml=yaml, classes=classes_to_register)
 
-    return yaml
+    return yaml  # noqa: RET504
 
 
 def register_classes(yaml: ruamel.yaml.YAML, classes: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
@@ -300,7 +300,7 @@ def enum_to_yaml(
     Returns:
         Scalar representation of the name of the enumeration value.
     """
-    return cast(ruamel.yaml.nodes.ScalarNode, representer.represent_scalar(f"!{cls.__name__}", f"{str(data)}"))
+    return cast(ruamel.yaml.nodes.ScalarNode, representer.represent_scalar(f"!{cls.__name__}", f"{data!s}"))
 
 
 def enum_from_yaml(

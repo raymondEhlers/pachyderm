@@ -499,7 +499,7 @@ class LegendConfig:
         ax: matplotlib.axes.Axes,
         legend_handles: Sequence[matplotlib.container.ErrorbarContainer] | None = None,
         legend_labels: Sequence[str] | None = None,
-    ) -> matplotlib.axes.Legend | None:
+    ) -> matplotlib.legend.Legend | None:
         if not self.location:
             return None
         kwargs = {}
@@ -541,13 +541,13 @@ class TitleConfig:
 def _ensure_sequence_of_axis_config(value: AxisConfig | Sequence[AxisConfig]) -> Sequence[AxisConfig]:
     if isinstance(value, AxisConfig):
         value = [value]
-    return value  # noqa: RET504
+    return value
 
 
 def _ensure_sequence_of_text_config(value: TextConfig | Sequence[TextConfig]) -> Sequence[TextConfig]:
     if isinstance(value, TextConfig):
         value = [value]
-    return value  # noqa: RET504
+    return value
 
 
 @attrs.define
@@ -609,7 +609,7 @@ class Figure:
 def _ensure_sequence_of_panels(value: Panel | Sequence[Panel]) -> Sequence[Panel]:
     if isinstance(value, Panel):
         value = [value]
-    return value  # noqa: RET504
+    return value
 
 
 @attrs.define

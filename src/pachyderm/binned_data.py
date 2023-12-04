@@ -1234,7 +1234,7 @@ def _apply_rebin(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np
 
     # First, find run lengths
     # From: https://stackoverflow.com/a/58540073/12907985
-    loc_run_start = np.empty(len(old_to_new_index), dtype=np.bool_)
+    loc_run_start: npt.NDArray[np.bool_] = np.empty(len(old_to_new_index), dtype=np.bool_)
     loc_run_start[0] = True
     np.not_equal(old_to_new_index[:-1], old_to_new_index[1:], out=loc_run_start[1:])
     run_starts = np.nonzero(loc_run_start)[0]
