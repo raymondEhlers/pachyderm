@@ -377,7 +377,12 @@ class AxisConfig:
     def apply(self, ax: matplotlib.axes.Axes) -> None:
         if self.label:
             getattr(ax, f"set_{self.axis}label")(self.label, fontsize=self.font_size)
-            # Set the tick font size too
+        # Set the tick font size too. Here, we want to consider two cases:
+        # 1) If we've provided a label, we want to increase the size as appropriate to match the label.
+        # 2) If we're provided an explicit tick size, we definitely want to increase it.
+        if self.label or self.tick_font_size:
+            # The font size that we want is dictated by the label if unspecified. That way,
+            # it will match the size by default
             tick_font_size = self.tick_font_size if self.tick_font_size else self.font_size
             ax.tick_params(axis=self.axis, which="major", labelsize=tick_font_size)
         if self.log:
