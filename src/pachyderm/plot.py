@@ -365,6 +365,11 @@ def _validate_axis_name(instance: AxisConfig, attribute: attrs.Attribute[str], v
         raise ValueError(_msg)
 
 
+def _convert_major_axis_multiple_locator_with_base(value: float | bool | None) -> float | None:
+    if isinstance(value, bool) and value:
+        return 1.0
+    return value
+
 @attrs.define
 class AxisConfig:
     axis: str = attrs.field(validator=[_validate_axis_name])
@@ -373,8 +378,16 @@ class AxisConfig:
     range: tuple[float | None, float | None] | None = attrs.field(default=None)
     font_size: float | None = attrs.field(default=None)
     tick_font_size: float | None = attrs.field(default=None)
+    # This is basically a shortcut. We can always apply this manually, but we do it
+    # often enough that it's worth having a shortcut.
+    use_major_axis_multiple_locator_with_base: float | None = attrs.field(default=None, converter=_convert_major_axis_multiple_locator_with_base)
 
     def apply(self, ax: matplotlib.axes.Axes) -> None:
+        # Validation
+        if self.log and self.use_major_axis_multiple_locator_with_base is not None:
+            logger.warning("Set both log and major axis multiple locator! Not sure what will happen...")
+
+        # And apply the settings
         if self.label:
             getattr(ax, f"set_{self.axis}label")(self.label, fontsize=self.font_size)
         # Set the tick font size too. Here, we want to consider two cases:
@@ -396,6 +409,8 @@ class AxisConfig:
             getattr(ax, f"{self.axis}axis").set_minor_locator(minor_locator)
             # But we don't want to label these ticks.
             getattr(ax, f"{self.axis}axis").set_minor_formatter(matplotlib.ticker.NullFormatter())
+        if self.use_major_axis_multiple_locator_with_base is not None:
+            getattr(ax, f"{self.axis}axis").set_major_locator(matplotlib.ticker.MultipleLocator(base=self.use_major_axis_multiple_locator_with_base))
         if self.range:
             min_range, max_range = self.range
             min_current_range, max_current_range = getattr(ax, f"get_{self.axis}lim")()
