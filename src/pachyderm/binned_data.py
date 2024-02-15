@@ -785,7 +785,7 @@ class BinnedData:
         # NOTE: allclose can't handle the axes or the metadata dictionary, so we skip it here
         #       and check it explicitly below.
         keys_to_exclude = ["axes", "metadata"]
-        agreement = [np.allclose(getattr(self, a), getattr(other, a)) for a in attributes if a not in keys_to_exclude]
+        agreement = [np.allclose(getattr(self, a), getattr(other, a), equal_nan=True) for a in attributes if a not in keys_to_exclude]
         # Check axes
         axes_agree = self.axes == other.axes
         # Check metadata
