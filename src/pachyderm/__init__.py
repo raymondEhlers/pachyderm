@@ -5,7 +5,7 @@
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
 
-__version__ = "3.0"
+__version__ = "3.1"
 
 __all__ = [
     "__version__",
