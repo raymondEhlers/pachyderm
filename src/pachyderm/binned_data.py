@@ -1030,8 +1030,11 @@ class BinnedData:
         # Need to deal with boost histogram first because it now (Feb 2021) has values and variances.
         if hasattr(binned_data, "view"):
             return cls._from_boost_histogram(binned_data)
-        # Uproot4: has "_values_variances"
-        if hasattr(binned_data, "_values_variances"):
+        # Uproot4: has "_values_variances" for hists, but doesn't appear to for profiles, so we
+        # also consider `to_pyroot`, which profiles do have (as should all(?) uproot objects)
+        # NOTE: `to_pyroot` should be specific to uproot4+ since it wasn't available in uproot3.
+        #       It also shouldn't overlap with ROOT itself.
+        if hasattr(binned_data, "_values_variances") or hasattr(binned_data, "to_pyroot"):
             return cls._from_uproot4(binned_data)
         # Uproot3: "values" and "variances" is a proxy for an uproot3 hist. uproot4 hists also have these,
         # so we need to check for uproot4 first
