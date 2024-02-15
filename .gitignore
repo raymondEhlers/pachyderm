@@ -26,9 +26,10 @@ htmlcov/
 .pachyderm/
 env/
 .venv/
+.venv-3.*/
 .python-version
 # tools
-.pdm.toml
+.pdm-python
 
 # Ignore filetypes
 *.root
