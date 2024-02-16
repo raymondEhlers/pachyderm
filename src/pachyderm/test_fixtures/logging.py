@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import pytest
+import pytest  # pylint: disable=import-error
 
 # Set logging level as a global variable to simplify configuration.
 # This is not ideal, but fine for simple tests.
