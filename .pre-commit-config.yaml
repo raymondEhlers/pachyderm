@@ -64,6 +64,7 @@ repos:
           - "numpy>=1.23.4"
           - "ruamel.yaml>=0.17.10"
           - "boost-histogram>=1.4"
+          - "hist>=2.7.1"
 
   - repo: https://github.com/codespell-project/codespell
     rev: "v2.2.6"

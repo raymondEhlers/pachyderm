@@ -13,7 +13,7 @@ import typing
 import uuid
 from collections.abc import Mapping, Sequence
 from functools import reduce
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import attrs
 import numpy as np
@@ -285,10 +285,7 @@ class Axis:
         )
 
         # Finally, return the represented object.
-        return cast(
-            ruamel.yaml.nodes.MappingNode,
-            representation,
-        )
+        return representation  # noqa: RET504
 
     @classmethod
     def from_yaml(
@@ -378,10 +375,7 @@ class AxesTuple(tuple[Axis, ...]):
         )
 
         # Finally, return the represented object.
-        return cast(
-            ruamel.yaml.nodes.MappingNode,
-            representation,
-        )
+        return representation  # noqa: RET504
 
     @classmethod
     def from_yaml(
@@ -575,10 +569,7 @@ class BinnedData:
         )
 
         # Finally, return the represented object.
-        return cast(
-            ruamel.yaml.nodes.MappingNode,
-            representation,
-        )
+        return representation  # noqa: RET504
 
     @classmethod
     def from_yaml(
