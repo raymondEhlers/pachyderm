@@ -4,6 +4,7 @@
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@yale.edu>, Yale University
 """
+from __future__ import annotations
 
 import logging
 from typing import Any
@@ -14,9 +15,10 @@ import pytest
 # This is not ideal, but fine for simple tests.
 logging_level = logging.DEBUG
 
-@pytest.fixture
+
+@pytest.fixture()
 def logging_mixin(caplog: Any) -> None:
-    """ Logging mixin to capture logging messages from modules.
+    """Logging mixin to capture logging messages from modules.
 
     It logs at the debug level, which is probably most useful for when a test fails.
     """
