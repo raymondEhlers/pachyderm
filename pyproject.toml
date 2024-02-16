@@ -29,7 +29,6 @@ classifiers = [
 ]
 dynamic = ["version"]
 include = [
-    "pachyderm/py.typed",
     "pachyderm/alice/datasets/*.yaml",
 ]
 dependencies = [
