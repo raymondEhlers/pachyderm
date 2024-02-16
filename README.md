@@ -2,7 +2,7 @@
 
 [![Actions Status][actions-badge]][actions-link]
 [![Documentation Status][rtd-badge]][rtd-link]
-[![Code Coverage][code-badge]][code-cov]
+[![Code Coverage][code-cov-badge]][code-cov-link]
 
 [![PyPI version][pypi-version]][pypi-link]
 [![Conda-Forge][conda-badge]][conda-link]
