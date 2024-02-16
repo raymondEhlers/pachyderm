@@ -83,7 +83,7 @@ def yaml(
     y = register_module_classes(yaml=y, modules=modules_to_register)
     y = register_classes(yaml=y, classes=classes_to_register)
 
-    return y # noqa: RET504
+    return y  # noqa: RET504
 
 
 def register_classes(yaml: ruamel.yaml.YAML, classes: Iterable[Any] | None = None) -> ruamel.yaml.YAML:
