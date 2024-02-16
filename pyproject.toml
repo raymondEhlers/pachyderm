@@ -120,6 +120,10 @@ module = "pachyderm.*"
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
+[[tool.mypy.overrides]]
+module = ["ROOT", "numba", "nox"]
+ignore_missing_imports = true
+
 
 [tool.ruff]
 src = ["src"]

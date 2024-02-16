@@ -26,10 +26,10 @@ logger = logging.getLogger(__name__)
 # If only supporting 3.7+, we can add `from __future__ import annotations` and just use the more detailed definition
 if TYPE_CHECKING:
     AxesTupleAttribute = attrs.Attribute["AxesTuple"]
-    NumpyAttribute = attrs.Attribute[npt.NDArray[Any]]
+    NPAttribute = attrs.Attribute[npt.NDArray[Any]]
 else:
     AxesTupleAttribute = attrs.Attribute
-    NumpyAttribute = attrs.Attribute
+    NPAttribute = attrs.Attribute
 
 
 @attrs.frozen
@@ -469,7 +469,7 @@ def _validate_axes(instance: BinnedData, attribute: AxesTupleAttribute, value: A
             raise ValueError(_msg)
 
 
-def _validate_arrays(instance: BinnedData, attribute: NumpyAttribute, value: npt.NDArray[Any]) -> None:
+def _validate_arrays(instance: BinnedData, attribute: NPAttribute, value: npt.NDArray[Any]) -> None:
     expected_length = _array_length_from_axes(instance.axes)
     if value.size != expected_length:
         _msg = (
@@ -1261,9 +1261,9 @@ def _apply_rebin(
 
     # Only use numba if available
     f = _sum_values_for_rebin_numba if _sum_values_for_rebin_numba is not None else _sum_values_for_rebin
-    return f(
+    return f(  # type: ignore[no-any-return]
         n_bins_new_axis=n_bins_new_axis,
-        values=values,  # type: ignore[no-any-return]
+        values=values,
         run_starts=run_starts,
         run_values=run_values,
         run_lengths=run_lengths,

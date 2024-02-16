@@ -566,11 +566,13 @@ class Histogram1D:
         new += other
         return new
 
-    def __radd__(self: _T, other: _T) -> _T:
+    def __radd__(self: _T, other: int | _T) -> _T:
         """For use with sum(...)."""
         if other == 0:
             return self
         else:
+            # Help out mypy
+            assert not isinstance(other, int)
             return self + other
 
     def __iadd__(self: _T, other: _T) -> _T:
@@ -642,7 +644,7 @@ class Histogram1D:
             self.errors_squared *= other ** 2
             # Scale stats accordingly. We can only preserve the stats if using a scalar (according to ROOT).
             if np.isscalar(other):
-                self._scale_stats(scale_factor=other)
+                self._scale_stats(scale_factor=other)  # type: ignore[arg-type]
             else:
                 self._recalculate_stats()
         else:
@@ -681,7 +683,7 @@ class Histogram1D:
             self *= 1.0 / other
             # Scale stats accordingly. We can only preserve the stats if using a scalar (according to ROOT).
             if np.isscalar(other):
-                self._scale_stats(scale_factor=1.0 / other)
+                self._scale_stats(scale_factor=1.0 / other)  # type: ignore[operator,arg-type]
             else:
                 self._recalculate_stats()
         else:
