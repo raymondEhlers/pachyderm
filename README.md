@@ -93,4 +93,3 @@ $ open docs/_build/html/index.html
 
 **PACHYDERM**: **P**hysics **A**nalysis **C**ore for **H**eav**Y**-ions with **D**etermination of (analysis)
 **E**lements via **R**ecursion and **M**erging.
-

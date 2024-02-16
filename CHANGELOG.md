@@ -238,7 +238,7 @@ Changelog based on the [format here](https://keepachangelog.com/en/1.0.0/).
 ### Changed
 
 - Changed the return typing of `selected_iterables` in `generic_config` from `Dict[str, Any]` to `Mapping[str,
-  Any]` to accept more generic mappings. See: `f9bf3a173e5a448bb174357d73950e024220da48`.
+Any]` to accept more generic mappings. See: `f9bf3a173e5a448bb174357d73950e024220da48`.
 
 ### Fixed
 
