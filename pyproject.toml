@@ -97,6 +97,7 @@ xfail_strict = true
 filterwarnings = [
   "error",
 ]
+log_level = "INFO"
 log_cli_level = "INFO"
 testpaths = [
   "tests",
