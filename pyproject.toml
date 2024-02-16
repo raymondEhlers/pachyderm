@@ -127,7 +127,7 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
-module = ["ROOT", "numba", "nox", "iminuit", "numdifftools", "scipy.*"]
+module = ["ROOT", "numba", "nox", "iminuit", "numdifftools", "scipy.*", "cycler"]
 ignore_missing_imports = true
 
 
@@ -199,4 +199,4 @@ messages_control.disable = [
 
 
 [tool.codespell]
-ignore-words-list = "thn, nd"
+ignore-words-list = "thn, nd, ore"
