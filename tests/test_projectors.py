@@ -853,13 +853,13 @@ class TestProjectorsWithRoot:
         ],
         ids=["Same range PDCA", "Different range PDCA"],
     )
-    def test_invalid_PDCA_axis(test_root_hists, PDCA_axis):
+    def test_invalid_PDCA_axis(self, test_root_hists, PDCA_axis):
         """Test catching a PDCA on the same axis as the projection axis."""
         ROOT = pytest.importorskip("ROOT")  # noqa: F841
 
         # Setup projector
         output_observable: dict[str, typing_helpers.Hist] = {}
-        observable_to_project_from = {"hist3D": test_root_hists.hist3D}  # type: ignore[attr-defined]
+        observable_to_project_from = {"hist3D": test_root_hists.hist3D}
         projection_name_format = "hist"
         obj = projectors.HistProjector(
             output_observable=output_observable,

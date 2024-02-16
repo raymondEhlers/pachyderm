@@ -694,7 +694,7 @@ class PlotConfig:
 
         # Finally, we can actually apply the stored properties.
         # Apply panels to the axes.
-        for ax, panel in zip(axes, self.panels, strict=True):
-            panel.apply(ax, legend_handles=legend_handles, legend_labels=legend_labels)
+        for _ax, panel in zip(axes, self.panels, strict=True):
+            panel.apply(_ax, legend_handles=legend_handles, legend_labels=legend_labels)
         # Figure
         self.figure.apply(fig)

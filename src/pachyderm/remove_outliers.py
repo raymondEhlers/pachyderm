@@ -346,9 +346,9 @@ class OutliersRemovalManager:
         pre_removal_median = {}
         post_removal_median = {}
 
-        for hist_name, hist in hists.items():
+        for hist_name, _hist in hists.items():
             # Setup
-            hist_to_check = _project_to_part_level(hist=hist, outliers_removal_axis=outliers_removal_axis)
+            hist_to_check = _project_to_part_level(hist=_hist, outliers_removal_axis=outliers_removal_axis)
 
             # Check these values before and after outlier removal.
             (pre_removal_mean[hist_name], pre_removal_median[hist_name]) = _get_mean_and_median(hist_to_check)
@@ -364,16 +364,16 @@ class OutliersRemovalManager:
         outliers_start_index: int = np.max(outliers_indices)
         logger.debug(f"outliers_start_index: {outliers_start_index}")
 
-        for hist_name, hist in hists.items():
+        for hist_name, _hist in hists.items():
             # Then do the actual outliers removal.
             _remove_outliers_from_hist(
-                hist=hist,
+                hist=_hist,
                 outliers_start_index=outliers_start_index,
                 outliers_removal_axis=outliers_removal_axis,
             )
 
             # Now check the mean and median to see how much they've changed.
-            hist_to_check = _project_to_part_level(hist=hist, outliers_removal_axis=outliers_removal_axis)
+            hist_to_check = _project_to_part_level(hist=_hist, outliers_removal_axis=outliers_removal_axis)
             (post_removal_mean[hist_name], post_removal_median[hist_name]) = _get_mean_and_median(hist_to_check)
             mean_fractional_difference = (
                 post_removal_mean[hist_name] - pre_removal_mean[hist_name]

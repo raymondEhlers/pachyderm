@@ -309,9 +309,9 @@ class Axis:
         # Specialize for each version
         if serialization_version == 1:
             return cls(**kwargs)
-        else:  # noqa: RET505
-            _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
-            raise ValueError(_msg)
+
+        _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
+        raise ValueError(_msg)
 
 
 class AxesTuple(tuple[Axis, ...]):
@@ -413,9 +413,9 @@ class AxesTuple(tuple[Axis, ...]):
             for axis_data in stored_obj_data.value:
                 axes.append(constructor.construct_object(axis_data))
             return cls(axes)
-        else:  # noqa: RET505
-            _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
-            raise ValueError(_msg)
+
+        _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
+        raise ValueError(_msg)
 
 
 def _axes_tuple_from_axes_sequence(
@@ -609,9 +609,9 @@ class BinnedData:
                 for k in list(stored_mapping.keys())
             }
             return cls(**stored_data)
-        else:  # noqa: RET505
-            _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
-            raise ValueError(_msg)
+
+        _msg = f"Unknown serialization version {serialization_version} for {cls.__name__}"
+        raise ValueError(_msg)
 
     @property
     def axis(self) -> Axis:
@@ -659,10 +659,9 @@ class BinnedData:
         """For use with sum(...)."""
         if other == 0:
             return self
-        else:  # noqa: RET505
-            # Help out mypy
-            assert not isinstance(other, int)
-            return self + other
+        # Help out mypy
+        assert not isinstance(other, int)
+        return self + other
 
     def __iadd__(self: BinnedData, other: BinnedData) -> BinnedData:
         """Handles ``a += b``."""
@@ -1292,7 +1291,10 @@ def _sum_values_for_rebin(
     output = np.zeros(n_bins_new_axis, dtype=values.dtype)
 
     # For each run length that is a valid
-    for run_start, v_index, run_length in zip(run_starts, run_values, run_lengths, strict=True):
+    # NOTE: We skip the `strict` keyword for zip because numba doesn't support it, and we
+    #       conditionally compile this function. However, once numba supports it, it should
+    #       be added in because these are all expected to be the same length.
+    for run_start, v_index, run_length in zip(run_starts, run_values, run_lengths):  # noqa: B905
         # Only sum up values which are valid indices for the output
         # If it's below 0, it's in the underflow. If it's >= to the number of new bins,
         # it's in the overflow. In either case, we ignore them.

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture()
-def retrieve_root_list(test_root_hists: Any) -> Iterator[tuple[Path, Any, Any]]:
+def retrieve_root_list(test_root_hists: Any) -> Iterator[tuple[str, Any, Any]]:
     """Create an set of lists to load for a ROOT file.
 
     NOTE: Not using a mock since I'd like to the real objects and storing
@@ -93,7 +93,7 @@ def retrieve_root_list(test_root_hists: Any) -> Iterator[tuple[Path, Any, Any]]:
     expected["mainList"] = main_list
     expected["secondList"] = second_list
 
-    yield (filename, l1, expected)
+    yield (str(filename), l1, expected)
 
     # We need to call Clear() because we reference the same histograms in both the main list
     # the inner list. If we don't explicitly call it on the main list, it may be called on the
@@ -227,7 +227,7 @@ class TestRetrievingHistogramsFromAList:
 
 
 @pytest.fixture()
-def setup_histogram_conversion() -> tuple[Path, str, histogram.Histogram1D]:
+def setup_histogram_conversion() -> tuple[str, str, histogram.Histogram1D]:
     """Setup expected values for histogram conversion tests.
 
     This set of expected values corresponds to:
@@ -266,7 +266,7 @@ def setup_histogram_conversion() -> tuple[Path, str, histogram.Histogram1D]:
         root_hist.Write()
         fOut.Close()
 
-    return filename, hist_name, expected
+    return str(filename), hist_name, expected
 
 
 def check_hist(input_hist: histogram.Histogram1D, expected: histogram.Histogram1D) -> bool:

@@ -81,9 +81,9 @@ downloadALICERunByRun = "pachyderm.alice.download:run_download_run_by_run_train_
 [tool.hatch]
 version.source = "vcs"
 build.hooks.vcs.version-file = "src/pachyderm/_version.py"
-build.include = [
-    "src/pachyderm/alice/datasets/*.yaml",
-]
+#build.include = [
+#    "src/pachyderm/alice/datasets/*.yaml",
+#]
 
 [tool.hatch.envs.default]
 features = ["test"]

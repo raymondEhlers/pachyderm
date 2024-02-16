@@ -70,20 +70,20 @@ def yaml(
     """
     # Define a round-trip YAML object for us to work with. This object should be imported by other modules
     # NOTE: "typ" is a not a typo. It stands for "type"
-    yaml = ruamel.yaml.YAML(typ="rt")
+    y = ruamel.yaml.YAML(typ="rt")
 
     # Register representers and constructors
     # numpy array
-    yaml.representer.add_representer(np.ndarray, numpy_array_to_yaml)
-    yaml.constructor.add_constructor("!numpy_array", numpy_array_from_yaml)
+    y.representer.add_representer(np.ndarray, numpy_array_to_yaml)
+    y.constructor.add_constructor("!numpy_array", numpy_array_from_yaml)
     # numpy float64
-    yaml.representer.add_representer(np.float64, numpy_float64_to_yaml)
-    yaml.constructor.add_constructor("!numpy_float64", numpy_float64_from_yaml)
+    y.representer.add_representer(np.float64, numpy_float64_to_yaml)
+    y.constructor.add_constructor("!numpy_float64", numpy_float64_from_yaml)
     # Register external classes
-    yaml = register_module_classes(yaml=yaml, modules=modules_to_register)
-    yaml = register_classes(yaml=yaml, classes=classes_to_register)
+    y = register_module_classes(yaml=y, modules=modules_to_register)
+    y = register_classes(yaml=y, classes=classes_to_register)
 
-    return yaml  # noqa: RET504
+    return y # noqa: RET504
 
 
 def register_classes(yaml: ruamel.yaml.YAML, classes: Iterable[Any] | None = None) -> ruamel.yaml.YAML:

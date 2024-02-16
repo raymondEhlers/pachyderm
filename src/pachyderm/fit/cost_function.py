@@ -150,8 +150,7 @@ class SimultaneousFit(generic_class.EqualityMixin):
         """For use with ``sum(...)``."""
         if other == 0:
             return self
-        else:  # noqa: RET505
-            return self + other
+        return self + other
 
     def __call__(self, *args: float) -> float:
         """Calculate the cost function for all x values in the data."""
@@ -199,10 +198,9 @@ class CostFunctionBase(abc.ABC):
         """For use with ``sum(...)``."""
         if other == 0:
             return self
-        else:  # noqa: RET505
-            # Help out mypy...
-            assert not isinstance(other, int)
-            return self + other
+        # Help out mypy...
+        assert not isinstance(other, int)
+        return self + other
 
     def __call__(self, *args: float) -> float:
         """Calculate the cost function for all x values in the data."""
