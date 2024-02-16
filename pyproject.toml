@@ -81,9 +81,6 @@ downloadALICERunByRun = "pachyderm.alice.download:run_download_run_by_run_train_
 [tool.hatch]
 version.source = "vcs"
 build.hooks.vcs.version-file = "src/pachyderm/_version.py"
-#build.include = [
-#    "src/pachyderm/alice/datasets/*.yaml",
-#]
 
 [tool.hatch.envs.default]
 features = ["test"]
@@ -96,6 +93,9 @@ addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = [
   "error",
+  # Temporarily until this is resolved: https://github.com/dateutil/dateutil/issues/1314
+  # NOTE: It is coming from dateutil, which is used by matplotlib
+  "ignore:datetime.datetime.utcfromtimestamp:DeprecationWarning:dateutil.tz.tz",
 ]
 log_level = "INFO"
 log_cli_level = "INFO"
