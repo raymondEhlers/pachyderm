@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Test the integration between various classes.
 
 """
@@ -41,7 +39,7 @@ def dump_to_string_and_retrieve(input_object: Any, y: yaml.ruamel.yaml.YAML = No
     return output_object
 
 
-def test_Histogram1D_with_yaml(logging_mixin: Any) -> None:
+def test_Histogram1D_with_yaml() -> None:
     """Test writing and then reading a Histogram1D via YAML.
 
     This ensures that writing a histogram1D can be done successfully.
@@ -55,7 +53,7 @@ def test_Histogram1D_with_yaml(logging_mixin: Any) -> None:
     )
     # Access "x" since it is generated but then stored in the class. This could disrupt YAML, so
     # we should explicitly test it.
-    input_hist.x
+    _ = input_hist.x
 
     # Dump and load (ie round trip)
     output_hist = dump_to_string_and_retrieve(input_hist, y=y)
@@ -73,7 +71,6 @@ def test_Histogram1D_with_yaml(logging_mixin: Any) -> None:
     ids=["1D", "2D"],
 )
 def test_binned_data_with_yaml(
-    logging_mixin: Any,
     axes: list[npt.NDArray[np.float64]],
 ) -> None:
     """Test writing and then reading BinnedData via YAML.
@@ -108,7 +105,7 @@ def test_binned_data_with_yaml(
     )
     # Access "bin_centers" since it is generated but then stored in the Axis class. This could disrupt YAML, so
     # we should explicitly test it.
-    input_hist.axes.bin_centers
+    _ = input_hist.axes.bin_centers
 
     # Dump and load (ie round trip)
     output_hist = dump_to_string_and_retrieve(input_hist, y=y)

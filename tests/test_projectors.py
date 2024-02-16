@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Test projector functionality.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
@@ -14,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from pachyderm import projectors, utils
+from pachyderm import projectors, typing_helpers, utils
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +28,7 @@ class SparseAxisLabels(enum.Enum):
 @pytest.fixture()
 def create_hist_axis_range():
     """Create a HistAxisRange object to use for testing."""
-    object_args = {
+    object_args: dict[str, Any] = {
         "axis_range_name": "z_axis_test_projector",
         "axis_type": projectors.TH1AxisType.y_axis,
         "min_val": lambda x: x,
@@ -43,7 +41,7 @@ def create_hist_axis_range():
     return (obj, object_args)
 
 
-def test_hist_axis_range(logging_mixin, create_hist_axis_range):
+def test_hist_axis_range(create_hist_axis_range):
     """Tests for creating a HistAxisRange object."""
     obj, object_args = create_hist_axis_range
 
@@ -68,7 +66,7 @@ def test_hist_axis_range(logging_mixin, create_hist_axis_range):
 
 
 @pytest.mark.parametrize(
-    "axis_type, axis",
+    ("axis_type", "axis"),
     [
         (projectors.TH1AxisType.x_axis, "x_axis"),
         (projectors.TH1AxisType.y_axis, "y_axis"),
@@ -80,7 +78,7 @@ def test_hist_axis_range(logging_mixin, create_hist_axis_range):
     ids=["xAxis", "yAxis", "zAxis", "number for x axis", "number for y axis", "number for z axis"],
 )
 @pytest.mark.parametrize("hist_to_test", range(3), ids=["1D", "2D", "3D"])
-def test_TH1Axis_determination(logging_mixin, create_hist_axis_range, axis_type, axis, hist_to_test, test_root_hists):
+def test_TH1Axis_determination(create_hist_axis_range, axis_type, axis, hist_to_test, test_root_hists):
     """Test TH1 axis determination in the HistAxisRange object."""
     ROOT = pytest.importorskip("ROOT")
     axis_map = {
@@ -109,9 +107,9 @@ def test_TH1Axis_determination(logging_mixin, create_hist_axis_range, axis_type,
     [SparseAxisLabels.axis_two, SparseAxisLabels.axis_four, SparseAxisLabels.axis_five, 2, 4, 5],
     ids=["axis_two", "axis_four", "axis_five", "number for axis one", "number for axis two", "number for axis three"],
 )
-def test_THn_axis_determination(logging_mixin, axis_selection, create_hist_axis_range, test_sparse):
+def test_THn_axis_determination(axis_selection, create_hist_axis_range, test_sparse):
     """Test THn axis determination in the HistAxisRange object."""
-    ROOT = pytest.importorskip("ROOT")
+    ROOT = pytest.importorskip("ROOT")  # noqa: F841
     # Retrieve sparse.
     sparse, _ = test_sparse
     # Retrieve object and setup.
@@ -126,7 +124,7 @@ class TestsForHistAxisRange:
     """Tests for HistAxisRange which require ROOT."""
 
     @pytest.mark.parametrize(
-        "min_val, max_val, min_val_func, max_val_func, expected_func",
+        ("min_val", "max_val", "min_val_func", "max_val_func", "expected_func"),
         [
             (0, 10, "find_bin_min", "find_bin_max", lambda axis, x, y: axis.SetRangeUser(x, y)),
             (1, 9, "find_bin_min", "find_bin_max", lambda axis, x, y: axis.SetRangeUser(x, y)),
@@ -135,7 +133,7 @@ class TestsForHistAxisRange:
                 None,
                 None,
                 "n_bins",
-                lambda axis, x, y: True,
+                lambda axis, x, y: True,  # noqa: ARG005
             ),  # This is just a no-op. We don't want to restrict the range.
             (0, 7, None, None, lambda axis, x, y: axis.SetRange(x, y)),
         ],
@@ -146,9 +144,7 @@ class TestsForHistAxisRange:
             "0 - 10 with raw bin value passed apply_func_to_find_bin",
         ],
     )
-    def test_apply_range_set(
-        self, logging_mixin, min_val, max_val, min_val_func, max_val_func, expected_func, test_sparse
-    ):
+    def test_apply_range_set(self, min_val, max_val, min_val_func, max_val_func, expected_func, test_sparse):
         """Test apply a range set to an axis via a HistAxisRange object.
 
         This is intentionally tested against SetRangeUser, so we can be certain that it reproduces
@@ -172,7 +168,7 @@ class TestsForHistAxisRange:
             "find_bin_max": lambda x: projectors.HistAxisRange.apply_func_to_find_bin(
                 ROOT.TAxis.FindBin, x - utils.EPSILON
             ),
-            "n_bins": lambda x: projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.GetNbins),
+            "n_bins": lambda x: projectors.HistAxisRange.apply_func_to_find_bin(ROOT.TAxis.GetNbins),  # noqa: ARG005
         }
         min_val_func = function_map[min_val_func]
         max_val_func = function_map[max_val_func]
@@ -200,7 +196,7 @@ class TestsForHistAxisRange:
         assert ax.GetNbins() == expected_axis.GetNbins()
         assert ax.GetName() == expected_axis.GetName()
 
-    def test_disagreement_with_set_range_user(self, logging_mixin, test_sparse):
+    def test_disagreement_with_set_range_user(self, test_sparse):
         """Test the disagreement between SetRange and SetRangeUser when the epsilon shift is not included."""
         ROOT = pytest.importorskip("ROOT")
 
@@ -236,11 +232,11 @@ class TestsForHistAxisRange:
         assert ax.GetName() == expected_axis.GetName()
 
     @pytest.mark.parametrize(
-        "func, value, expected",
+        ("func", "value", "expected"),
         [(None, 3, 3), ("n_bins", None, 10), ("find_bin", 10 - utils.EPSILON, 5)],
         ids=["Only value", "Func only", "Func with value"],
     )
-    def test_retrieve_axis_value(self, logging_mixin, func, value, expected, test_sparse):
+    def test_retrieve_axis_value(self, func, value, expected, test_sparse):
         """Test retrieving axis values using apply_func_to_find_bin()."""
         ROOT = pytest.importorskip("ROOT")
 
@@ -295,11 +291,11 @@ def setup_hist_axis_range(hist_range: projectors.HistAxisRange) -> projectors.Hi
     hist_range = copy.copy(hist_range)
     hist_range.min_val = projectors.HistAxisRange.apply_func_to_find_bin(
         ROOT.TAxis.FindBin,
-        hist_range.min_val + utils.EPSILON,  # type: ignore
+        hist_range.min_val + utils.EPSILON,  # type: ignore[operator]
     )
     hist_range.max_val = projectors.HistAxisRange.apply_func_to_find_bin(
         ROOT.TAxis.FindBin,
-        hist_range.max_val - utils.EPSILON,  # type: ignore
+        hist_range.max_val - utils.EPSILON,  # type: ignore[operator]
     )
     return hist_range
 
@@ -357,8 +353,8 @@ class SingleObservable:
 
 
 def determine_projector_input_args(
-    single_observable: bool, hist: projectors.Hist, hist_label: str
-) -> tuple[dict[str, Any], SingleObservable, dict[str, projectors.Hist]]:
+    single_observable: bool, hist: typing_helpers.Hist, hist_label: str
+) -> tuple[dict[str, Any], SingleObservable, dict[str, typing_helpers.Hist]]:
     """Determine some projector input arguments.
 
     Note:
@@ -374,7 +370,7 @@ def determine_projector_input_args(
     kwdargs: dict[str, Any] = {}
     # These observables have to be defined here so we don't lose reference to them.
     observable = SingleObservable(hist=None)
-    output_observable: dict[str, projectors.Hist] = {}
+    output_observable: dict[str, typing_helpers.Hist] = {}
 
     # The arguments depend on the observable type.
     if single_observable:
@@ -389,8 +385,8 @@ def determine_projector_input_args(
 
 
 def check_and_get_projection(
-    single_observable: bool, observable: SingleObservable, output_observable: dict[str, projectors.Hist]
-) -> projectors.Hist:
+    single_observable: bool, observable: SingleObservable, output_observable: dict[str, typing_helpers.Hist]
+) -> typing_helpers.Hist:
     """Run basic checks and get the projection.
 
     Args:
@@ -423,9 +419,9 @@ class TestProjectorsWithRoot:
         ],
         ids=["Dict observable input", "Single observable input"],
     )
-    def test_projectors(self, logging_mixin, single_observable, test_root_hists):
+    def test_projectors(self, single_observable, test_root_hists):
         """Test creation and basic methods of the projection class."""
-        ROOT = pytest.importorskip("ROOT")
+        ROOT = pytest.importorskip("ROOT")  # noqa: F841
 
         # Args
         projection_name_format = "{test} world"
@@ -443,7 +439,7 @@ class TestProjectorsWithRoot:
 
         # These objects should be overridden so they aren't super meaningful, but we can still
         # test to ensure that they provide the basic functionality that is expected.
-        assert obj.projection_name(test="Hello") == projection_name_format.format(test="Hello")
+        assert obj.projection_name(test="Hello") == projection_name_format.format(test="Hello")  # type: ignore[arg-type]
         assert obj.get_hist(observable=test_root_hists.hist2D) == test_root_hists.hist2D
         assert obj.output_key_name(
             input_key="input_key",
@@ -457,9 +453,9 @@ class TestProjectorsWithRoot:
 
         # Checking printing of the projector settings.
         # Add one additional per selection entry so we have something to print.
-        obj.additional_axis_cuts.append("my_axis")
+        obj.additional_axis_cuts.append("my_axis")  # type: ignore[arg-type]
         obj.projection_dependent_cut_axes.append([hist_axis_ranges_without_entries.x_axis])
-        obj.projection_axes.append("projection_axis")
+        obj.projection_axes.append("projection_axis")  # type: ignore[arg-type]
         # It is rather minimal, but that is fine since it is only printed information.
         expected_str = "HistProjector: Projection Information:\n"
         expected_str += f'\tprojection_name_format: "{projection_name_format}"\n'
@@ -486,7 +482,7 @@ class TestProjectorsWithRoot:
     # AAC = Additional Axis Cuts
     # PDCA = Projection Dependent Cut Axes
     @pytest.mark.parametrize(
-        "use_PDCA, additional_cuts, expected_additional_cuts",
+        ("use_PDCA", "additional_cuts", "expected_additional_cuts"),
         [
             (False, None, True),
             (False, hist_axis_ranges.y_axis, True),
@@ -514,7 +510,7 @@ class TestProjectorsWithRoot:
     )
     # PA = Projection Axes
     @pytest.mark.parametrize(
-        "projection_axes, expected_projection_axes",
+        ("projection_axes", "expected_projection_axes"),
         [
             (hist_axis_ranges.x_axis, True),
             (hist_axis_ranges_without_entries.x_axis, False),
@@ -523,7 +519,6 @@ class TestProjectorsWithRoot:
     )
     def test_TH2_projection(
         self,
-        logging_mixin,
         test_root_hists,
         single_observable,
         use_PDCA,
@@ -533,7 +528,7 @@ class TestProjectorsWithRoot:
         expected_projection_axes,
     ):
         """Test projection of a TH2 to a TH1."""
-        ROOT = pytest.importorskip("ROOT")
+        ROOT = pytest.importorskip("ROOT")  # noqa: F841
 
         # Setup hist ranges
         if additional_cuts:
@@ -543,7 +538,7 @@ class TestProjectorsWithRoot:
                 additional_cuts = setup_hist_axis_range(additional_cuts)
         projection_axes = setup_hist_axis_range(projection_axes)
         # Setup projector
-        kwdargs = {}
+        kwdargs: dict[str, Any] = {}
         # These observables have to be defined here so we don't lose reference to them.
         kwdargs, observable, output_observable = determine_projector_input_args(
             single_observable=single_observable,
@@ -563,9 +558,8 @@ class TestProjectorsWithRoot:
                 # for the disconnected PDCAs.
                 for axis_set in additional_cuts:
                     obj.projection_dependent_cut_axes.append([axis_set])
-        else:
-            if additional_cuts is not None:
-                obj.additional_axis_cuts.append(additional_cuts)
+        elif additional_cuts is not None:
+            obj.additional_axis_cuts.append(additional_cuts)
         obj.projection_axes.append(projection_axes)
 
         # Perform the projection.
@@ -612,13 +606,13 @@ class TestProjectorsWithRoot:
     )
     # AAC = Additional Axis Cuts
     @pytest.mark.parametrize(
-        "additional_axis_cuts, expected_additional_axis_cuts",
+        ("additional_axis_cuts", "expected_additional_axis_cuts"),
         [(None, True), (hist_axis_ranges.x_axis, True), (hist_axis_ranges_without_entries.x_axis, False)],
         ids=["No AAC selection", "AAC with entries", "AAC with no entries"],
     )
     # PDCA = Projection Dependent Cut Axes
     @pytest.mark.parametrize(
-        "projection_dependent_cut_axes, expected_projection_dependent_cut_axes",
+        ("projection_dependent_cut_axes", "expected_projection_dependent_cut_axes"),
         [
             (None, True),
             ([], True),
@@ -640,13 +634,12 @@ class TestProjectorsWithRoot:
     )
     # PA = Projection Axes
     @pytest.mark.parametrize(
-        "projection_axes, expected_projection_axes",
+        ("projection_axes", "expected_projection_axes"),
         [(hist_axis_ranges.z_axis, True), (hist_axis_ranges_without_entries.z_axis, False)],
         ids=["PA with entries", "PA without entries"],
     )
     def test_TH3_to_TH1_projection(
         self,
-        logging_mixin,
         test_root_hists,
         single_observable,
         additional_axis_cuts,
@@ -657,7 +650,7 @@ class TestProjectorsWithRoot:
         expected_projection_axes,
     ):
         """Test projection from a TH3 to a TH1 derived class."""
-        ROOT = pytest.importorskip("ROOT")
+        ROOT = pytest.importorskip("ROOT")  # noqa: F841
 
         # Setup hist ranges
         if additional_axis_cuts:
@@ -735,7 +728,7 @@ class TestProjectorsWithRoot:
     # AAC = Additional Axis Cuts
     # PDCA = Projection Dependent Cut Axes
     @pytest.mark.parametrize(
-        "use_PDCA, additional_cuts, expected_additional_cuts",
+        ("use_PDCA", "additional_cuts", "expected_additional_cuts"),
         [
             (False, None, True),
             (False, hist_axis_ranges.y_axis, True),
@@ -763,7 +756,7 @@ class TestProjectorsWithRoot:
     )
     # PA = Projection Axes
     @pytest.mark.parametrize(
-        "projection_axes, expected_projection_axes",
+        ("projection_axes", "expected_projection_axes"),
         [
             ([hist_axis_ranges.z_axis, hist_axis_ranges.x_axis], True),
             ([hist_axis_ranges.z_axis, hist_axis_ranges_without_entries.x_axis], False),
@@ -774,7 +767,6 @@ class TestProjectorsWithRoot:
     )
     def test_TH3_to_TH2_projection(
         self,
-        logging_mixin,
         test_root_hists,
         single_observable,
         use_PDCA,
@@ -784,7 +776,7 @@ class TestProjectorsWithRoot:
         expected_projection_axes,
     ):
         """Test projection of a TH3 into a TH2."""
-        ROOT = pytest.importorskip("ROOT")
+        ROOT = pytest.importorskip("ROOT")  # noqa: F841
 
         # Setup hist ranges
         if additional_cuts:
@@ -812,9 +804,8 @@ class TestProjectorsWithRoot:
                 # for the disconnected PDCAs.
                 for axis_set in additional_cuts:
                     obj.projection_dependent_cut_axes.append([axis_set])
-        else:
-            if additional_cuts is not None:
-                obj.additional_axis_cuts.append(additional_cuts)
+        elif additional_cuts is not None:
+            obj.additional_axis_cuts.append(additional_cuts)
         for ax in projection_axes:
             obj.projection_axes.append(ax)
 
@@ -862,13 +853,13 @@ class TestProjectorsWithRoot:
         ],
         ids=["Same range PDCA", "Different range PDCA"],
     )
-    def test_invalid_PDCA_axis(logging_mixin, test_root_hists, PDCA_axis):
+    def test_invalid_PDCA_axis(test_root_hists, PDCA_axis):
         """Test catching a PDCA on the same axis as the projection axis."""
-        ROOT = pytest.importorskip("ROOT")
+        ROOT = pytest.importorskip("ROOT")  # noqa: F841
 
         # Setup projector
-        output_observable = {}
-        observable_to_project_from = {"hist3D": test_root_hists.hist3D}
+        output_observable: dict[str, typing_helpers.Hist] = {}
+        observable_to_project_from = {"hist3D": test_root_hists.hist3D}  # type: ignore[attr-defined]
         projection_name_format = "hist"
         obj = projectors.HistProjector(
             output_observable=output_observable,
@@ -883,7 +874,7 @@ class TestProjectorsWithRoot:
         obj.projection_axes.append(hist_axis_ranges.x_axis)
 
         # Perform the projection.
-        with pytest.raises(ValueError) as exception_info:
+        with pytest.raises(ValueError, match="configuration is not allowed") as exception_info:
             obj.project()
 
         assert "This configuration is not allowed" in exception_info.value.args[0]
@@ -937,13 +928,13 @@ class TestsForTHnSparseProjection:
     )
     # AAC = Additional Axis Cuts
     @pytest.mark.parametrize(
-        "additional_axis_cuts, expected_additional_axis_cuts_counts",
+        ("additional_axis_cuts", "expected_additional_axis_cuts_counts"),
         [(None, 1), (sparse_hist_axis_ranges.x_axis, 1), (sparse_hist_axis_ranges_with_no_entries.x_axis, 0)],
         ids=["No AAC selection", "AAC with entries", "AAC with no entries"],
     )
     # PDCA = Projection Dependent Cut Axes
     @pytest.mark.parametrize(
-        "projection_dependent_cut_axes, expected_projection_dependent_cut_axes_counts",
+        ("projection_dependent_cut_axes", "expected_projection_dependent_cut_axes_counts"),
         [
             (None, 2),
             ([], 2),
@@ -965,7 +956,7 @@ class TestsForTHnSparseProjection:
     )
     # PA = Projection Axes
     @pytest.mark.parametrize(
-        "projection_axes, expected_projection_axes_counts",
+        ("projection_axes", "expected_projection_axes_counts"),
         [(sparse_hist_axis_ranges.z_axis, 1), (sparse_hist_axis_ranges_with_no_entries.z_axis, 0)],
         ids=["PA with entries", "PA without entries"],
     )
@@ -981,7 +972,7 @@ class TestsForTHnSparseProjection:
         expected_projection_axes_counts,
     ):
         """Test projection of a THnSparse into a TH1."""
-        ROOT = pytest.importorskip("ROOT")
+        ROOT = pytest.importorskip("ROOT")  # noqa: F841
 
         # Setup hist ranges
         if additional_axis_cuts:

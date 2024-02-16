@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Tests for the outliers removal module.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
@@ -19,9 +17,9 @@ from pachyderm import projectors, remove_outliers
 logger = logging.getLogger(__name__)
 
 
-def test_mean_and_median(logging_mixin, test_root_hists):
+def test_mean_and_median(test_root_hists):
     """Test calculating the mean and median of a histogram."""
-    ROOT = pytest.importorskip("ROOT")
+    ROOT = pytest.importorskip("ROOT")  # noqa: F841
     hist = test_root_hists.hist1D
     for i in range(1, 11):
         hist.SetBinContent(i, i)
@@ -41,7 +39,7 @@ def test_mean_and_median(logging_mixin, test_root_hists):
 
 
 @pytest.mark.parametrize(
-    "moving_average, expected_cut_index",
+    ("moving_average", "expected_cut_index"),
     [
         # The expected cut axis here is where the array changes to 0, and then shifted
         # to the index that corresponds to the moving average being calculated from the middle
@@ -55,7 +53,7 @@ def test_mean_and_median(logging_mixin, test_root_hists):
     ],
     ids=["Constant until below", "Early bump above threshold"],
 )
-def test_outliers_determination_from_moving_average(logging_mixin, moving_average, expected_cut_index):
+def test_outliers_determination_from_moving_average(moving_average, expected_cut_index):
     """Test outliers determination for a pathological moving average.
 
     Note:
@@ -78,7 +76,7 @@ def test_outliers_determination_from_moving_average(logging_mixin, moving_averag
 
 
 @pytest.fixture(params=["2D", "3D"])
-def setup_outliers_hist(request, logging_mixin):
+def setup_outliers_hist(request):
     ROOT = pytest.importorskip("ROOT")
 
     # Setup
@@ -99,7 +97,7 @@ def setup_outliers_hist(request, logging_mixin):
         hist = ROOT.TH2F("test2D", "test2D", 10, 0, 10, 100, 0, 100)
 
     # Fill function as an power law.
-    def f(x, y):
+    def f(x: int | float, y: int | float) -> int | float:  # noqa: ARG001
         """Power function to the power of -1.0
 
         Normalization selected such that x = 50 is equal to 1.
@@ -127,11 +125,11 @@ def setup_outliers_hist(request, logging_mixin):
         base_args = [x.value, y.value]
         if hist3D:
             base_args.append(z.value)
-        bin_content_args = base_args + [f(x.value, y.value)]
+        bin_content_args = [*base_args, f(x.value, y.value)]
         # Fake the errors. Don't use sqrt because it will create errors larger than filled values.
         # Since we're faking the input data, we don't really care about the errors. We just want
         # them to be non-zero.
-        bin_error_args = base_args + [f(x.value, y.value) / 2]
+        bin_error_args = [*base_args, f(x.value, y.value) / 2]
 
         # Fill in the determined values
         hist.SetBinContent(*bin_content_args)
@@ -154,7 +152,7 @@ class TestOutliersRemovalIntegration:
         ],
         ids=["Do not remove entry", "Remove early entries"],
     )
-    def test_remove_outliers(self, logging_mixin, setup_outliers_hist, remove_entries):
+    def test_remove_outliers(self, setup_outliers_hist, remove_entries):
         """Integration test for removing outliers.
 
         We check a 2D and a 3D hist, both projecting to the y axis (arbitrarily selected).

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Tests for generic analysis configuration.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
@@ -12,6 +10,7 @@ import enum
 import itertools
 import logging
 from io import StringIO
+from typing import Any
 
 import pytest
 import ruamel.yaml
@@ -21,7 +20,7 @@ from pachyderm import generic_config, yaml
 logger = logging.getLogger(__name__)
 
 
-def log_yaml_dump(yml, config):
+def log_yaml_dump(yml: Any, config: dict[str, Any]) -> None:
     """Helper function to log the YAML config."""
     s = StringIO()
     yml.dump(config, s)
@@ -96,7 +95,7 @@ override:
     return (data, test_yaml)
 
 
-def basic_config_exception(data):
+def basic_config_exception(data: dict[str, Any]) -> dict[str, Any]:
     """Add an unmatched key (ie does not exist in the main config) to the override
     map to cause an exception.
 
@@ -111,7 +110,7 @@ def basic_config_exception(data):
     return data
 
 
-def override_data(config):
+def override_data(config: dict[str, Any]) -> dict[str, Any]:
     """Helper function to override the configuration.
 
     It can print the configuration before and after overriding the options if enabled.
@@ -128,7 +127,7 @@ def override_data(config):
         log_yaml_dump(yml, config)
 
     # Override and simplify the values
-    config = generic_config.override_options(config, (), ())
+    config = generic_config.override_options(config, (), ())  # type: ignore[arg-type]
     config = generic_config.simplify_data_representations(config)
 
     if logger.isEnabledFor(logging.DEBUG):
@@ -138,7 +137,7 @@ def override_data(config):
     return config
 
 
-def test_override_retrieve_unrelated_value(logging_mixin, basic_config):
+def test_override_retrieve_unrelated_value(basic_config):
     """Test retrieving a basic value unrelated to the overridden data."""
     (basic_config, yaml_string) = basic_config
 
@@ -149,7 +148,7 @@ def test_override_retrieve_unrelated_value(logging_mixin, basic_config):
     assert basic_config[value_name] == value_before_override
 
 
-def test_override_with_basic_config(logging_mixin, basic_config):
+def test_override_with_basic_config(basic_config):
     """Test override with the basic config."""
     (basic_config, yaml_string) = basic_config
     basic_config = override_data(basic_config)
@@ -158,7 +157,7 @@ def test_override_with_basic_config(logging_mixin, basic_config):
     assert basic_config["test3"] == "test6"
 
 
-def test_basic_anchor_override(logging_mixin, basic_config):
+def test_basic_anchor_override(basic_config):
     """Test overriding with an anchor.
 
     When an anchor reference is overridden, we expect that the anchor value is updated.
@@ -185,7 +184,7 @@ def test_basic_anchor_override(logging_mixin, basic_config):
     assert basic_config["testFloatAnchorIndirection"] == 3.14
 
 
-def test_advanced_anchor_override(logging_mixin, basic_config):
+def test_advanced_anchor_override(basic_config):
     """Test overriding a anchored value with another anchor.
 
     When an override value is using an anchor value, we expect that value to propagate fully.
@@ -197,7 +196,7 @@ def test_advanced_anchor_override(logging_mixin, basic_config):
     assert basic_config["responseTaskName"] == basic_config["pythiaInfoAfterEventSelectionTaskName"]
 
 
-def test_for_unmatched_keys(logging_mixin, basic_config):
+def test_for_unmatched_keys(basic_config):
     """Test for an unmatched key in the override field (ie without a match in the config).
 
     Such an unmatched key should cause a `KeyError` exception, which we catch.
@@ -213,7 +212,7 @@ def test_for_unmatched_keys(logging_mixin, basic_config):
     assert exception_info.value.args[0] == "test_exception"
 
 
-def test_complex_object_override(logging_mixin, basic_config):
+def test_complex_object_override(basic_config):
     """Test override with complex objects.
 
     In particular, test with lists, dicts.
@@ -225,7 +224,7 @@ def test_complex_object_override(logging_mixin, basic_config):
     assert basic_config["testDict"] == {3: 4}
 
 
-def test_load_configuration(logging_mixin, basic_config):
+def test_load_configuration(basic_config):
     """Test that loading yaml goes according to expectations. This may be somewhat trivial, but it
     is still important to check in case ruamel.yaml changes APIs or defaults.
 
@@ -290,12 +289,10 @@ multiEntryDict:
     foo: "bar"
 """
     yaml = ruamel.yaml.YAML(typ="rt")
-    data = yaml.load(test_yaml)
-
-    return data
+    return yaml.load(test_yaml)
 
 
-def test_data_simplification_on_base_types(logging_mixin, data_simplification_config):
+def test_data_simplification_on_base_types(data_simplification_config):
     """Test the data simplification function on base types.
 
     Here we tests int, float, and str.  They should always stay the same.
@@ -307,7 +304,7 @@ def test_data_simplification_on_base_types(logging_mixin, data_simplification_co
     assert config["str"] == "hello"
 
 
-def test_data_simplification_on_lists(logging_mixin, data_simplification_config):
+def test_data_simplification_on_lists(data_simplification_config):
     """Test the data simplification function on lists.
 
     A single entry list should be returned as a string, while a multiple entry list should be
@@ -319,7 +316,7 @@ def test_data_simplification_on_lists(logging_mixin, data_simplification_config)
     assert config["multiEntryList"] == ["hello", "world"]
 
 
-def test_dict_data_simplification(logging_mixin, data_simplification_config):
+def test_dict_data_simplification(data_simplification_config):
     """Test the data simplification function on dicts.
 
     Dicts should always maintain their structure.
@@ -368,7 +365,7 @@ iterables:
     yaml = ruamel.yaml.YAML(typ="rt")
     config = yaml.load(config)
 
-    possible_iterables = {}
+    possible_iterables: dict[str, Any] = {}
     possible_iterables["reaction_plane_orientation"] = reaction_plane_orientation
     possible_iterables["qVector"] = qvector
     possible_iterables["collisionEnergy"] = collision_energy
@@ -380,7 +377,7 @@ iterables:
     )
 
 
-def test_determine_selection_of_iterable_values_from_config(logging_mixin, object_creation_config):
+def test_determine_selection_of_iterable_values_from_config(object_creation_config):
     """Test determining which values of an iterable to use."""
     (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
     iterables = generic_config.determine_selection_of_iterable_values_from_config(
@@ -395,7 +392,7 @@ def test_determine_selection_of_iterable_values_from_config(logging_mixin, objec
     assert len(iterables) == 2
 
 
-def test_determine_selection_of_iterable_values_from_config_list_of_values(logging_mixin, object_creation_config):
+def test_determine_selection_of_iterable_values_from_config_list_of_values(object_creation_config):
     """Test creating objects from lists of values in a configuration file."""
 
     # Create fake object needed for using lists of objects.
@@ -425,7 +422,7 @@ def test_determine_selection_of_iterable_values_from_config_list_of_values(loggi
     assert len(iterables) == 3
 
 
-def test_determine_selection_of_iterable_values_with_undefined_iterable(logging_mixin, object_creation_config):
+def test_determine_selection_of_iterable_values_with_undefined_iterable(object_creation_config):
     """Test determining which values of an iterable to use when an iterable is not defined."""
     (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
 
@@ -437,7 +434,7 @@ def test_determine_selection_of_iterable_values_with_undefined_iterable(logging_
     assert exception_info.value.args[0] == "qVector"
 
 
-def test_determine_selection_of_iterable_values_with_string_selection(logging_mixin, object_creation_config):
+def test_determine_selection_of_iterable_values_with_string_selection(object_creation_config):
     """Test trying to determine values with a string.
 
     This is not allowed, so it should raise an exception.
@@ -474,7 +471,7 @@ def object_and_creation_args():
     return (obj, args, formatting_options)
 
 
-def test_create_objects_from_iterables(logging_mixin, object_creation_config, object_and_creation_args):
+def test_create_objects_from_iterables(object_creation_config, object_and_creation_args):
     """Test object creation from a set of iterables."""
     # Collect variables
     (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
@@ -529,14 +526,14 @@ def test_create_objects_from_iterables(logging_mixin, object_creation_config, ob
             assert found_key_index is True
 
 
-def test_missing_iterable_for_object_creation(logging_mixin, object_and_creation_args):
+def test_missing_iterable_for_object_creation(object_and_creation_args):
     """Test object creation when the iterables are missing."""
     (obj, args, formatting_options) = object_and_creation_args
     # Create empty iterables for this test.
-    iterables = {}
+    iterables: dict[str, Any] = {}
 
     # Create the objects.
-    with pytest.raises(ValueError) as exception_info:
+    with pytest.raises(ValueError, match="no iterables") as exception_info:
         generic_config.create_objects_from_iterables(
             obj=obj, args=args, iterables=iterables, formatting_options=formatting_options
         )
@@ -578,7 +575,7 @@ noneExample: null
     return (generic_config.apply_formatting_dict(config, formatting), formatting)
 
 
-def test_apply_formatting_to_basic_types(logging_mixin, formatting_config):
+def test_apply_formatting_to_basic_types(formatting_config):
     """Test applying formatting to basic types."""
     config, formatting_dict = formatting_config
 
@@ -589,7 +586,7 @@ def test_apply_formatting_to_basic_types(logging_mixin, formatting_config):
     assert config["noFormatBecauseNoFormatter"] == "{noFormatHere}"
 
 
-def test_apply_formatting_to_iterable_types(logging_mixin, formatting_config):
+def test_apply_formatting_to_iterable_types(formatting_config):
     """Test applying formatting to iterable types."""
     config, formatting_dict = formatting_config
 
@@ -599,7 +596,7 @@ def test_apply_formatting_to_iterable_types(logging_mixin, formatting_config):
     assert config["dict2"]["dict"] == {"str": "do nothing", "format": str(formatting_dict["c"])}
 
 
-def test_apply_formatting_skip_latex(logging_mixin, formatting_config):
+def test_apply_formatting_skip_latex(formatting_config):
     """Test skipping the application of the formatting to strings which look like latex."""
     config, formatting_dict = formatting_config
 
@@ -607,10 +604,10 @@ def test_apply_formatting_skip_latex(logging_mixin, formatting_config):
 
 
 @pytest.fixture()
-def setup_analysis_iterator(logging_mixin):
+def setup_analysis_iterator():
     """Setup for testing iteration over analysis objects."""
     KeyIndex = dataclasses.make_dataclass("KeyIndex", ["a", "b", "c"], frozen=True)
-    KeyIndex.__iter__ = generic_config._key_index_iter
+    KeyIndex.__iter__ = generic_config._key_index_iter  # type: ignore[attr-defined]
     analysis_iterables = {"a": ["a1", "a2"], "b": ["b1", "b2"], "c": ["c"]}
     test_dict = {
         KeyIndex(a="a1", b="b1", c="c"): "obj1",

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """ Tests for integration of functionality in the fit modules.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
@@ -8,9 +6,10 @@ from __future__ import annotations
 
 import logging
 from io import StringIO
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import pytest  # noqa: F401
 
 import pachyderm.fit
@@ -19,7 +18,7 @@ from pachyderm import histogram, yaml
 logger = logging.getLogger(__name__)
 
 
-def dump_to_string_and_retrieve(input_object: Any, y: yaml.ruamel.yaml.YAML = None) -> Any:
+def dump_to_string_and_retrieve(input_object: Any, y: yaml.YAML | None = None) -> Any:
     """Dump the given input object via YAML and then retrieve it for comparison.
 
     Args:
@@ -42,7 +41,7 @@ def dump_to_string_and_retrieve(input_object: Any, y: yaml.ruamel.yaml.YAML = No
     return output_object
 
 
-def pedestal(x: Union[np.ndarray, float], pedestal: float) -> Union[np.ndarray, float]:
+def pedestal(x: npt.NDArray[np.float64] | float, pedestal: float) -> float | npt.NDArray[np.float64]:  # noqa: ARG001
     return pedestal
 
 
@@ -51,18 +50,17 @@ class PedestalFit(pachyderm.fit.Fit):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.fit_function = pedestal
+        self.fit_function = pedestal  # type: ignore[assignment]
 
     def _post_init_validation(self) -> None:
         """Validate that the fit object was setup properly."""
-        ...
 
     def _setup(self, h: histogram.Histogram1D) -> tuple[histogram.Histogram1D, pachyderm.fit.T_FitArguments]:
         """Setup the histogram and arguments for the fit."""
         return h, {"pedestal": 0}
 
 
-def test_round_trip_of_fit_object_to_YAML(logging_mixin: Any) -> None:
+def test_round_trip_of_fit_object_to_YAML() -> None:
     """Test a YAML round trip for a fit object."""
     # Setup
     input_fit_object = PedestalFit(use_log_likelihood=False)

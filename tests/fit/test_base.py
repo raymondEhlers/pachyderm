@@ -58,9 +58,7 @@ def test_merge_func_code(
     ],
     ids=["1, 2", "2, 1"],
 )
-def test_merge_func_code_against_probfit(
-    simple_test_functions: Any, function_list_names: list[int]
-) -> None:
+def test_merge_func_code_against_probfit(simple_test_functions: Any, function_list_names: list[int]) -> None:
     """Test merging function codes against probfit."""
     # Setup
     funcs = simple_test_functions

@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
 """ Tests for binned_data
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -15,7 +13,7 @@ import pytest
 from pachyderm import binned_data
 
 
-def test_axis_slice_copy(caplog: Any) -> None:
+def test_axis_slice_copy() -> None:
     axis = binned_data.Axis(np.arange(1, 11))
     sliced_axis = axis[:]
 
@@ -25,7 +23,7 @@ def test_axis_slice_copy(caplog: Any) -> None:
 
 
 @pytest.mark.parametrize(
-    "start,stop,step,expected_bin_edges",
+    ("start", "stop", "step", "expected_bin_edges"),
     [
         (2, None, None, np.arange(3, 12)),
         (2j, None, None, np.arange(2, 12)),
@@ -48,11 +46,10 @@ def test_axis_slice_copy(caplog: Any) -> None:
     ],
 )
 def test_axis_slice(
-    start: Optional[int],
-    stop: Optional[int],
-    step: Optional[int],
+    start: int | None,
+    stop: int | None,
+    step: int | None,
     expected_bin_edges: npt.NDArray[np.int64],
-    caplog: Any,
 ) -> None:
     axis = binned_data.Axis(bin_edges=np.arange(1, 12))
     s = slice(start, stop, step)
@@ -74,7 +71,7 @@ def test_axis_slice(
 
 
 @pytest.mark.parametrize(
-    "start,stop,step,expected_bin_edges",
+    ("start", "stop", "step", "expected_bin_edges"),
     [
         (None, None, binned_data.Rebin(2), np.arange(1, 12, 2)),
         (3j, None, binned_data.Rebin(2), np.arange(3, 12, 2)),
@@ -93,11 +90,10 @@ def test_axis_slice(
     ],
 )
 def test_axis_slice_rebin(
-    start: Optional[int],
-    stop: Optional[int],
-    step: Optional[int],
+    start: int | None,
+    stop: int | None,
+    step: int | None,
     expected_bin_edges: npt.NDArray[np.int64],
-    caplog: Any,
 ) -> None:
     axis = binned_data.Axis(bin_edges=np.arange(1, 12))
     s = slice(start, stop, step)
@@ -127,7 +123,7 @@ def hists_for_rebinning() -> tuple[npt.NDArray[np.float64], binned_data.BinnedDa
 
 
 @pytest.mark.parametrize(
-    "start,stop,step,expected_bin_edges",
+    ("start", "stop", "step", "expected_bin_edges"),
     [
         (2, None, None, np.arange(3, 12)),
         (2j, None, None, np.arange(2, 12)),
@@ -151,11 +147,10 @@ def hists_for_rebinning() -> tuple[npt.NDArray[np.float64], binned_data.BinnedDa
 )
 def test_hist_slice(
     hists_for_rebinning: Any,
-    start: Optional[int],
-    stop: Optional[int],
-    step: Optional[int],
+    start: int | None,
+    stop: int | None,
+    step: int | None,
     expected_bin_edges: npt.NDArray[np.int64],
-    caplog: Any,
 ) -> None:
     values, h = hists_for_rebinning
     s = slice(start, stop, step)
@@ -176,7 +171,7 @@ def test_hist_slice(
 
 
 @pytest.mark.parametrize(
-    "start,stop,step,expected_bin_edges",
+    ("start", "stop", "step", "expected_bin_edges"),
     [
         (None, None, binned_data.Rebin(2), np.arange(1, 12, 2)),
         (3j, None, binned_data.Rebin(2), np.arange(3, 12, 2)),
@@ -202,11 +197,10 @@ def test_hist_slice(
 )
 def test_hist_slice_rebin(
     hists_for_rebinning: Any,
-    start: Optional[int],
-    stop: Optional[int],
-    step: Optional[int],
+    start: int | None,
+    stop: int | None,
+    step: int | None,
     expected_bin_edges: npt.NDArray[np.int64],
-    caplog: Any,
 ) -> None:
     values, h = hists_for_rebinning
     s = slice(start, stop, step)
@@ -242,7 +236,7 @@ def test_hist_slice_rebin(
     ],
     ids=["1D", "2D"],
 )
-def test_conversion_and_projection_with_boost_histogram(logging_mixin: Any, h: binned_data.BinnedData) -> None:
+def test_conversion_and_projection_with_boost_histogram(h: binned_data.BinnedData) -> None:
     """Test conversion of binned_data to boost-histogram (and back)."""
     bh = pytest.importorskip("boost_histogram")
     # First, convert and check that it was successful.
@@ -290,7 +284,7 @@ def test_conversion_and_projection_with_boost_histogram(logging_mixin: Any, h: b
     ],
     ids=["1D", "2D"],
 )
-def test_conversion_and_projection_with_root_hist(logging_mixin: Any, h: binned_data.BinnedData) -> None:
+def test_conversion_and_projection_with_root_hist(h: binned_data.BinnedData) -> None:
     """Test conversion of binned_data to boost-histogram (and back)."""
     ROOT = pytest.importorskip("ROOT")  # noqa: F841
     root_hist = h.to_ROOT()

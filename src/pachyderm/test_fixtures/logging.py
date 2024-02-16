@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Logging related fixtures to aid testing.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@yale.edu>, Yale University
@@ -17,7 +15,7 @@ logging_level = logging.DEBUG
 
 
 @pytest.fixture()
-def logging_mixin(caplog: Any) -> None:
+def logging_mixin(caplog: Any) -> None:  # noqa: PT004
     """Logging mixin to capture logging messages from modules.
 
     It logs at the debug level, which is probably most useful for when a test fails.

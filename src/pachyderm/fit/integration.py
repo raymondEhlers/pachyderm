@@ -6,8 +6,7 @@ from __future__ import annotations
 
 import abc
 import logging
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, cast, overload
 
 import iminuit
 import numpy as np
@@ -26,6 +25,23 @@ logger = logging.getLogger(__name__)
 T_FitArguments = dict[str, bool | float | tuple[float, float]]
 
 _T_Fit = TypeVar("_T_Fit", bound="Fit")
+
+
+class FitFunction(Protocol):
+    __name__: str
+
+    @overload
+    def __call__(self, *args: float, **kwargs: float) -> float:
+        ...
+
+    @overload
+    def __call__(self, *args: npt.NDArray[np.float64], **kwargs: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+        ...
+
+    def __call__(
+        self, *args: float | npt.NDArray[np.float64], **kwargs: float | npt.NDArray[np.float64]
+    ) -> float | npt.NDArray[np.float64]:
+        ...
 
 
 class Fit(abc.ABC, generic_class.EqualityMixin):
@@ -64,7 +80,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         self.use_log_likelihood = use_log_likelihood
         self.fit_options = fit_options
         self.user_arguments: T_FitArguments = user_arguments
-        self.fit_function: Callable[..., float]
+        self.fit_function: FitFunction
         self.fit_result: base.FitResult
 
         # Create the cost function based on the fit parameters.

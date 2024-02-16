@@ -39,4 +39,6 @@ from .cost_function import (  # noqa: F401
     binned_chi_squared_safe_for_zeros,
 )
 from .function import AddPDF, DividePDF, MultiplyPDF, SubtractPDF, extended_gaussian, gaussian  # noqa: F401
-from .integration import Fit, T_FitArguments, fit_with_minuit  # noqa: F401
+from .integration import Fit as Fit
+from .integration import T_FitArguments as T_FitArguments
+from .integration import fit_with_minuit as fit_with_minuit
