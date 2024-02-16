@@ -1,18 +1,17 @@
-#!/usr/bin/env python
-
 """ Handle generic TH1 and THn projections.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import copy
 import enum
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Optional, Union
+from collections.abc import Callable, Iterable
+from typing import Any, Union
 
 from pachyderm import generic_class
 from pachyderm.typing_helpers import Axis, Hist
-
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -30,7 +29,7 @@ class TH1AxisType(enum.Enum):
     z_axis = 2
 
 
-def hist_axis_func(axis_type: enum.Enum) -> Callable[[Hist], Axis]:
+def hist_axis_func(axis_type: enum.Enum) -> Callable[[Hist], Axis]:  # pyright: ignore[reportInvalidTypeForm]
     """Wrapper to retrieve the axis of a given histogram.
 
     This can be convenient outside of just projections, so it's made available in the API.
@@ -41,7 +40,7 @@ def hist_axis_func(axis_type: enum.Enum) -> Callable[[Hist], Axis]:
         Callable to retrieve the specified axis when given a hist.
     """
 
-    def axis_func(hist: Hist) -> Axis:
+    def axis_func(hist: Hist) -> Axis:  # pyright: ignore[reportInvalidTypeForm]
         """Retrieve the axis associated with the ``HistAxisRange`` object for a given hist.
 
         Args:
@@ -66,7 +65,7 @@ def hist_axis_func(axis_type: enum.Enum) -> Callable[[Hist], Axis]:
             # Return the proper THn access
             # logger.debug(f"From hist: {hist}, hist_axis_type: {hist_axis_type}, axis: {hist.GetAxis(hist_axis_type.value)}")
             return hist.GetAxis(hist_axis_type)
-        else:
+        else:  # noqa: RET505
             # If it's not a THn, then it must be a TH1 derived
             axis_function_map = {
                 TH1AxisType.x_axis.value: hist.GetXaxis,
@@ -82,7 +81,7 @@ def hist_axis_func(axis_type: enum.Enum) -> Callable[[Hist], Axis]:
     return axis_func
 
 
-RangeMinMaxType = Union[float, Callable[[Any], float]]
+RangeMinMaxType = Union[float, Callable[[Any], float]]  # noqa: UP007
 
 
 class HistAxisRange(generic_class.EqualityMixin):
@@ -111,7 +110,7 @@ class HistAxisRange(generic_class.EqualityMixin):
         self.max_val = max_val
 
     def __repr__(self) -> str:
-        """ Representation of the object. """
+        """Representation of the object."""
         # The axis type is an enumeration of some type. In such a case, we want the repr to represent
         # it using the str method instead
         return "{}(name = {name!r}, axis_type = {axis_type}, min_val = {min_val!r}, max_val = {max_val!r})".format(
@@ -119,18 +118,18 @@ class HistAxisRange(generic_class.EqualityMixin):
         )
 
     def __str__(self) -> str:
-        """ Print the elements of the object. """
+        """Print the elements of the object."""
         return "{}: name: {name}, axis_type: {axis_type}, min_val: {min_val}, max_val: {max_val}".format(
             self.__class__.__name__, **self.__dict__
         )
 
     @property
     def axis(self) -> Callable[[Any], Any]:
-        """ Determine the axis to return based on the hist type. """
+        """Determine the axis to return based on the hist type."""
         axis_func = hist_axis_func(axis_type=self.axis_type)
-        return axis_func
+        return axis_func  # noqa: RET504
 
-    def apply_range_set(self, hist: Hist) -> None:
+    def apply_range_set(self, hist: Hist) -> None:  # pyright: ignore[reportInvalidTypeForm]
         """Apply the associated range set to the axis of a given hist.
 
         Note:
@@ -158,8 +157,8 @@ class HistAxisRange(generic_class.EqualityMixin):
 
     @staticmethod
     def apply_func_to_find_bin(
-        func: Union[None, Callable[..., Union[float, int, Any]]], values: Optional[float] = None
-    ) -> Callable[[Any], Union[float, int]]:
+        func: None | Callable[..., float | int | Any], values: float | None = None
+    ) -> Callable[[Any], float | int]:
         """Closure to determine the bin associated with a value on an axis.
 
         It can apply a function to an axis if necessary to determine the proper bin.  Otherwise,
@@ -193,7 +192,7 @@ class HistAxisRange(generic_class.EqualityMixin):
             Function to be called with an axis to determine the desired bin on that axis.
         """
 
-        def return_func(axis: Axis) -> Any:
+        def return_func(axis: Axis) -> Any:  # pyright: ignore[reportInvalidTypeForm]
             """Apply the stored function and value to a given axis.
 
             Args:
@@ -205,7 +204,7 @@ class HistAxisRange(generic_class.EqualityMixin):
             if func:
                 if values is not None:
                     return func(axis, values)
-                else:
+                else:  # noqa: RET505
                     return func(axis)
             else:
                 return values
@@ -266,11 +265,11 @@ class HistProjector:
 
     def __init__(
         self,
-        observable_to_project_from: Union[Dict[str, Any], Hist, Any],
-        output_observable: Union[Dict[str, Any], Hist, Any],
+        observable_to_project_from: dict[str, Any] | Hist | Any,  # pyright: ignore[reportInvalidTypeForm]
+        output_observable: dict[str, Any] | Hist | Any,  # pyright: ignore[reportInvalidTypeForm]
         projection_name_format: str,
-        output_attribute_name: Optional[str] = None,
-        projection_information: Optional[Dict[str, Any]] = None,
+        output_attribute_name: str | None = None,
+        projection_information: dict[str, Any] | None = None,
     ):
         # Determine whether we projecting multiple objects.
         # If not, store the attribute under which we are going to store the output.
@@ -284,9 +283,8 @@ class HistProjector:
         if self.single_observable_projection and (
             isinstance(observable_to_project_from, dict) or isinstance(output_observable, dict)
         ):
-            raise ValueError(
-                "A dict of observables is not compatible with a single observable projection. Check your arguments."
-            )
+            msg = "A dict of observables is not compatible with a single observable projection. Check your arguments."
+            raise ValueError(msg)
         self.observable_to_project_from = observable_to_project_from
         self.output_observable = output_observable
 
@@ -302,13 +300,13 @@ class HistProjector:
 
         # Axes
         # Cuts for axes which are not projected
-        self.additional_axis_cuts: List[HistAxisRange] = []
+        self.additional_axis_cuts: list[HistAxisRange] = []
         # Axes cuts which depend on the projection axes
         # ie. If we want to change the range of the axis that we are projecting
         # For example, we may want to project an axis non-continuously (say, -1 - 0.5, 0.5 - 1)
-        self.projection_dependent_cut_axes: List[List[HistAxisRange]] = []
+        self.projection_dependent_cut_axes: list[list[HistAxisRange]] = []
         # Axes to actually project
-        self.projection_axes: List[HistAxisRange] = []
+        self.projection_axes: list[HistAxisRange] = []
 
     # Printing functions
     def __str__(self) -> str:
@@ -319,7 +317,7 @@ class HistProjector:
         ret_val = f"{self.__class__.__name__}: Projection Information:\n"
         ret_val += f'\tprojection_name_format: "{self.projection_name_format}"'
         ret_val += "\n\tprojection_information:\n"
-        ret_val += "\n".join(["\t\t- " + str("Arg: ") + str(val) for arg, val in self.projection_information.items()])
+        ret_val += "\n".join(["\t\t- " + "Arg: " + str(val) for arg, val in self.projection_information.items()])
         ret_val += "\n\tadditional_axis_cuts:\n"
         ret_val += "\n".join(["\t\t- " + str(axis) for axis in self.additional_axis_cuts])
         ret_val += "\n\tprojection_dependent_cut_axes:\n"
@@ -334,7 +332,7 @@ class HistProjector:
 
         return ret_val
 
-    def call_projection_function(self, hist: Hist) -> Hist:
+    def call_projection_function(self, hist: Hist) -> Hist:  # pyright: ignore[reportInvalidTypeForm]
         """Calls the actual projection function for the hist.
 
         Args:
@@ -365,7 +363,7 @@ class HistProjector:
 
         return projected_hist
 
-    def _project_THn(self, hist: Hist) -> Any:
+    def _project_THn(self, hist: Hist) -> Any:  # pyright: ignore[reportInvalidTypeForm]
         """Perform the actual THn -> THn or TH1 projection.
 
         This projection could be to 1D, 2D, 3D, or ND.
@@ -387,11 +385,11 @@ class HistProjector:
 
         # Test calculating errors
         # Add "E" to ensure that errors will be calculated
-        args = projection_axes + ["E"]
+        args = projection_axes + ["E"]  # noqa: RUF005
         # Do the actual projection
         logger.debug(f"hist: {hist.GetName()} args: {args}")
 
-        if len(projection_axes) > 3:
+        if len(projection_axes) > 3:  # noqa: SIM108
             # Project into a THnBase object.
             projected_hist = hist.ProjectionND(*args)
         else:
@@ -400,7 +398,7 @@ class HistProjector:
 
         return projected_hist
 
-    def _project_TH3(self, hist: Hist) -> Any:
+    def _project_TH3(self, hist: Hist) -> Any:  # pyright: ignore[reportInvalidTypeForm]
         """Perform the actual TH3 -> TH1 projection.
 
         This projection could be to 1D or 2D.
@@ -425,9 +423,8 @@ class HistProjector:
             #       expected axis names.
             proj_axis_name = axis.axis_type.name[:1]
             if proj_axis_name not in ["x", "y", "z"]:
-                raise ValueError(
-                    f"Projection axis name {proj_axis_name} is not 'x', 'y', or 'z'. Please check your configuration."
-                )
+                msg = f"Projection axis name {proj_axis_name} is not 'x', 'y', or 'z'. Please check your configuration."
+                raise ValueError(msg)
             projection_axis_name += proj_axis_name
 
         # Handle ROOT Project3D quirk...
@@ -442,9 +439,9 @@ class HistProjector:
         logger.info(f'Projecting onto axes "{projection_axis_name}" from hist {hist.GetName()}')
         projected_hist = hist.Project3D(projection_axis_name)
 
-        return projected_hist
+        return projected_hist  # noqa: RET504
 
-    def _project_TH2(self, hist: Hist) -> Any:
+    def _project_TH2(self, hist: Hist) -> Any:  # pyright: ignore[reportInvalidTypeForm]
         """Perform the actual TH2 -> TH1 projection.
 
         This projection can only be to 1D.
@@ -472,7 +469,7 @@ class HistProjector:
             axis_type = self.projection_axes[0].axis_type.value
         except ValueError:
             # Seems that we received an int, so just use that value
-            axis_type = self.axis_type  # type: ignore[attr-defined]
+            axis_type = self.axis_type  # type: ignore[attr-defined] # pylint: disable=no-member
 
         projection_func = projection_func_map[axis_type]
 
@@ -480,16 +477,16 @@ class HistProjector:
         logger.info(f"Projecting onto axis range {self.projection_axes[0].name} from hist {hist.GetName()}")
         projected_hist = projection_func()
 
-        return projected_hist
+        return projected_hist  # noqa: RET504
 
     def _project_observable(
         self,
         input_key: str,
         input_observable: Any,
-        get_hist_args: Optional[Dict[str, Any]] = None,
-        projection_name_args: Optional[Dict[str, Any]] = None,
+        get_hist_args: dict[str, Any] | None = None,
+        projection_name_args: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> Hist:
+    ) -> Hist:  # pyright: ignore[reportInvalidTypeForm]
         """Perform a projection for a single observable.
 
         Note:
@@ -550,11 +547,12 @@ class HistProjector:
             if PDCA.axis_type == PA.axis_type
         ]
         if duplicated_axes:
-            raise ValueError(
+            msg = (
                 f"Axis {duplicated_axes} is in the projection axes and the projection dependent cut axes."
                 " This configuration is not allowed, as the range in the PDCA will be overwritten by the projection axes!"
                 " Please revise your configuration."
             )
+            raise ValueError(msg)
 
         # Perform the projections
         hists = []
@@ -590,7 +588,7 @@ class HistProjector:
 
         return output_hist, projection_name, projection_name_args
 
-    def _project_single_observable(self, **kwargs: Any) -> Hist:
+    def _project_single_observable(self, **kwargs: Any) -> Hist:  # pyright: ignore[reportInvalidTypeForm]
         """Driver function for projecting and storing a single observable.
 
         Args:
@@ -602,7 +600,11 @@ class HistProjector:
         assert isinstance(self.output_attribute_name, str)
 
         # Run the actual projection.
-        output_hist, projection_name, projection_name_args, = self._project_observable(
+        (
+            output_hist,
+            projection_name,
+            projection_name_args,
+        ) = self._project_observable(
             input_key="single_observable",
             input_observable=self.observable_to_project_from,
             **kwargs,
@@ -616,16 +618,15 @@ class HistProjector:
 
         # Store the final output hist
         if not hasattr(self.output_observable, self.output_attribute_name):
-            raise ValueError(
-                f"Attempted to assign hist to non-existent attribute {self.output_attribute_name} of object {self.output_observable}. Check the attribute name!"
-            )
+            msg = f"Attempted to assign hist to non-existent attribute {self.output_attribute_name} of object {self.output_observable}. Check the attribute name!"
+            raise ValueError(msg)
         # Actually store the histogram.
         setattr(self.output_observable, self.output_attribute_name, output_hist)
 
         # Return the observable
         return output_hist
 
-    def _project_dict(self, **kwargs: Any) -> Dict[str, Hist]:
+    def _project_dict(self, **kwargs: Any) -> dict[str, Hist]:  # pyright: ignore[reportInvalidTypeForm]
         """Driver function for projecting and storing a dictionary of observables.
 
         Args:
@@ -637,7 +638,11 @@ class HistProjector:
         get_hist_args = copy.deepcopy(kwargs)
         projection_name_args = copy.deepcopy(kwargs)
         for key, input_observable in self.observable_to_project_from.items():
-            output_hist, projection_name, projection_name_args, = self._project_observable(
+            (
+                output_hist,
+                projection_name,
+                projection_name_args,
+            ) = self._project_observable(
                 input_key=key,
                 input_observable=input_observable,
                 get_hist_args=get_hist_args,
@@ -653,7 +658,7 @@ class HistProjector:
 
         return self.output_observable
 
-    def project(self, **kwargs: Any) -> Union[Hist, Dict[str, Hist]]:
+    def project(self, **kwargs: Any) -> Hist | dict[str, Hist]:  # pyright: ignore[reportInvalidTypeForm]
         """Perform the requested projection(s).
 
         Note:
@@ -666,10 +671,10 @@ class HistProjector:
         """
         if self.single_observable_projection:
             return self._project_single_observable(**kwargs)
-        else:
+        else:  # noqa: RET505
             return self._project_dict(**kwargs)
 
-    def cleanup_cuts(self, hist: Hist, cut_axes: Iterable[HistAxisRange]) -> None:
+    def cleanup_cuts(self, hist: Hist, cut_axes: Iterable[HistAxisRange]) -> None:  # pyright: ignore[reportInvalidTypeForm]
         """Cleanup applied cuts by resetting the axis to the full range.
 
         Inspired by: https://github.com/matplo/rootutils/blob/master/python/2.7/THnSparseWrapper.py
@@ -686,7 +691,7 @@ class HistProjector:
     #############################
     # Functions to be overridden!
     #############################
-    def projection_name(self, **kwargs: Dict[str, Any]) -> str:
+    def projection_name(self, **kwargs: dict[str, Any]) -> str:
         """Define the projection name for this projector.
 
         Note:
@@ -701,7 +706,7 @@ class HistProjector:
         """
         return self.projection_name_format.format(**kwargs)
 
-    def get_hist(self, observable: Any, **kwargs: Dict[str, Any]) -> Any:
+    def get_hist(self, observable: Any, **kwargs: dict[str, Any]) -> Any:  # noqa: ARG002
         """Get the histogram that may be stored in some object.
 
         This histogram is used to project from.
@@ -721,7 +726,7 @@ class HistProjector:
         """
         return observable
 
-    def output_key_name(self, input_key: str, output_hist: Hist, projection_name: str, **kwargs: str) -> str:
+    def output_key_name(self, input_key: str, output_hist: Hist, projection_name: str, **kwargs: str) -> str:  # pyright: ignore[reportInvalidTypeForm] # noqa: ARG002
         """Returns the key under which the output object should be stored.
 
         Note:
@@ -740,7 +745,7 @@ class HistProjector:
         """
         return projection_name
 
-    def output_hist(self, output_hist: Hist, input_observable: Any, **kwargs: Any) -> Union[Hist, Any]:
+    def output_hist(self, output_hist: Hist, input_observable: Any, **kwargs: Any) -> Hist | Any:  # pyright: ignore[reportInvalidTypeForm] # noqa: ARG002
         """Return an output object. It should store the ``output_hist``.
 
         Note:

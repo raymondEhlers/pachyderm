@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """ Download data related to ALICE.
 
 Based on code from Markus Fasel's download train run-by-run output in parallel script.
@@ -16,18 +14,14 @@ import logging
 import queue
 import threading
 import time
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from importlib import resources
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence, TypeVar, Union
+from typing import Any, TypeVar, Union
 
 from pachyderm import yaml
 from pachyderm.alice import utils
-
-try:
-    import importlib.resources as resources
-except ImportError:
-    # Try the back ported package.
-    import importlib_resources as resources  # type: ignore[no-redef]
 
 logger = logging.getLogger(__name__)
 
@@ -52,12 +46,13 @@ class FilePair:
     n_tries: int = 0
 
     def __post_init__(self) -> None:
-        """ Ensure that we actually receive Paths. """
+        """Ensure that we actually receive Paths."""
         self.source = Path(self.source)
         self.target = Path(self.target)
 
 
-FilePairQueue = queue.Queue[Union[FilePair, None]]
+FilePairQueue = queue.Queue[Union[FilePair, None]]  # noqa: UP007
+
 
 class QueueFiller(threading.Thread, abc.ABC):
     """Fill file pairs into the queue.
@@ -115,7 +110,6 @@ class QueueFiller(threading.Thread, abc.ABC):
         Returns:
             None.
         """
-        ...
 
 
 def does_period_contain_data(period: str) -> bool:
@@ -271,11 +265,10 @@ def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[dict[
     This is useful for passing the selections as kwargs to a function (perhaps for formatting).
     As a concrete example,
 
-    ```python
+    ```pycon
     >>> selections = {"a": [1], "b": [2, 3]}
     >>> list(_combinations_of_selections(selections))
     [{'a': 1, 'b': 2}, {'a': 1, 'b': 3}]
-
     ```
 
     Note:
@@ -292,7 +285,7 @@ def _combinations_of_selections(selections: Mapping[str, Any]) -> Iterable[dict[
     sels = {k: [v] if not isinstance(v, list) else v for k, v in selections.items()}
     # Return all combinations in a dict, such that they can be used as kwargs
     # See: https://stackoverflow.com/a/15211805
-    return (dict(zip(sels, v)) for v in itertools.product(*sels.values()))
+    return (dict(zip(sels, v, strict=True)) for v in itertools.product(*sels.values()))
 
 
 class CopyHandler(threading.Thread):
@@ -309,7 +302,7 @@ class CopyHandler(threading.Thread):
         # self._copy_function = random_choice
 
     def run(self) -> None:
-        """ Copy the files stored into the data pool. """
+        """Copy the files stored into the data pool."""
         while True:
             # This blocks waiting for the next file.
             next_file = self._queue.get()
@@ -381,7 +374,7 @@ def download(queue_filler: QueueFiller, q: FilePairQueue, fewer_threads: bool = 
     workers = []
     n_threads = int(NTHREADS / 2) if fewer_threads else NTHREADS
     logger.info(f"Using {n_threads} threads to download files.")
-    for _i in range(0, n_threads):
+    for _i in range(n_threads):
         worker = CopyHandler(q=q)
         worker.start()
         workers.append(worker)
@@ -417,8 +410,8 @@ class FileListDownloadFiller(QueueFiller):
     ]
     # Setup the queue and filler, and then start downloading.
     q: download.FilePairQueue = queue.Queue()
-    queue_filler = download.FileListDownloadFiller(pairs = file_pair_list, q = q)
-    download.download(queue_filler = queue_filler, q = q)
+    queue_filler = download.FileListDownloadFiller(pairs=file_pair_list, q=q)
+    download.download(queue_filler=queue_filler, q=q)
     ```
 
     Args:
@@ -457,9 +450,7 @@ class DatasetDownloadFiller(QueueFiller):
             structure yields better compatibility with the analysis manager.
     """
 
-    def __init__(
-        self, dataset: DataSet, output_dir: Path | str, *args: FilePairQueue, **kwargs: FilePairQueue
-    ) -> None:
+    def __init__(self, dataset: DataSet, output_dir: Path | str, *args: FilePairQueue, **kwargs: FilePairQueue) -> None:
         super().__init__(*args, **kwargs)
         self.dataset = dataset
         self.output_dir = Path(output_dir)
@@ -667,7 +658,7 @@ class RunByRunTrainOutputFiller(QueueFiller):
         if self._pt_hard_bin:
             grid_base = grid_base / str(self._pt_hard_bin)
 
-        return grid_base  # noqa: RET504
+        return grid_base
 
     def _process(self) -> None:
         logger.info(f"Searching output files in train directory {self._grid_base}")

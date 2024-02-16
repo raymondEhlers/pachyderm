@@ -1,13 +1,13 @@
-#!/usr/bin/env python3
-
 """ Integration of functionality in the fit modules.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import abc
 import logging
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type, TypeVar, Union, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 import iminuit
 import numpy as np
@@ -17,14 +17,13 @@ import ruamel.yaml
 from pachyderm import generic_class
 from pachyderm.fit import base, cost_function
 
-
 if TYPE_CHECKING:
     from pachyderm import histogram
 
 logger = logging.getLogger(__name__)
 
 # Typing
-T_FitArguments = Dict[str, Union[bool, float, Tuple[float, float]]]
+T_FitArguments = dict[str, bool | float | tuple[float, float]]
 
 _T_Fit = TypeVar("_T_Fit", bound="Fit")
 
@@ -52,8 +51,8 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
     def __init__(
         self,
         use_log_likelihood: bool,
-        fit_options: Optional[Dict[str, Any]] = None,
-        user_arguments: Optional[T_FitArguments] = None,
+        fit_options: dict[str, Any] | None = None,
+        user_arguments: T_FitArguments | None = None,
     ):
         # Validation
         if user_arguments is None:
@@ -69,7 +68,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         self.fit_result: base.FitResult
 
         # Create the cost function based on the fit parameters.
-        self._cost_func: Type[cost_function.DataComparisonCostFunction]
+        self._cost_func: type[cost_function.DataComparisonCostFunction]
         if use_log_likelihood:
             self._cost_func = cost_function.BinnedLogLikelihood
         else:
@@ -93,7 +92,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         ...
 
     @abc.abstractmethod
-    def _setup(self, h: "histogram.Histogram1D") -> Tuple["histogram.Histogram1D", T_FitArguments]:
+    def _setup(self, h: histogram.Histogram1D) -> tuple[histogram.Histogram1D, T_FitArguments]:
         """Setup the histogram and arguments for the fit.
 
         Args:
@@ -104,7 +103,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         """
         ...
 
-    def _create_cost_function(self, h: "histogram.Histogram1D") -> cost_function.DataComparisonCostFunction:
+    def _create_cost_function(self, h: histogram.Histogram1D) -> cost_function.DataComparisonCostFunction:
         """Create the cost function from the data and stored parameters.
 
         Args:
@@ -128,7 +127,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
         """
         return self.fit_function(*args, **kwargs)
 
-    def calculate_errors(self, x: Optional[npt.NDArray[Any]] = None) -> npt.NDArray[Any]:
+    def calculate_errors(self, x: npt.NDArray[Any] | None = None) -> npt.NDArray[Any]:
         """Calculate the errors on the fit function for the given x values.
 
         Args:
@@ -145,7 +144,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
             x=x,
         )
 
-    def fit(self, h: "histogram.Histogram1D", user_arguments: Optional[T_FitArguments] = None) -> base.FitResult:
+    def fit(self, h: histogram.Histogram1D, user_arguments: T_FitArguments | None = None) -> base.FitResult:
         """Fit the given histogram to the stored fit function using iminuit.
 
         The fit errors will be automatically calculated if possible. It is possible if the fit function
@@ -188,7 +187,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
 
     @classmethod
     def to_yaml(
-        cls: Type[_T_Fit], representer: ruamel.yaml.representer.BaseRepresenter, obj: _T_Fit
+        cls: type[_T_Fit], representer: ruamel.yaml.representer.BaseRepresenter, obj: _T_Fit
     ) -> ruamel.yaml.nodes.SequenceNode:
         """Encode YAML representation.
 
@@ -218,7 +217,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
 
     @classmethod
     def from_yaml(
-        cls: Type[_T_Fit], constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.MappingNode
+        cls: type[_T_Fit], constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.MappingNode
     ) -> _T_Fit:
         """Decode YAML representation.
 
@@ -267,7 +266,7 @@ class Fit(abc.ABC, generic_class.EqualityMixin):
 
 
 def _validate_minuit_args(
-    cost_func: Union[cost_function.CostFunctionBase, cost_function.SimultaneousFit], minuit_args: T_FitArguments
+    cost_func: cost_function.CostFunctionBase | cost_function.SimultaneousFit, minuit_args: T_FitArguments
 ) -> None:
     """Validate the arguments provided for Minuit.
 
@@ -287,24 +286,27 @@ def _validate_minuit_args(
     for p in parameters:
         if p in minuit_args:
             if f"limit_{p}" not in minuit_args:
-                raise ValueError(f"Limits on parameter '{p}' must be specified.")
+                msg = f"Limits on parameter '{p}' must be specified."
+                raise ValueError(msg)
             if f"error_{p}" not in minuit_args:
-                raise ValueError(f"Initial error on parameter '{p}' must be specified.")
+                msg = f"Initial error on parameter '{p}' must be specified."
+                raise ValueError(msg)
             # If p and limit_p and error_p were specified, then the parameter is fully specified.
         elif p.replace("fix", "") in minuit_args:
             # The parameter is fixed and therefore needs no further specification.
             pass
         else:
             # The parameter wasn't specified.
-            raise ValueError(f"Parameter '{p}' must be specified in the fit arguments.")
+            msg = f"Parameter '{p}' must be specified in the fit arguments."
+            raise ValueError(msg)
 
 
 def fit_with_minuit(
-    cost_func: Union[cost_function.CostFunctionBase, cost_function.SimultaneousFit],
+    cost_func: cost_function.CostFunctionBase | cost_function.SimultaneousFit,
     minuit_args: T_FitArguments,
     x: npt.NDArray[Any],
-    use_minos: Optional[bool] = False,
-) -> Tuple[base.FitResult, iminuit.Minuit]:
+    use_minos: bool | None = False,
+) -> tuple[base.FitResult, iminuit.Minuit]:
     """Perform a fit using the given cost function with Minuit.
 
     Args:
@@ -329,7 +331,7 @@ def fit_with_minuit(
         # Log likelihood cost functions needs an errordef of 0.5 to scale the errors properly, while 1 should
         # be used for chi squared cost functions.
         error_def = 1.0
-        if isinstance(cost_func, (cost_function.LogLikelihood, cost_function.BinnedLogLikelihood)):
+        if isinstance(cost_func, cost_function.LogLikelihood | cost_function.BinnedLogLikelihood):
             error_def = 0.5
         # Store the value.
         minuit_args["errordef"] = error_def
@@ -369,11 +371,13 @@ def fit_with_minuit(
 
     # Check that the fit is actually good
     if not minuit.valid:
-        raise base.FitFailed("Minimization failed! The fit is invalid!")
+        msg = "Minimization failed! The fit is invalid!"
+        raise base.FitFailed(msg)
     # Check covariance matrix accuracy. We need to check it explicitly because It appears that it is not
     # included in the migrad_ok status check.
     if not minuit.accurate:
-        raise base.FitFailed("Covariance matrix is inaccurate! The fit is invalid!")
+        msg = "Covariance matrix is inaccurate! The fit is invalid!"
+        raise base.FitFailed(msg)
 
     # Create the fit result and calculate the errors.
     fit_result = base.FitResult.from_minuit(minuit, cost_func, x)

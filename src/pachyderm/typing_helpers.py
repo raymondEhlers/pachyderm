@@ -1,9 +1,8 @@
-#!/usr/bin/env python
-
 """ Typing helpers for package.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 from typing import Any, Union
 
@@ -17,7 +16,7 @@ try:
     #       However, this means that it needs to be imported before some pachyderm modules.
     ROOT.PyConfig.IgnoreCommandLineOptions = True
 
-    Hist = Union[ROOT.TH1, ROOT.THnBase]
+    Hist = Union[ROOT.TH1, ROOT.THnBase]  # noqa: UP007
     Axis = ROOT.TAxis
     Canvas = ROOT.TCanvas
     TFile = ROOT.TFile

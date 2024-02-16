@@ -6,7 +6,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import attrs
 import matplotlib.axes
@@ -36,71 +37,72 @@ def configure(disable_interactive_backend: bool = False) -> None:
     labels and latex. Lastly, it tweaked smaller visual settings. The differences between the default
     matplotlib and these settings are:
 
-    .. code-block:: python
-        >>> pprint.pprint(diff)
-        {'axes.axisbelow': 'original: line, new: True',
-         'axes.edgecolor': 'original: black, new: .15',
-         'axes.labelcolor': 'original: black, new: .15',
-         'axes.labelsize': 'original: medium, new: 12.0',
-         'axes.linewidth': 'original: 0.8, new: 1.25',
-         'axes.prop_cycle': "original: cycler('color', ['#1f77b4', '#ff7f0e', "
-                            "'#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', "
-                            "'#7f7f7f', '#bcbd22', '#17becf']), new: cycler('color', "
-                            '[(0.2980392156862745, 0.4470588235294118, '
-                            '0.6901960784313725), (0.8666666666666667, '
-                            '0.5176470588235295, 0.3215686274509804), '
-                            '(0.3333333333333333, 0.6588235294117647, '
-                            '0.40784313725490196), (0.7686274509803922, '
-                            '0.3058823529411765, 0.3215686274509804), '
-                            '(0.5058823529411764, 0.4470588235294118, '
-                            '0.7019607843137254), (0.5764705882352941, '
-                            '0.47058823529411764, 0.3764705882352941), '
-                            '(0.8549019607843137, 0.5450980392156862, '
-                            '0.7647058823529411), (0.5490196078431373, '
-                            '0.5490196078431373, 0.5490196078431373), (0.8, '
-                            '0.7254901960784313, 0.4549019607843137), '
-                            '(0.39215686274509803, 0.7098039215686275, '
-                            '0.803921568627451)])',
-         'axes.titlesize': 'original: large, new: 12.0',
-         'font.sans-serif': "original: ['DejaVu Sans', 'Bitstream Vera Sans', "
-                            "'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', "
-                            "'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', "
-                            "'sans-serif'], new: ['Arial', 'DejaVu Sans', 'Liberation "
-                            "Sans', 'Bitstream Vera Sans', 'sans-serif']",
-         'font.size': 'original: 10.0, new: 12.0',
-         'grid.color': 'original: #b0b0b0, new: .8',
-         'grid.linewidth': 'original: 0.8, new: 1.0',
-         'image.cmap': 'original: viridis, new: rocket',
-         'legend.fontsize': 'original: medium, new: 11.0',
-         'lines.solid_capstyle': 'original: projecting, new: round',
-         'mathtext.bf': 'original: sans:bold, new: Bitstream Vera Sans:bold',
-         'mathtext.fontset': 'original: dejavusans, new: custom',
-         'mathtext.it': 'original: sans:italic, new: Bitstream Vera Sans:italic',
-         'mathtext.rm': 'original: sans, new: Bitstream Vera Sans',
-         'patch.edgecolor': 'original: black, new: w',
-         'patch.facecolor': 'original: C0, new: (0.2980392156862745, '
-                            '0.4470588235294118, 0.6901960784313725)',
-         'patch.force_edgecolor': 'original: False, new: True',
-         'text.color': 'original: black, new: .15',
-         'text.usetex': 'original: False, new: True',
-         'xtick.color': 'original: black, new: .15',
-         'xtick.direction': 'original: out, new: in',
-         'xtick.labelsize': 'original: medium, new: 11.0',
-         'xtick.major.size': 'original: 3.5, new: 6.0',
-         'xtick.major.width': 'original: 0.8, new: 1.25',
-         'xtick.minor.size': 'original: 2.0, new: 4.0',
-         #'xtick.minor.top': 'original: True, new: False',
-         'xtick.minor.visible': 'original: False, new: True',
-         'xtick.minor.width': 'original: 0.6, new: 1.0',
-         'ytick.color': 'original: black, new: .15',
-         'ytick.direction': 'original: out, new: in',
-         'ytick.labelsize': 'original: medium, new: 11.0',
-         'ytick.major.size': 'original: 3.5, new: 6.0',
-         'ytick.major.width': 'original: 0.8, new: 1.25',
-         'ytick.minor.right': 'original: True, new: False',
-         'ytick.minor.size': 'original: 2.0, new: 4.0',
-         #'ytick.minor.visible': 'original: False, new: True',
-         'ytick.minor.width': 'original: 0.6, new: 1.0'}
+    ```pycon
+    >>> pprint.pprint(diff)
+    {'axes.axisbelow': 'original: line, new: True',
+     'axes.edgecolor': 'original: black, new: .15',
+     'axes.labelcolor': 'original: black, new: .15',
+     'axes.labelsize': 'original: medium, new: 12.0',
+     'axes.linewidth': 'original: 0.8, new: 1.25',
+     'axes.prop_cycle': "original: cycler('color', ['#1f77b4', '#ff7f0e', "
+                        "'#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', "
+                        "'#7f7f7f', '#bcbd22', '#17becf']), new: cycler('color', "
+                        '[(0.2980392156862745, 0.4470588235294118, '
+                        '0.6901960784313725), (0.8666666666666667, '
+                        '0.5176470588235295, 0.3215686274509804), '
+                        '(0.3333333333333333, 0.6588235294117647, '
+                        '0.40784313725490196), (0.7686274509803922, '
+                        '0.3058823529411765, 0.3215686274509804), '
+                        '(0.5058823529411764, 0.4470588235294118, '
+                        '0.7019607843137254), (0.5764705882352941, '
+                        '0.47058823529411764, 0.3764705882352941), '
+                        '(0.8549019607843137, 0.5450980392156862, '
+                        '0.7647058823529411), (0.5490196078431373, '
+                        '0.5490196078431373, 0.5490196078431373), (0.8, '
+                        '0.7254901960784313, 0.4549019607843137), '
+                        '(0.39215686274509803, 0.7098039215686275, '
+                        '0.803921568627451)])',
+     'axes.titlesize': 'original: large, new: 12.0',
+     'font.sans-serif': "original: ['DejaVu Sans', 'Bitstream Vera Sans', "
+                        "'Computer Modern Sans Serif', 'Lucida Grande', 'Verdana', "
+                        "'Geneva', 'Lucid', 'Arial', 'Helvetica', 'Avant Garde', "
+                        "'sans-serif'], new: ['Arial', 'DejaVu Sans', 'Liberation "
+                        "Sans', 'Bitstream Vera Sans', 'sans-serif']",
+     'font.size': 'original: 10.0, new: 12.0',
+     'grid.color': 'original: #b0b0b0, new: .8',
+     'grid.linewidth': 'original: 0.8, new: 1.0',
+     'image.cmap': 'original: viridis, new: rocket',
+     'legend.fontsize': 'original: medium, new: 11.0',
+     'lines.solid_capstyle': 'original: projecting, new: round',
+     'mathtext.bf': 'original: sans:bold, new: Bitstream Vera Sans:bold',
+     'mathtext.fontset': 'original: dejavusans, new: custom',
+     'mathtext.it': 'original: sans:italic, new: Bitstream Vera Sans:italic',
+     'mathtext.rm': 'original: sans, new: Bitstream Vera Sans',
+     'patch.edgecolor': 'original: black, new: w',
+     'patch.facecolor': 'original: C0, new: (0.2980392156862745, '
+                        '0.4470588235294118, 0.6901960784313725)',
+     'patch.force_edgecolor': 'original: False, new: True',
+     'text.color': 'original: black, new: .15',
+     'text.usetex': 'original: False, new: True',
+     'xtick.color': 'original: black, new: .15',
+     'xtick.direction': 'original: out, new: in',
+     'xtick.labelsize': 'original: medium, new: 11.0',
+     'xtick.major.size': 'original: 3.5, new: 6.0',
+     'xtick.major.width': 'original: 0.8, new: 1.25',
+     'xtick.minor.size': 'original: 2.0, new: 4.0',
+     #'xtick.minor.top': 'original: True, new: False',
+     'xtick.minor.visible': 'original: False, new: True',
+     'xtick.minor.width': 'original: 0.6, new: 1.0',
+     'ytick.color': 'original: black, new: .15',
+     'ytick.direction': 'original: out, new: in',
+     'ytick.labelsize': 'original: medium, new: 11.0',
+     'ytick.major.size': 'original: 3.5, new: 6.0',
+     'ytick.major.width': 'original: 0.8, new: 1.25',
+     'ytick.minor.right': 'original: True, new: False',
+     'ytick.minor.size': 'original: 2.0, new: 4.0',
+     #'ytick.minor.visible': 'original: False, new: True',
+     'ytick.minor.width': 'original: 0.6, new: 1.0'}
+    ```
 
     I implemented most of these below (although I left out a few color options).
 
@@ -250,14 +252,15 @@ def error_boxes(
         raise ValueError(_msg)
 
     # Default arguments
+    passed_kwargs: dict[str, Any] = kwargs.copy()
     if "alpha" not in kwargs:
-        kwargs["alpha"] = 0.5
+        passed_kwargs["alpha"] = 0.5
 
     # Create the rectangles
-    error_boxes = []
+    output_error_boxes = []
     # We need to transpose the errors, because they are expected to be of the shape (n, 2).
     # NOTE: It will still work as expected if they are only of length n.
-    for x, y, xerr, yerr in zip(x_data, y_data, x_errors.T, y_errors.T):
+    for x, y, xerr, yerr in zip(x_data, y_data, x_errors.T, y_errors.T, strict=True):
         # For the errors, we want to support symmetric and asymmetric errors.
         # Thus, for asymmetric errors, we sum up the distance, but for symmetric
         # errors, we want to take * 2 of the error.
@@ -271,12 +274,12 @@ def error_boxes(
             float(xerr.sum() if len(xerr) == 2 else xerr * 2),
             float(yerr.sum() if len(yerr) == 2 else yerr * 2),
         )
-        error_boxes.append(r)
+        output_error_boxes.append(r)
 
     # Create the patch collection and add it to the given axis.
     patch_collection = matplotlib.collections.PatchCollection(
-        error_boxes,
-        **kwargs,
+        output_error_boxes,
+        **passed_kwargs,
     )
     ax.add_collection(patch_collection)
 
@@ -286,7 +289,7 @@ def error_boxes(
 def convert_mpl_color_scheme_to_ROOT(
     name: str | None = None,
     cmap: matplotlib.colors.ListedColormap | matplotlib.colors.LinearSegmentedColormap | None = None,
-    reversed: bool = False,
+    reverse_cmap: bool = False,
     n_values_to_cut_from_top: int = 0,
 ) -> str:
     """Convert matplotlib color scheme to ROOT.
@@ -299,7 +302,7 @@ def convert_mpl_color_scheme_to_ROOT(
         Snippet to add the color scheme to ROOT.
     """
     # Setup
-    import numpy as np
+    # import numpy as np
 
     # Validation
     if name is None and cmap is None:
@@ -308,14 +311,13 @@ def convert_mpl_color_scheme_to_ROOT(
     # We select on the passed cmap rather than the name because we might use the name later.
     if cmap is None:
         color_scheme = matplotlib.cm.get_cmap(name)
+    elif not isinstance(cmap, matplotlib.colors.ListedColormap):
+        color_scheme = matplotlib.colors.ListedColormap(cmap)  # type: ignore[arg-type]
     else:
-        if not isinstance(cmap, matplotlib.colors.ListedColormap):
-            color_scheme = matplotlib.colors.ListedColormap(cmap)
-        else:
-            color_scheme = cmap
+        color_scheme = cmap
 
     # Reverse if requested.
-    if reversed:
+    if reverse_cmap:
         color_scheme = color_scheme.reversed()
 
     # Extract the colors
@@ -370,8 +372,11 @@ def _convert_major_axis_multiple_locator_with_base(value: float | bool | None) -
         return 1.0
     return value
 
+
 @attrs.define
 class AxisConfig:
+    """Configuration for an axis."""
+
     axis: str = attrs.field(validator=[_validate_axis_name])
     label: str = attrs.field(default="")
     log: bool = attrs.field(default=False)
@@ -380,9 +385,12 @@ class AxisConfig:
     tick_font_size: float | None = attrs.field(default=None)
     # This is basically a shortcut. We can always apply this manually, but we do it
     # often enough that it's worth having a shortcut.
-    use_major_axis_multiple_locator_with_base: float | None = attrs.field(default=None, converter=_convert_major_axis_multiple_locator_with_base)
+    use_major_axis_multiple_locator_with_base: float | None = attrs.field(
+        default=None, converter=_convert_major_axis_multiple_locator_with_base
+    )
 
     def apply(self, ax: matplotlib.axes.Axes) -> None:
+        """Apply the axis configuration to the given axis."""
         # Validation
         if self.log and self.use_major_axis_multiple_locator_with_base is not None:
             logger.warning("Set both log and major axis multiple locator! Not sure what will happen...")
@@ -397,7 +405,7 @@ class AxisConfig:
             # The font size that we want is dictated by the label if unspecified. That way,
             # it will match the size by default
             tick_font_size = self.tick_font_size if self.tick_font_size else self.font_size
-            ax.tick_params(axis=self.axis, which="major", labelsize=tick_font_size)
+            ax.tick_params(axis=self.axis, which="major", labelsize=tick_font_size)  # type: ignore[arg-type]
         if self.log:
             getattr(ax, f"set_{self.axis}scale")("log")
             # Probably need to increase the number of ticks for a log axis. We just assume that's the case.
@@ -405,12 +413,14 @@ class AxisConfig:
             # See: https://stackoverflow.com/a/44079725/12907985
             major_locator = matplotlib.ticker.LogLocator(base=10, numticks=12)
             getattr(ax, f"{self.axis}axis").set_major_locator(major_locator)
-            minor_locator = matplotlib.ticker.LogLocator(base=10.0, subs=np.linspace(0.2, 0.9, 8), numticks=12)
+            minor_locator = matplotlib.ticker.LogLocator(base=10.0, subs=np.linspace(0.2, 0.9, 8), numticks=12)  # type: ignore[arg-type]
             getattr(ax, f"{self.axis}axis").set_minor_locator(minor_locator)
             # But we don't want to label these ticks.
             getattr(ax, f"{self.axis}axis").set_minor_formatter(matplotlib.ticker.NullFormatter())
         if self.use_major_axis_multiple_locator_with_base is not None:
-            getattr(ax, f"{self.axis}axis").set_major_locator(matplotlib.ticker.MultipleLocator(base=self.use_major_axis_multiple_locator_with_base))
+            getattr(ax, f"{self.axis}axis").set_major_locator(
+                matplotlib.ticker.MultipleLocator(base=self.use_major_axis_multiple_locator_with_base)
+            )
         if self.range:
             min_range, max_range = self.range
             min_current_range, max_current_range = getattr(ax, f"get_{self.axis}lim")()
@@ -423,6 +433,8 @@ class AxisConfig:
 
 @attrs.define
 class TextConfig:
+    """Configuration for text on a plot."""
+
     text: str = attrs.field()
     x: float = attrs.field()
     y: float = attrs.field()
@@ -432,6 +444,7 @@ class TextConfig:
     text_kwargs: dict[str, Any] = attrs.field(factory=dict)
 
     def apply(self, ax_or_fig: matplotlib.axes.Axes | matplotlib.figure.Figure) -> None:
+        """Apply the text configuration to the given axis or figure."""
         # Some reasonable defaults
         if self.alignment is None:
             ud = "upper" if self.y >= 0.5 else "lower"
@@ -460,7 +473,7 @@ class TextConfig:
                 "multialignment": "left",
             },
         }
-        kwargs = alignments[self.alignment]
+        kwargs: dict[str, Any] = alignments[self.alignment]
         if not isinstance(ax_or_fig, matplotlib.figure.Figure):
             # We always want to place using normalized coordinates.
             # In the rare case that we don't want to, we can place by hand.
@@ -475,12 +488,14 @@ class TextConfig:
             self.text,
             color=self.color,
             fontsize=self.font_size,
-            **kwargs
+            **kwargs,
         )
 
 
 @attrs.define
 class LegendConfig:
+    """Configuration for a legend on a plot."""
+
     location: str = attrs.field(default=None)
     # Takes advantage of the fact that None will use the default.
     anchor: tuple[float, float] | None = attrs.field(default=None)
@@ -500,9 +515,15 @@ class LegendConfig:
         legend_handles: Sequence[matplotlib.container.ErrorbarContainer] | None = None,
         legend_labels: Sequence[str] | None = None,
     ) -> matplotlib.legend.Legend | None:
+        """Apply the legend configuration to the given axis.
+
+        Note:
+            If provided, we'll use the given legend_handles and legend_labels to create the legend
+            rather than those already associated with the legend.
+        """
         if not self.location:
             return None
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         if legend_handles:
             kwargs["handles"] = legend_handles
         if legend_labels:
@@ -529,12 +550,16 @@ class LegendConfig:
 
 @attrs.define
 class TitleConfig:
+    """Configuration for a title of a plot."""
+
     text: str = attrs.field()
     size: float | None = attrs.field(default=None)
 
     def apply(
-        self, ax: matplotlib.axes.Axes,
+        self,
+        ax: matplotlib.axes.Axes,
     ) -> None:
+        """Apply the title configuration to the given axis."""
         ax.set_title(self.text, fontsize=self.size)
 
 
@@ -552,6 +577,15 @@ def _ensure_sequence_of_text_config(value: TextConfig | Sequence[TextConfig]) ->
 
 @attrs.define
 class Panel:
+    """Configuration for a panel within a plot.
+
+    The `Panel` is a configuration for an `ax` object.
+
+    Attributes:
+        axes: Configuration of the MPL axis. We allow for multiple AxisConfig because each config specifies
+            a single axis (ie. x or y). Careful not to confuse with the actual `ax` object provided by MPL.
+    """
+
     axes: Sequence[AxisConfig] = attrs.field(converter=_ensure_sequence_of_axis_config)
     text: Sequence[TextConfig] = attrs.field(converter=_ensure_sequence_of_text_config, factory=list)
     legend: LegendConfig | None = attrs.field(default=None)
@@ -563,6 +597,7 @@ class Panel:
         legend_handles: Sequence[matplotlib.container.ErrorbarContainer] | None = None,
         legend_labels: Sequence[str] | None = None,
     ) -> None:
+        """Apply the panel configuration to the given axis."""
         # Axes
         for axis in self.axes:
             axis.apply(ax)
@@ -579,10 +614,13 @@ class Panel:
 
 @attrs.define
 class Figure:
+    """Configuration for a MPL figure."""
+
     edge_padding: Mapping[str, float] = attrs.field(factory=dict)
     text: Sequence[TextConfig] = attrs.field(converter=_ensure_sequence_of_text_config, factory=list)
 
     def apply(self, fig: matplotlib.figure.Figure) -> None:
+        """Apply the figure configuration to the given figure."""
         # Add text
         for text in self.text:
             text.apply(fig)
@@ -614,6 +652,17 @@ def _ensure_sequence_of_panels(value: Panel | Sequence[Panel]) -> Sequence[Panel
 
 @attrs.define
 class PlotConfig:
+    """Configuration for an overall plot.
+
+    A plot consists of some number of panels, which are each configured with their own axes, text, etc.
+    These axes are on a figure.
+
+    Attributes:
+        name: Name of the plot. Usually used for the filename.
+        panels: Configuration for the panels of the plot.
+        figure: Configuration for the figure of the plot.
+    """
+
     name: str = attrs.field()
     panels: Sequence[Panel] = attrs.field(converter=_ensure_sequence_of_panels)
     figure: Figure = attrs.field(factory=Figure)
@@ -626,6 +675,7 @@ class PlotConfig:
         legend_handles: Sequence[matplotlib.container.ErrorbarContainer] | None = None,
         legend_labels: Sequence[str] | None = None,
     ) -> None:
+        """Apply the plot configuration to the given figure and axes."""
         # Validation
         if ax is None and axes is None:
             _msg = "Must pass the axis or axes of the figure."
@@ -644,7 +694,7 @@ class PlotConfig:
 
         # Finally, we can actually apply the stored properties.
         # Apply panels to the axes.
-        for ax, panel in zip(axes, self.panels):
+        for ax, panel in zip(axes, self.panels, strict=True):
             panel.apply(ax, legend_handles=legend_handles, legend_labels=legend_labels)
         # Figure
         self.figure.apply(fig)

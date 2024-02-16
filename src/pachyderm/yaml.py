@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Module related to YAML.
 
 Contains a way to construct the main YAML object, as well as relevant mixins and classes.
@@ -15,17 +13,17 @@ Note:
     Practically, I believe that we could also resolve this by implementing ``__reduce_ex``, but that appears as if
     it will be more work than our implemented workaround. Our workaround can be implemented as:
 
-    .. code-block:: python
+    ```python
+    class TestEnum(enum.Enum):
+        a = 1
+        b = 2
 
-        >>> class TestEnum(enum.Enum):
-        ...   a = 1
-        ...   b = 2
-        ...
-        ...   def __str__(self):
-        ...     return self.name
-        ...
-        ...   to_yaml = staticmethod(generic_class.enum_to_yaml)
-        ...   from_yaml = staticmethod(generic_class.enum_from_yaml)
+        def __str__(self):
+            return self.name
+
+        to_yaml = staticmethod(generic_class.enum_to_yaml)
+        from_yaml = staticmethod(generic_class.enum_from_yaml)
+    ```
 
     This enum object will pickle properly. Note that rather strangely, this issue showed up during tests on Debian
     Stretch, but not the exact same version of python on macOS. I don't know why that's the case, but the workaround
@@ -33,17 +31,20 @@ Note:
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import base64
 import enum
 import inspect
 import logging
+from collections.abc import Iterable
 from io import BytesIO
-from typing import Any, Iterable, Optional, Type, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
 import ruamel.yaml
+from ruamel.yaml import YAML as YAML
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,7 @@ T_EnumFromYAML = TypeVar("T_EnumFromYAML", bound=enum.Enum)
 
 
 def yaml(
-    modules_to_register: Optional[Iterable[Any]] = None, classes_to_register: Optional[Iterable[Any]] = None
+    modules_to_register: Iterable[Any] | None = None, classes_to_register: Iterable[Any] | None = None
 ) -> ruamel.yaml.YAML:
     """Create a YAML object for loading a YAML configuration.
 
@@ -72,10 +73,10 @@ def yaml(
     yaml = ruamel.yaml.YAML(typ="rt")
 
     # Register representers and constructors
-    # Numpy array
+    # numpy array
     yaml.representer.add_representer(np.ndarray, numpy_array_to_yaml)
     yaml.constructor.add_constructor("!numpy_array", numpy_array_from_yaml)
-    # Numpy float64
+    # numpy float64
     yaml.representer.add_representer(np.float64, numpy_float64_to_yaml)
     yaml.constructor.add_constructor("!numpy_float64", numpy_float64_from_yaml)
     # Register external classes
@@ -85,7 +86,7 @@ def yaml(
     return yaml  # noqa: RET504
 
 
-def register_classes(yaml: ruamel.yaml.YAML, classes: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
+def register_classes(yaml: ruamel.yaml.YAML, classes: Iterable[Any] | None = None) -> ruamel.yaml.YAML:
     """Register externally defined classes."""
     # Validation
     if classes is None:
@@ -99,7 +100,7 @@ def register_classes(yaml: ruamel.yaml.YAML, classes: Optional[Iterable[Any]] = 
     return yaml
 
 
-def register_module_classes(yaml: ruamel.yaml.YAML, modules: Optional[Iterable[Any]] = None) -> ruamel.yaml.YAML:
+def register_module_classes(yaml: ruamel.yaml.YAML, modules: Iterable[Any] | None = None) -> ruamel.yaml.YAML:
     """Register all classes in the given modules with the YAML object.
 
     This is a simple helper function.
@@ -130,10 +131,10 @@ def numpy_array_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, da
 
     Use with:
 
-    .. code-block:: python
-
-        >>> yaml = ruamel.yaml.YAML()
-        >>> yaml.representer.add_representer(np.ndarray, yaml.numpy_array_to_yaml)
+    ```python
+    yaml = ruamel.yaml.YAML()
+    yaml.representer.add_representer(np.ndarray, yaml.numpy_array_to_yaml)
+    ```
 
     Note:
         We cannot use ``yaml.register_class`` because it won't register the proper type.
@@ -164,10 +165,10 @@ def numpy_array_from_yaml(
 
     Use with:
 
-    .. code-block:: python
-
-        >>> yaml = ruamel.yaml.YAML()
-        >>> yaml.constructor.add_constructor("!numpy_array", yaml.numpy_array_from_yaml)
+    ```python
+    yaml = ruamel.yaml.YAML()
+    yaml.constructor.add_constructor("!numpy_array", yaml.numpy_array_from_yaml)
+    ```
 
     Note:
         We cannot use ``yaml.register_class`` because it won't register the proper type.
@@ -183,7 +184,7 @@ def numpy_array_from_yaml(
         constructor: YAML constructor being used to read and create the objects specified in the YAML.
         data: Data stored in the YAML node currently being processed.
     Returns:
-        Numpy array containing the data in the current YAML node.
+        numpy array containing the data in the current YAML node.
     """
     return_value: npt.NDArray[Any]
     if isinstance(data.value, list):
@@ -208,10 +209,10 @@ def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, 
 
     Use with:
 
-    .. code-block:: python
-
-        >>> yaml = ruamel.yaml.YAML()
-        >>> yaml.representer.add_representer(np.float64, yaml.numpy_float64_to_yaml)
+    ```python
+    yaml = ruamel.yaml.YAML()
+    yaml.representer.add_representer(np.float64, yaml.numpy_float64_to_yaml)
+    ```
 
     Note:
         We cannot use ``yaml.register_class`` because it won't register the proper type.
@@ -234,7 +235,8 @@ def numpy_float64_to_yaml(representer: ruamel.yaml.representer.BaseRepresenter, 
 
 
 def numpy_float64_from_yaml(
-    constructor: ruamel.yaml.constructor.BaseConstructor, data: ruamel.yaml.nodes.ScalarNode  # noqa: ARG001
+    constructor: ruamel.yaml.constructor.BaseConstructor,  # noqa: ARG001
+    data: ruamel.yaml.nodes.ScalarNode,
 ) -> np.float64:
     """Read an float64 from YAML to numpy.
 
@@ -242,10 +244,10 @@ def numpy_float64_from_yaml(
 
     Use with:
 
-    .. code-block:: python
-
-        >>> yaml = ruamel.yaml.YAML()
-        >>> yaml.constructor.add_constructor("!numpy_float64", yaml.numpy_float64_from_yaml)
+    ```python
+    yaml = ruamel.yaml.YAML()
+    yaml.constructor.add_constructor("!numpy_float64", yaml.numpy_float64_from_yaml)
+    ```
 
     Note:
         We cannot use ``yaml.register_class`` because it won't register the proper type.
@@ -260,7 +262,7 @@ def numpy_float64_from_yaml(
         constructor: YAML constructor being used to read and create the objects specified in the YAML.
         data: Data stored in the YAML node currently being processed.
     Returns:
-        Numpy float64 containing the data in the current YAML node.
+        numpy float64 containing the data in the current YAML node.
     """
     return_value: np.float64
     try:
@@ -277,7 +279,7 @@ def numpy_float64_from_yaml(
 
 
 def enum_to_yaml(
-    cls: Type[T_EnumToYAML], representer: ruamel.yaml.representer.BaseRepresenter, data: T_EnumToYAML
+    cls: type[T_EnumToYAML], representer: ruamel.yaml.representer.BaseRepresenter, data: T_EnumToYAML
 ) -> ruamel.yaml.nodes.ScalarNode:
     """Encodes YAML representation.
 
@@ -300,11 +302,13 @@ def enum_to_yaml(
     Returns:
         Scalar representation of the name of the enumeration value.
     """
-    return cast(ruamel.yaml.nodes.ScalarNode, representer.represent_scalar(f"!{cls.__name__}", f"{data!s}"))
+    return representer.represent_scalar(f"!{cls.__name__}", f"{data!s}")
 
 
 def enum_from_yaml(
-    cls: Type[T_EnumFromYAML], constructor: ruamel.yaml.constructor.BaseConstructor, node: ruamel.yaml.nodes.ScalarNode  # noqa: ARG001
+    cls: type[T_EnumFromYAML],
+    constructor: ruamel.yaml.constructor.BaseConstructor,  # noqa: ARG001
+    node: ruamel.yaml.nodes.ScalarNode,
 ) -> T_EnumFromYAML:
     """Decode YAML representation.
 

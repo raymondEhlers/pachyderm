@@ -1,54 +1,53 @@
-#!/usr/bin/env python
-
 """ Histogram related classes and functionality.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import collections
+import contextlib
 import itertools
 import logging
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Callable, ContextManager, Dict, List, Mapping, Optional, Tuple, Type, TypeVar, Union, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
 
 from pachyderm.typing_helpers import Axis, Hist, TFile
 
-
 # Setup logger
 logger = logging.getLogger(__name__)
 
 _T_ContextManager = TypeVar("_T_ContextManager")
-T_Extraction_Function = Tuple[
-    Union[List[float], npt.NDArray[Any]], Union[List[float], npt.NDArray[Any]], Dict[str, Any]
-]
+T_Extraction_Function = tuple[list[float] | npt.NDArray[Any], list[float] | npt.NDArray[Any], dict[str, Any]]
 
 
-class RootOpen(ContextManager[_T_ContextManager]):
+class RootOpen(contextlib.AbstractContextManager[_T_ContextManager]):
     """Very simple helper to open root files."""
 
-    def __init__(self, filename: Union[Path, str], mode: str = "read"):
-        import ROOT  # pyright: ignore [reportMissingImports]
+    def __init__(self, filename: Path | str, mode: str = "read"):
+        import ROOT  # pyright: ignore [reportMissingImports] # pylint: disable=import-error
 
         # Validate as a path
         self.filename = Path(filename)
         self.mode = mode
         self.f = ROOT.TFile.Open(str(self.filename), self.mode)
 
-    def __enter__(self) -> TFile:
+    def __enter__(self) -> TFile:  # pyright: ignore[reportInvalidTypeForm]
         if not self.f or self.f.IsZombie():
-            raise IOError(f"Failed to open ROOT file '{self.filename}'.")
+            msg = f"Failed to open ROOT file '{self.filename}'."
+            raise OSError(msg)
         return self.f
 
     def __exit__(
         self,
-        exception_type: Optional[Type[BaseException]],
-        exception_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exception_type: type[BaseException] | None,
+        exception_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         """We want to pass on all raised exceptions, but ensure that the file is always closed."""
         # The typing information is from here:
@@ -64,7 +63,7 @@ class RootOpen(ContextManager[_T_ContextManager]):
         # to be raised.
 
 
-def get_histograms_in_file(filename: Union[Path, str]) -> Dict[str, Any]:
+def get_histograms_in_file(filename: Path | str) -> dict[str, Any]:
     """Helper function which gets all histograms in a file.
 
     Args:
@@ -78,7 +77,7 @@ def get_histograms_in_file(filename: Union[Path, str]) -> Dict[str, Any]:
     return get_histograms_in_list(filename=filename)
 
 
-def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] = None) -> Dict[str, Any]:
+def get_histograms_in_list(filename: Path | str, list_name: str | None = None) -> dict[str, Any]:
     """Get histograms from the file and make them available in a dict.
 
     Lists are recursively explored, with all lists converted to dictionaries, such that the return
@@ -97,9 +96,9 @@ def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] 
     # Validation
     filename = Path(filename)
 
-    hists: Dict[str, Any] = {}
+    hists: dict[str, Any] = {}
     with RootOpen(filename=filename, mode="READ") as fIn:
-        if list_name is not None:
+        if list_name is not None:  # noqa: SIM108
             hist_list = fIn.Get(list_name)
         else:
             hist_list = [obj.ReadObj() for obj in fIn.GetListOfKeys()]
@@ -109,7 +108,8 @@ def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] 
             # Closing this file appears (but is not entirely confirmed) to be extremely important! Otherwise,
             # the memory will leak, leading to ROOT memory issues!
             fIn.Close()
-            raise ValueError(f'Could not find list with name "{list_name}". Possible names are listed above.')
+            msg = f'Could not find list with name "{list_name}". Possible names are listed above.'
+            raise ValueError(msg)
 
         # Retrieve objects in the hist list
         for obj in hist_list:
@@ -118,7 +118,7 @@ def get_histograms_in_list(filename: Union[Path, str], list_name: Optional[str] 
     return hists
 
 
-def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
+def _retrieve_object(output_dict: dict[str, Any], obj: Any) -> None:
     """Function to recursively retrieve histograms from a list in a ROOT file.
 
     ``SetDirectory(True)`` is applied to TH1 derived hists and python is explicitly given
@@ -131,10 +131,10 @@ def _retrieve_object(output_dict: Dict[str, Any], obj: Any) -> None:
     Returns:
         None: Changes in the dict are reflected in the output_dict which was passed.
     """
-    import ROOT  # pyright: ignore [reportMissingImports]
+    import ROOT  # pyright: ignore [reportMissingImports] # pylint: disable=import-error
 
     # Store TH1 or THn
-    if isinstance(obj, ROOT.TH1) or isinstance(obj, ROOT.THnBase):
+    if isinstance(obj, ROOT.TH1 | ROOT.THnBase):
         # Ensure that it is not lost after the file is closed
         # Only works for TH1
         if isinstance(obj, ROOT.TH1):
@@ -190,24 +190,27 @@ def _extract_values_from_hepdata_dependent_variable(var: Mapping[str, Any]) -> T
 
     # Validate the collected values.
     if len(hist_stat_errors) == 0:
-        raise ValueError(
+        msg = (
             f"Could not retrieve statistical errors for dependent var {var}.\n" f" hist_stat_errors: {hist_stat_errors}"
         )
+        raise ValueError(msg)
     if len(hist_values) != len(hist_stat_errors):
-        raise ValueError(
+        msg = (
             f"Could not retrieve the same number of values and statistical errors for dependent var {var}.\n"
             f" hist_values: {hist_values}\n"
             f" hist_stat_errors: {hist_stat_errors}"
         )
+        raise ValueError(msg)
     if len(hist_sys_errors) != 0 and len(hist_sys_errors) != len(hist_stat_errors):
-        raise ValueError(
+        msg = (
             f"Could not extract the same number of statistical and systematic errors for dependent var {var}.\n"
             f" hist_stat_errors: {hist_stat_errors}\n"
             f" hist_sys_errors: {hist_sys_errors}"
         )
+        raise ValueError(msg)
 
     # Create the histogram
-    metadata: Dict[str, Any] = {"sys_error": np.array(hist_sys_errors)}
+    metadata: dict[str, Any] = {"sys_error": np.array(hist_sys_errors)}
 
     return hist_values, hist_stat_errors, metadata
 
@@ -251,7 +254,7 @@ class Histogram1D:
     bin_edges: npt.NDArray[Any]
     y: npt.NDArray[Any]
     errors_squared: npt.NDArray[Any]
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Perform validation on the inputs."""
@@ -263,19 +266,21 @@ class Histogram1D:
             try:
                 setattr(self, name, np.array(arr))
             except TypeError as e:
-                raise ValueError(
+                msg = (
                     f"Arrays must be numpy arrays, but could not convert object {name} of"
                     f" type {type(arr)} to numpy array."
-                ) from e
+                )
+                raise ValueError(msg) from e
 
         # Ensure that they're the appropriate length
         if not (len(self.bin_edges) - 1 == len(self.y) == len(self.errors_squared)):
-            logger.debug("mis matched")
-            raise ValueError(
+            logger.debug("mismatched")
+            msg = (
                 f"Length of input arrays doesn't match! Bin edges should be one longer than"
                 f" y and errors_squared. Lengths: bin_edges: {len(self.bin_edges)},"
                 f" y: {len(self.y)}, errors_squared: {len(self.errors_squared)}"
             )
+            raise ValueError(msg)
 
         # Ensure they don't point to one another (which can cause issues when performing
         # operations in place).
@@ -403,7 +408,7 @@ class Histogram1D:
         # We want to copy bin_edges, y, and errors_squared, but not anything else. Namely, we skip _x here.
         # In principle, it wouldn't really be a problem to copy, but there may be other "_" fields that we
         # want to skip later, so we do the right thing now.
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             k: np.array(v, copy=True) for k, v in vars(self).items() if not k.startswith("_") and k != "metadata"
         }
         # We also want to make an explicit copy of the metadata
@@ -412,11 +417,11 @@ class Histogram1D:
 
     def counts_in_interval(
         self,
-        min_value: Optional[float] = None,
-        max_value: Optional[float] = None,
-        min_bin: Optional[int] = None,
-        max_bin: Optional[int] = None,
-    ) -> Tuple[float, float]:
+        min_value: float | None = None,
+        max_value: float | None = None,
+        min_bin: int | None = None,
+        max_bin: int | None = None,
+    ) -> tuple[float, float]:
         """Count the number of counts within bins in an interval.
 
         Note:
@@ -444,11 +449,11 @@ class Histogram1D:
 
     def integral(
         self,
-        min_value: Optional[float] = None,
-        max_value: Optional[float] = None,
-        min_bin: Optional[int] = None,
-        max_bin: Optional[int] = None,
-    ) -> Tuple[float, float]:
+        min_value: float | None = None,
+        max_value: float | None = None,
+        min_bin: int | None = None,
+        max_bin: int | None = None,
+    ) -> tuple[float, float]:
         """Integrate the histogram over the given range.
 
         Note:
@@ -483,12 +488,12 @@ class Histogram1D:
 
     def _integral(
         self,
-        min_value: Optional[float] = None,
-        max_value: Optional[float] = None,
-        min_bin: Optional[int] = None,
-        max_bin: Optional[int] = None,
+        min_value: float | None = None,
+        max_value: float | None = None,
+        min_bin: int | None = None,
+        max_bin: int | None = None,
         multiply_by_bin_width: bool = False,
-    ) -> Tuple[float, float]:
+    ) -> tuple[float, float]:
         """Integrate the histogram over the specified range.
 
         This function provides the underlying implementation of the integral, giving the option to multiply
@@ -515,9 +520,11 @@ class Histogram1D:
         # Validate arguments
         # Specified both values and bins, which is invalid.
         if min_value is not None and min_bin is not None:
-            raise ValueError("Specified both min value and min bin. Only specify one.")
+            msg = "Specified both min value and min bin. Only specify one."
+            raise ValueError(msg)
         if max_value is not None and max_bin is not None:
-            raise ValueError("Specified both max value and max bin. Only specify one.")
+            msg = "Specified both max value and max bin. Only specify one."
+            raise ValueError(msg)
 
         # Determine the bins from the values
         if min_value is not None:
@@ -532,9 +539,8 @@ class Histogram1D:
         # Final validation to ensure that the bins properly ordered, with the min <= max.
         # NOTE: It is valid for the bins to be equal. In that case, we only take values from that single bin.
         if min_bin > max_bin:
-            raise ValueError(
-                f"Passed min_bin {min_bin} which is greater than the max_bin {max_bin}. The min bin must be smaller."
-            )
+            msg = f"Passed min_bin {min_bin} which is greater than the max_bin {max_bin}. The min bin must be smaller."
+            raise ValueError(msg)
 
         # Provide the opportunity to scale by bin width
         widths = np.ones(len(self.y))
@@ -570,7 +576,7 @@ class Histogram1D:
         """For use with sum(...)."""
         if other == 0:
             return self
-        else:
+        else:  # noqa: RET505
             # Help out mypy
             assert not isinstance(other, int)
             return self + other
@@ -578,11 +584,12 @@ class Histogram1D:
     def __iadd__(self: _T, other: _T) -> _T:
         """Handles ``a += b``."""
         if not np.allclose(self.bin_edges, other.bin_edges):
-            raise TypeError(
+            msg = (
                 f"Binning is different for given histograms."
                 f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
                 f"Cannot add!"
             )
+            raise TypeError(msg)
         self.y += other.y
         self.errors_squared += other.errors_squared
         # Update stats.
@@ -606,11 +613,12 @@ class Histogram1D:
     def __isub__(self: _T, other: _T) -> _T:
         """Handles ``a -= b``."""
         if not np.allclose(self.bin_edges, other.bin_edges):
-            raise TypeError(
+            msg = (
                 f"Binning is different for given histograms."
                 f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
                 f"Cannot subtract!"
             )
+            raise TypeError(msg)
         self.y -= other.y
         self.errors_squared += other.errors_squared
         # According to ROOT, we need to reset stats because we are subtracting. Otherwise, one
@@ -628,20 +636,20 @@ class Histogram1D:
                 factor = scale_factor * scale_factor
             self.metadata[key] = self.metadata[key] * factor
 
-    def __mul__(self: _T, other: Union[_T, float]) -> _T:
+    def __mul__(self: _T, other: _T | float) -> _T:
         """Handles ``a = b * c``."""
         new = self.copy()
         new *= other
         return new
 
-    def __imul__(self: _T, other: Union[_T, float]) -> _T:
+    def __imul__(self: _T, other: _T | float) -> _T:
         """Handles ``a *= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
-            assert isinstance(other, (float, int, np.number, np.ndarray))
+            assert isinstance(other, float | int | np.number | np.ndarray)
             # Scale histogram by a scalar
             self.y *= other
-            self.errors_squared *= other ** 2
+            self.errors_squared *= other**2
             # Scale stats accordingly. We can only preserve the stats if using a scalar (according to ROOT).
             if np.isscalar(other):
                 self._scale_stats(scale_factor=other)  # type: ignore[arg-type]
@@ -652,15 +660,16 @@ class Histogram1D:
             assert isinstance(other, Histogram1D)
             # Validation
             if not np.allclose(self.bin_edges, other.bin_edges):
-                raise TypeError(
+                msg = (
                     f"Binning is different for given histograms."
                     f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
                     f"Cannot multiply!"
                 )
+                raise TypeError(msg)
             # NOTE: We need to calculate the errors_squared first because the depend on the existing y values
             # Errors are from ROOT::TH1::Multiply(const TH1 *h1)
             # NOTE: This is just error propagation, simplified with a = b * c!
-            self.errors_squared = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
+            self.errors_squared = self.errors_squared * other.y**2 + other.errors_squared * self.y**2
             self.y *= other.y
 
             # Recalculate the stats (same as ROOT)
@@ -668,17 +677,17 @@ class Histogram1D:
 
         return self
 
-    def __truediv__(self: _T, other: Union[_T, float]) -> _T:
+    def __truediv__(self: _T, other: _T | float) -> _T:
         """Handles ``a = b / c``."""
         new = self.copy()
         new /= other
         return new
 
-    def __itruediv__(self: _T, other: Union[_T, float]) -> _T:
+    def __itruediv__(self: _T, other: _T | float) -> _T:
         """Handles ``a /= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
-            assert isinstance(other, (float, int, np.number, np.ndarray))
+            assert isinstance(other, float | int | np.number | np.ndarray)
             # Scale histogram by a scalar
             self *= 1.0 / other
             # Scale stats accordingly. We can only preserve the stats if using a scalar (according to ROOT).
@@ -691,17 +700,18 @@ class Histogram1D:
             assert isinstance(other, Histogram1D)
             # Validation
             if not np.allclose(self.bin_edges, other.bin_edges):
-                raise TypeError(
+                msg = (
                     f"Binning is different for given histograms."
                     f"len(self): {len(self.bin_edges)}, len(other): {len(other.bin_edges)}."
                     f"Cannot divide!"
                 )
+                raise TypeError(msg)
             # Errors are from ROOT::TH1::Divide(const TH1 *h1)
             # NOTE: This is just error propagation, simplified with the a = b / c!
             # NOTE: We need to calculate the errors_squared first before setting y because the errors depend on
             #       the existing y values
-            errors_squared_numerator = self.errors_squared * other.y ** 2 + other.errors_squared * self.y ** 2
-            errors_squared_denominator = other.y ** 4
+            errors_squared_numerator = self.errors_squared * other.y**2 + other.errors_squared * self.y**2
+            errors_squared_denominator = other.y**4
             # NOTE: We have to be a bit clever when we divide to avoid dividing by bins with 0 entries. The
             #       approach taken here basically replaces any divide by 0s with a 0 in the output hist.
             #       For more info, see: https://stackoverflow.com/a/37977222
@@ -744,7 +754,7 @@ class Histogram1D:
         return all(agreement) and metadata_agree
 
     @staticmethod
-    def _from_uproot(hist: Any) -> Tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any], Dict[str, Any]]:
+    def _from_uproot(hist: Any) -> tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any], dict[str, Any]]:
         """Convert a uproot histogram to a set of array for creating a Histogram.
 
         Note:
@@ -761,8 +771,8 @@ class Histogram1D:
         variances = hist.variances(flow=False)
         (bin_edges,) = (axis.edges(flow=False) for axis in hist.axes)
 
-        print(dir(hist))
-        print(hist.member("fTsumw"))
+        # print(dir(hist))
+        # print(hist.member("fTsumw"))
 
         # Extract stats information. It will be stored in the metadata.
         metadata = {}
@@ -777,12 +787,12 @@ class Histogram1D:
 
     @classmethod
     def from_hepdata(
-        cls: Type[_T],
+        cls: type[_T],
         hist: Mapping[str, Any],
         extraction_function: Callable[
             [Mapping[str, Any]], T_Extraction_Function
         ] = _extract_values_from_hepdata_dependent_variable,
-    ) -> List[_T]:
+    ) -> list[_T]:
         """Convert (a set) of HEPdata histogram(s) to a Histogram1D.
 
         Will include any information that the extraction function extracts and returns.
@@ -804,9 +814,8 @@ class Histogram1D:
         """
         # HEP Data is just a map containing the data.
         if not isinstance(hist, collections.abc.Mapping):
-            raise TypeError(
-                f"Does not appear to be valid HEPdata. Must pass a map with the HEPdata information. Passed: {hist}"
-            )
+            msg = f"Does not appear to be valid HEPdata. Must pass a map with the HEPdata information. Passed: {hist}"  # type: ignore[unreachable]
+            raise TypeError(msg)
         histograms = []
         try:
             # We only support one independent variable, so we take the first entry.
@@ -825,13 +834,14 @@ class Histogram1D:
                     cls(
                         bin_edges=np.asarray(bin_edges),
                         y=np.asarray(y),
-                        errors_squared=np.asarray([err ** 2 for err in errors_squared]),
+                        errors_squared=np.asarray([err**2 for err in errors_squared]),
                         metadata=metadata,
                     )
                 )
 
         except IndexError as e:
-            raise TypeError(f"Invalid HEPdata histogram {hist}") from e
+            msg = f"Invalid HEPdata histogram {hist}"
+            raise TypeError(msg) from e
 
         for h in histograms:
             # Calculate stats, which we won't have stored in HEPdata.
@@ -840,7 +850,7 @@ class Histogram1D:
         return histograms
 
     @staticmethod
-    def _from_th1(hist: Hist) -> Tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any], Dict[str, Any]]:
+    def _from_th1(hist: Hist) -> tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any], dict[str, Any]]:  # pyright: ignore[reportInvalidTypeForm]
         """Convert a TH1 histogram to a Histogram.
 
         Note:
@@ -871,11 +881,12 @@ class Histogram1D:
         if hasattr(hist, "BuildOptions"):
             errors = np.array([hist.GetBinError(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
             # We expected errors squared
-            errors = errors ** 2
+            errors = errors**2
         else:
             # Sanity check. If they don't match, something odd has almost certainly occurred.
             if not np.isclose(errors[0], hist.GetBinError(1) ** 2):
-                raise ValueError("Sumw2 errors don't seem to represent bin errors!")
+                msg = "Sumw2 errors don't seem to represent bin errors!"
+                raise ValueError(msg)
 
             # Retrieve the stats and store them in the metadata.
             # They are useful for calculating histogram properties (mean, variance, etc).
@@ -892,7 +903,7 @@ class Histogram1D:
         return (bin_edges, y, errors, metadata)
 
     @classmethod
-    def from_existing_hist(cls: Type[_T], hist: Union[Hist, Any]) -> _T:
+    def from_existing_hist(cls: type[_T], hist: Hist | Any) -> _T:  # pyright: ignore[reportInvalidTypeForm]
         """Convert an existing histogram.
 
         Note:
@@ -904,14 +915,12 @@ class Histogram1D:
         Returns:
             Histogram: Dataclass with x, y, and errors
         """
-        try:
+        with contextlib.suppress(AttributeError):
             # Convert a histogram containing object -> TH1 or uproot hist.
             # It goes "HistogramContainer".hist -> TH1 or uproot hist
             # logger.debug("Converting HistogramContainer to standard hist")
             hist = hist.hist
-        except AttributeError:
-            # Just use the existing histogram
-            pass
+        # If it fails, just use the existing histogram
         logger.debug(f"{hist}, {type(hist)}")
 
         # If it's already a histogram, just return a copy
@@ -931,8 +940,10 @@ class Histogram1D:
 
 
 def get_array_from_hist2D(
-    hist: Hist, set_zero_to_NaN: bool = True, return_bin_edges: bool = False
-) -> Tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any]]:
+    hist: Hist,  # pyright: ignore[reportInvalidTypeForm]
+    set_zero_to_NaN: bool = True,
+    return_bin_edges: bool = False,
+) -> tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any]]:
     """Extract x, y, and bin values from a 2D ROOT histogram.
 
     Converts the histogram into a numpy array, and suitably processes it for a surface plot
@@ -1006,7 +1017,7 @@ def get_array_from_hist2D(
     return (X, Y, hist_array)
 
 
-def get_bin_edges_from_axis(axis: Axis) -> npt.NDArray[Any]:
+def get_bin_edges_from_axis(axis: Axis) -> npt.NDArray[Any]:  # pyright: ignore[reportInvalidTypeForm]
     """Get bin edges from a ROOT hist axis.
 
     Note:
@@ -1059,7 +1070,7 @@ _stats_keys = [
 
 def _create_stats_dict_from_values(
     total_sum_w: float, total_sum_w2: float, total_sum_wx: float, total_sum_wx2: float
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Create a statistics dictionary from the provided set of values.
 
     This is particularly useful for ensuring that the dictionary values are created uniformly.
@@ -1082,7 +1093,7 @@ def _create_stats_dict_from_values(
 
 def calculate_binned_stats(
     bin_edges: npt.NDArray[Any], y: npt.NDArray[Any], weights_squared: npt.NDArray[Any]
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Calculate the stats needed to fully determine histogram properties.
 
     The values are calculated the same way as in ``ROOT.TH1.GetStats(...)``. Recalculating the statistics
@@ -1113,11 +1124,11 @@ def calculate_binned_stats(
     total_sum_w = np.sum(y)
     total_sum_w2 = np.sum(weights_squared)
     total_sum_wx = np.sum(y * x)
-    total_sum_wx2 = np.sum(y * x ** 2)
+    total_sum_wx2 = np.sum(y * x**2)
     return _create_stats_dict_from_values(total_sum_w, total_sum_w2, total_sum_wx, total_sum_wx2)
 
 
-def binned_mean(stats: Dict[str, float]) -> float:
+def binned_mean(stats: dict[str, float]) -> float:
     """Mean of values stored in the histogram.
 
     Calculated in the same way as ROOT and physt.
@@ -1129,9 +1140,11 @@ def binned_mean(stats: Dict[str, float]) -> float:
     """
     # Validation
     if "_total_sum_wx" not in stats:
-        raise ValueError("Sum of weights * x is not available, so we cannot calculate the mean.")
+        msg = "Sum of weights * x is not available, so we cannot calculate the mean."
+        raise ValueError(msg)
     if "_total_sum_w" not in stats:
-        raise ValueError("Sum of weights is not available, so we cannot calculate the mean.")
+        msg = "Sum of weights is not available, so we cannot calculate the mean."
+        raise ValueError(msg)
     # Calculate the mean.
     total_sum_w = stats["_total_sum_w"]
     if total_sum_w > 0:
@@ -1140,7 +1153,7 @@ def binned_mean(stats: Dict[str, float]) -> float:
     return np.nan
 
 
-def binned_standard_deviation(stats: Dict[str, float]) -> float:
+def binned_standard_deviation(stats: dict[str, float]) -> float:
     """Standard deviation of the values filled into the histogram.
 
     Calculated in the same way as ROOT and physt.
@@ -1153,7 +1166,7 @@ def binned_standard_deviation(stats: Dict[str, float]) -> float:
     return cast(float, np.sqrt(binned_variance(stats)))
 
 
-def binned_variance(stats: Dict[str, float]) -> float:
+def binned_variance(stats: dict[str, float]) -> float:
     """Variance of the values filled into the histogram.
 
     Calculated in the same way as ROOT and physt.
@@ -1165,11 +1178,14 @@ def binned_variance(stats: Dict[str, float]) -> float:
     """
     # Validation
     if "_total_sum_wx" not in stats:
-        raise ValueError("Sum of weights * x is not available, so we cannot calculate the variance.")
+        msg = "Sum of weights * x is not available, so we cannot calculate the variance."
+        raise ValueError(msg)
     if "_total_sum_wx2" not in stats:
-        raise ValueError("Sum of weights * x * x is not available, so we cannot calculate the variance.")
+        msg = "Sum of weights * x * x is not available, so we cannot calculate the variance."
+        raise ValueError(msg)
     if "_total_sum_w" not in stats:
-        raise ValueError("Sum of weights is not available, so we cannot calculate the mean.")
+        msg = "Sum of weights is not available, so we cannot calculate the mean."
+        raise ValueError(msg)
 
     # Calculate the variance.
     total_sum_w = stats["_total_sum_w"]

@@ -240,6 +240,7 @@ class Axis:
             # First, if we're not rebinning with an array (where we ignore the passed start and stop and just
             # check for consistency), then we need to ensure that the stop value is consistent.
             if stop is not None:
+                # pylint: disable-next=pointless-string-statement
                 """
                 If we've set an upper limit, we want to add +1 to ensure that the upper edge of the bin that contains
                 the value is included. If we do find_bin on a bin edge, it returns the correct value, but in that case,
@@ -795,7 +796,7 @@ class BinnedData:
         return all(agreement) and axes_agree and metadata_agree
 
     @classmethod
-    def from_hepdata(cls: type[BinnedData], hist: Mapping[str, Any]) -> list[BinnedData]:  # noqa: ARG003
+    def from_hepdata(cls: type[BinnedData], hist: Mapping[str, Any]) -> list[BinnedData]:  # noqa: ARG003 # pylint: disable=unused-argument
         """Convert (a set) of HEPdata histogram(s) to BinnedData objects.
 
         Will include any information that the extraction function extracts and returns.
@@ -813,7 +814,7 @@ class BinnedData:
             extraction_function: Extract values from HEPdata dict to be used to construct a histogram. Default:
                 Retrieves y values, symmetric statical errors. Symmetric systematic errors are stored in the metadata.
         Returns:
-            List of Histogram1D constructed from the input HEPdata.
+            List of BinnedData constructed from the input HEPdata.
         """
         _msg = "Not yet implemented."
         raise NotImplementedError(_msg)

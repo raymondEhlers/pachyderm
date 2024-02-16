@@ -1,15 +1,15 @@
-#!/usr/bin/env python
-
 """ Provides outliers removal methods.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@yale.edu>, Yale University
 """
+from __future__ import annotations
 
 import ctypes
 import enum
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -17,14 +17,13 @@ import numpy.typing as npt
 from pachyderm import histogram, projectors, utils
 from pachyderm.typing_helpers import Hist
 
-
 logger = logging.getLogger(__name__)
 
 # Typing helper
-OutliersRemovalAxis = Union[projectors.TH1AxisType, enum.Enum]
+OutliersRemovalAxis = Union[projectors.TH1AxisType, enum.Enum]  # noqa: UP007
 
 
-def _get_mean_and_median(hist: Hist) -> Tuple[float, float]:
+def _get_mean_and_median(hist: Hist) -> tuple[float, float]:  # pyright: ignore[reportInvalidTypeForm]
     """Retrieve the mean and median from a ROOT histogram.
 
     Note:
@@ -53,10 +52,10 @@ def _get_mean_and_median(hist: Hist) -> Tuple[float, float]:
 class _OutputObject:
     """Helper object to retrieve the result of a projector."""
 
-    output: Hist
+    output: Hist  # pyright: ignore[reportInvalidTypeForm]
 
 
-def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxis) -> Hist:
+def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxis) -> Hist:  # pyright: ignore[reportInvalidTypeForm]
     """Project the input histogram to the particle level axis.
 
     Args:
@@ -67,10 +66,10 @@ def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxi
         The histogram to check for outliers.
     """
     # Setup the projector
-    import ROOT  # pyright: ignore [reportMissingImports]
+    import ROOT  # pyright: ignore [reportMissingImports] # pylint: disable=import-error
 
-    if isinstance(hist, (ROOT.TH2, ROOT.TH3)):
-        projection_information: Dict[str, Any] = {}
+    if isinstance(hist, ROOT.TH2 | ROOT.TH3):
+        projection_information: dict[str, Any] = {}
         output_object = _OutputObject(None)
         projector = projectors.HistProjector(
             observable_to_project_from=hist,
@@ -99,10 +98,10 @@ def _project_to_part_level(hist: Hist, outliers_removal_axis: OutliersRemovalAxi
 
 
 def _determine_outliers_index(
-    hist: Hist,
+    hist: Hist,  # pyright: ignore[reportInvalidTypeForm]
     moving_average_threshold: float = 1.0,
     number_of_values_to_search_ahead: int = 5,
-    limit_of_number_of_values_below_threshold: Optional[int] = None,
+    limit_of_number_of_values_below_threshold: int | None = None,
 ) -> int:
     """Determine the location of where outliers begin in a 1D histogram.
 
@@ -135,14 +134,15 @@ def _determine_outliers_index(
         ROOT (ie 1-indexed) index of the histogram axes where the outliers begin.
     """
     # Validation
-    import ROOT  # pyright: ignore [reportMissingImports]
+    import ROOT  # pyright: ignore [reportMissingImports] # pylint: disable=import-error
 
-    if isinstance(hist, (ROOT.TH2, ROOT.TH3, ROOT.THnBase)):
-        raise ValueError(
+    if isinstance(hist, ROOT.TH2 | ROOT.TH3 | ROOT.THnBase):
+        msg = (
             f"Given histogram '{hist.GetName()}' of type {type(hist)}, but can only"
             " determine the outlier location of a 1D histogram. Please project to"
             " the particle level axis first."
         )
+        raise ValueError(msg)
 
     if limit_of_number_of_values_below_threshold is None:
         # In principle, this could be another value. However, this is what was used in the previous outliers
@@ -176,7 +176,7 @@ def _determine_outliers_index(
 def _determine_outliers_for_moving_average(
     moving_average: npt.NDArray[Any],
     moving_average_threshold: float,
-    number_of_values_to_search_ahead: int,
+    number_of_values_to_search_ahead: int,  # noqa: ARG001
     limit_of_number_of_values_below_threshold: int,
 ) -> int:
     """Determine outliers to remove from a given moving average.
@@ -216,8 +216,8 @@ def _determine_outliers_for_moving_average(
     # Index we will search for from which outliers will be cut.
     cut_index = -1
 
-    # Determine the index where the limit_of_number_of_values_below_threshold bins are consequentially below the threshold.
-    for i, values in enumerate(zip(*values_to_check)):
+    # Determine the index where the limit_of_number_of_values_below_threshold bins are sequentially below the threshold.
+    for i, values in enumerate(zip(*values_to_check, strict=True)):
         # Skip the first bin because some old pt hard bin trains had a large number of erroneous entries
         # in the first bin (regardless of the actual pt hard bin). This should be resolved in the embedding
         # helper now. In any case, it doesn't make sense to encounter outliers in the first bin, so this is a
@@ -247,7 +247,9 @@ def _determine_outliers_for_moving_average(
 
 
 def _remove_outliers_from_hist(
-    hist: Hist, outliers_start_index: int, outliers_removal_axis: OutliersRemovalAxis
+    hist: Hist,  # pyright: ignore[reportInvalidTypeForm]
+    outliers_start_index: int,
+    outliers_removal_axis: OutliersRemovalAxis,
 ) -> None:
     """Remove outliers from a given histogram.
 
@@ -268,12 +270,12 @@ def _remove_outliers_from_hist(
         z = ctypes.c_int(0)
         # Maps axis to values
         # This is kind of dumb, but it works.
-        outliers_removal_axis_values: Dict[OutliersRemovalAxis, ctypes.c_int] = {
+        outliers_removal_axis_values: dict[OutliersRemovalAxis, ctypes.c_int] = {
             projectors.TH1AxisType.x_axis: x,
             projectors.TH1AxisType.y_axis: y,
             projectors.TH1AxisType.z_axis: z,
         }
-        for index in range(0, hist.GetNcells()):
+        for index in range(hist.GetNcells()):
             # Get the bin x, y, z from the global bin
             hist.GetBinXYZ(index, x, y, z)
             # Watch out for any problems
@@ -291,13 +293,15 @@ def _remove_outliers_from_hist(
 
 @dataclass
 class OutliersRemovalManager:
+    """Manage the removal of outliers from histograms."""
+
     moving_average_threshold: float = field(default=1.0)
 
     def run(
         self,
         outliers_removal_axis: OutliersRemovalAxis,
-        hist: Optional[Hist] = None,
-        hists: Optional[Mapping[str, Hist]] = None,
+        hist: Hist | None = None,  # pyright: ignore[reportInvalidTypeForm]
+        hists: Mapping[str, Hist] | None = None,  # pyright: ignore[reportInvalidTypeForm]
         mean_fractional_difference_limit: float = 0.01,
         median_fractional_difference_limit: float = 0.01,
     ) -> int:
@@ -317,9 +321,11 @@ class OutliersRemovalManager:
         """
         # Validation
         if hist is None and hists is None:
-            raise ValueError("Must specify either a single hist or a sequence of hists.")
+            msg = "Must specify either a single hist or a sequence of hists."
+            raise ValueError(msg)
         if hist and hists:
-            raise ValueError("Cannot specify both a single hist and a sequence of hists.")
+            msg = "Cannot specify both a single hist and a sequence of hists."
+            raise ValueError(msg)
         # Convert the hist into a temporary list so that we can use the same code below.
         if hist is not None:
             hists = {"hist": hist}
@@ -328,11 +334,12 @@ class OutliersRemovalManager:
         # Final hist validation
         for h in hists:
             if hasattr(h, "ProjectionND") and hasattr(h, "Projection"):
-                raise ValueError("Cannot remove outliers from THn hists. Project to TH3 or lower first.")
+                msg = "Cannot remove outliers from THn hists. Project to TH3 or lower first."
+                raise ValueError(msg)
 
         # Keep track of the outliers index for each hist to determine the maximum of the hists
         # that are passed in.
-        outliers_indices: List[int] = []
+        outliers_indices: list[int] = []
         # Keep track of pre/post median values
         pre_removal_mean = {}
         post_removal_mean = {}
@@ -380,15 +387,17 @@ class OutliersRemovalManager:
             )
             # Provide some very broad checks. We should be very surprised if the post outliers values vary by more than 5%
             if mean_fractional_difference > mean_fractional_difference_limit:
-                raise RuntimeError(
+                msg = (
                     f"Mean fractional difference is greater than {mean_fractional_difference_limit * 100}%!"
                     f" {mean_fractional_difference * 100}%"
                 )
+                raise RuntimeError(msg)
             if median_fractional_difference > median_fractional_difference_limit:
-                raise RuntimeError(
+                msg = (
                     f"Median fractional difference is greater than {median_fractional_difference_limit * 100}%!"
                     f" {median_fractional_difference * 100}%"
                 )
+                raise RuntimeError(msg)
 
         logger.debug(f"Outliers removal complete! Found outliers_start_index: {outliers_start_index}")
         return outliers_start_index

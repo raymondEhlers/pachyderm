@@ -1,21 +1,20 @@
-#!/usr/bin/env python3
-
 """ Functions for use with fitting.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import abc
 import logging
 import operator
-from typing import Any, Callable, Optional, Sequence, Union
+from collections.abc import Callable, Sequence
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
 
 from pachyderm import generic_class
 from pachyderm.fit import base as fit_base
-
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +44,8 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
     def __init__(
         self,
         *functions: Callable[..., float],
-        prefixes: Optional[Sequence[str]] = None,
-        skip_prefixes: Optional[Sequence[str]] = None,
+        prefixes: Sequence[str] | None = None,
+        skip_prefixes: Sequence[str] | None = None,
     ) -> None:
         # Store the functions
         self.functions = list(functions)
@@ -72,7 +71,7 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
         # We add in the x values into the function arguments here so we don't have to play tricks later
         # to get the function argument indices correct.
         return fit_base.call_list_of_callables_with_operation(
-            self._operation, self.functions, self.argument_positions, *[x, *merged_args]  # type: ignore
+            self._operation, self.functions, self.argument_positions, *[x, *merged_args]  # type: ignore[arg-type]
         )
 
 
@@ -157,8 +156,8 @@ class DividePDF(CombinePDF):
 
 
 def gaussian(
-    x: Union[npt.NDArray[np.float64], float], mean: float, sigma: float
-) -> Union[npt.NDArray[np.float64], float]:
+    x: npt.NDArray[np.float64] | float, mean: float, sigma: float
+) -> npt.NDArray[np.float64] | float:
     r"""Normalized gaussian.
 
     .. math::
@@ -172,12 +171,12 @@ def gaussian(
     Returns:
         Calculated gaussian value(s).
     """
-    return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))  # type: ignore
+    return 1.0 / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))  # type: ignore[no-any-return]
 
 
 def extended_gaussian(
-    x: Union[npt.NDArray[np.float64], float], mean: float, sigma: float, amplitude: float
-) -> Union[npt.NDArray[np.float64], float]:
+    x: npt.NDArray[np.float64] | float, mean: float, sigma: float, amplitude: float
+) -> npt.NDArray[np.float64] | float:
     r"""Extended gaussian.
 
     .. math::
@@ -192,4 +191,4 @@ def extended_gaussian(
     Returns:
         Calculated gaussian value(s).
     """
-    return amplitude / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))  # type: ignore
+    return amplitude / np.sqrt(2 * np.pi * np.square(sigma)) * np.exp(-1.0 / 2.0 * np.square((x - mean) / sigma))  # type: ignore[no-any-return]

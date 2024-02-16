@@ -1,14 +1,14 @@
-#!/usr/bin/env python
-
 """ Broad collection of utility functions and constants.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import functools
 import logging
 import operator
-from typing import Any, Mapping, Sequence, Union
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 # Small value - epsilon
 # For use to offset from bin edges when finding bins for use with SetRange()
 # NOTE: sys.float_info.epsilon is too small in some cases and thus should be avoided
-epsilon = 1e-5
+EPSILON = 1e-5
+
 
 ###################
 # Utility functions
@@ -81,7 +82,7 @@ def recursive_setattr(obj: Any, attr: str, val: Any) -> Any:
     return setattr(recursive_getattr(obj, pre) if pre else obj, post, val)
 
 
-def recursive_getitem(d: Mapping[str, Any], keys: Union[str, Sequence[str]]) -> Any:
+def recursive_getitem(d: Mapping[str, Any], keys: str | Sequence[str]) -> Any:
     """Recursively retrieve an item from a nested dict.
 
     Credit to: https://stackoverflow.com/a/52260663
@@ -97,5 +98,4 @@ def recursive_getitem(d: Mapping[str, Any], keys: Union[str, Sequence[str]]) -> 
     # If only a string, then just just return the item
     if isinstance(keys, str):
         return d[keys]
-    else:  # noqa: RET505
-        return functools.reduce(operator.getitem, keys, d)
+    return functools.reduce(operator.getitem, keys, d)

@@ -28,6 +28,8 @@ jobs:
       - uses: pre-commit/action@v3.0.1
         with:
           extra_args: --hook-stage manual --all-files
+      # NOTE: We only parse for errors with pylint because it's so noisy. Otherwise, the CI
+      #       will practically always show as broken.
       - name: Run PyLint
         run: |
           echo "::add-matcher::$GITHUB_WORKSPACE/.github/matchers/pylint.json"

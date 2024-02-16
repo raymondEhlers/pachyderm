@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """ Interface for fitting with Minuit.
 
 Some useful references on understanding binned vs unbinned fitting, likelihoods, etc:
@@ -12,6 +10,7 @@ See also the appendix of my thesis.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 __all__ = [
     "base",

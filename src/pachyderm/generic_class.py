@@ -1,12 +1,10 @@
-#!/usr/bin/env python
-
 """ Contains generic classes
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 from typing import Any, TypeVar, cast
-
 
 _T = TypeVar("_T", bound="EqualityMixin")
 

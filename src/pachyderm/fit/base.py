@@ -4,25 +4,18 @@
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import functools
 import itertools
 import logging
 import time
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -33,7 +26,6 @@ import numpy.typing as npt
 
 from pachyderm import generic_class
 
-
 if TYPE_CHECKING:
     from pachyderm.fit import cost_function
 
@@ -41,14 +33,12 @@ logger = logging.getLogger(__name__)
 
 # Typing
 T_FuncCode = TypeVar("T_FuncCode", bound="FuncCode")
-T_ArgumentPositions = List[List[int]]
+T_ArgumentPositions = list[list[int]]
 _T_FitResult = TypeVar("_T_FitResult", bound="FitResult")
 
 
 class FitFailed(Exception):
     """Raised if the fit failed. The message will include further details."""
-
-    pass
 
 
 @dataclass
@@ -71,16 +61,16 @@ class BaseFitResult:
         errors: Store the errors associated with the component fit function.
     """
 
-    parameters: List[str]
-    free_parameters: List[str]
-    fixed_parameters: List[str]
-    values_at_minimum: Dict[str, float]
-    errors_on_parameters: Dict[str, float]
-    covariance_matrix: Dict[Tuple[str, str], float]
+    parameters: list[str]
+    free_parameters: list[str]
+    fixed_parameters: list[str]
+    values_at_minimum: dict[str, float]
+    errors_on_parameters: dict[str, float]
+    covariance_matrix: dict[tuple[str, str], float]
     errors: npt.NDArray[Any]
 
     @property
-    def correlation_matrix(self) -> Dict[Tuple[str, str], float]:
+    def correlation_matrix(self) -> dict[tuple[str, str], float]:
         """The correlation matrix of the free parameters.
 
         These values are derived from the covariance matrix values stored in the fit.
@@ -109,7 +99,7 @@ class BaseFitResult:
                 # for YAML...
                 return float(value)
 
-            matrix: Dict[Tuple[str, str], float] = {}
+            matrix: dict[tuple[str, str], float] = {}
             for i_name in self.free_parameters:
                 for j_name in self.free_parameters:
                     matrix[(i_name, j_name)] = corr(i_name, j_name)
@@ -153,7 +143,7 @@ class FitResult(BaseFitResult):
         """Number of degrees of freedom."""
         return self.n_fit_data_points - len(self.free_parameters)
 
-    def effective_chi_squared(self, cost_func: "cost_function.DataComparisonCostFunction") -> float:
+    def effective_chi_squared(self, cost_func: cost_function.DataComparisonCostFunction) -> float:
         """Calculate the effective chi squared value.
 
         If the fit was performed using a chi squared cost function, it's just equal to
@@ -172,14 +162,14 @@ class FitResult(BaseFitResult):
         try:
             # We attempt to cache the chi squared, so first try to return that.
             return self._chi_squared
-        except AttributeError:
+        except AttributeError as e:
             # Setup
             from pachyderm import histogram
             from pachyderm.fit import cost_function
 
             # Calculate the chi_squared
             self._chi_squared: float
-            if isinstance(cost_func, (cost_function.ChiSquared, cost_function.BinnedChiSquared)):
+            if isinstance(cost_func, cost_function.ChiSquared | cost_function.BinnedChiSquared):
                 self._chi_squared = self.minimum_val
             elif isinstance(cost_func, cost_function.BinnedLogLikelihood):
                 data = cost_func.data
@@ -189,13 +179,14 @@ class FitResult(BaseFitResult):
                 self._chi_squared = cost_function.binned_chi_squared_safe_for_zeros(
                     data.x, data.y, data.errors, data.bin_edges, cost_func.f, *self.values_at_minimum.values()
                 )
-            elif isinstance(cost_func, cost_function.SimultaneousFit):
-                chi_squared = 0
+            elif isinstance(cost_func, cost_function.SimultaneousFit):  # type: ignore[unreachable]
+                chi_squared = 0  # type: ignore[unreachable]
                 for cf, function_args in zip(
                     cost_function.unravel_simultaneous_fits(cost_func.cost_functions),
                     _function_arguments_from_argument_positions(
                         cost_func.argument_positions, *self.values_at_minimum.values()
                     ),
+                    strict=True,
                 ):
                     data = cf.data
                     # Help out mypy...
@@ -207,7 +198,8 @@ class FitResult(BaseFitResult):
                     )
                 self._chi_squared = chi_squared
             else:
-                raise NotImplementedError("Needs to be implement for unbinned data.")
+                msg = "Needs to be implement for unbinned data."
+                raise NotImplementedError(msg) from e
                 # data = cost_func.data
                 ## Help out mypy...
                 # assert isinstance(data, histogram.Histogram1D)
@@ -219,7 +211,7 @@ class FitResult(BaseFitResult):
 
     @classmethod
     def from_minuit(
-        cls: Type[_T_FitResult], minuit: iminuit.Minuit, cost_func: Callable[..., float], x: npt.NDArray[Any]
+        cls: type[_T_FitResult], minuit: iminuit.Minuit, cost_func: Callable[..., float], x: npt.NDArray[Any]
     ) -> _T_FitResult:
         """Create a fit result form the Minuit fit object.
 
@@ -229,12 +221,13 @@ class FitResult(BaseFitResult):
         """
         # Validation
         if not minuit.valid:
-            raise RuntimeError("The fit is invalid - unable to extract result!")
+            msg = "The fit is invalid - unable to extract result!"
+            raise RuntimeError(msg)
 
         # Determine the relevant fit parameters.
-        fixed_parameters: List[str] = [k for k in minuit.parameters if minuit.fixed[k] is True]
+        fixed_parameters: list[str] = [k for k in minuit.parameters if minuit.fixed[k] is True]
         # We use the cost function because we want intentionally want to skip "x"
-        parameters: List[str] = iminuit.util.describe(cost_func)
+        parameters: list[str] = iminuit.util.describe(cost_func)
         # Can't just use set(parameters) - set(fixed_parameters) because set() is unordered!
         free_parameters = [p for p in parameters if p not in set(fixed_parameters)]
         # Store the result
@@ -274,7 +267,7 @@ class FitResult(BaseFitResult):
         return NotImplemented
 
 
-def extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> Tuple[Dict[str, Any], List[str]]:
+def extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> tuple[dict[str, Any], list[str]]:
     """Extract the parameters relevant to the given function from a fit result.
 
     Note:
@@ -436,7 +429,7 @@ class FuncCode(generic_class.EqualityMixin):
 
     __slots__ = ("co_varnames", "co_argcount")
 
-    def __init__(self, args: List[str]):
+    def __init__(self, args: list[str]):
         self.co_varnames = args
         self.co_argcount = len(args)
 
@@ -445,7 +438,7 @@ class FuncCode(generic_class.EqualityMixin):
 
     @classmethod
     def from_function(
-        cls: Type[T_FuncCode], func: Callable[..., float], leading_parameters_to_remove: int = 1
+        cls: type[T_FuncCode], func: Callable[..., float], leading_parameters_to_remove: int = 1
     ) -> T_FuncCode:
         """Create a func_code from a function.
 
@@ -459,9 +452,9 @@ class FuncCode(generic_class.EqualityMixin):
 
 def merge_func_codes(
     functions: Iterable[Callable[..., float]],
-    prefixes: Optional[Sequence[str]] = None,
-    skip_prefixes: Optional[Sequence[str]] = None,
-) -> Tuple[List[str], List[List[int]]]:
+    prefixes: Sequence[str] | None = None,
+    skip_prefixes: Sequence[str] | None = None,
+) -> tuple[list[str], list[list[int]]]:
     """Merge the arguments of the given functions into one func_code.
 
     Note:
@@ -482,7 +475,8 @@ def merge_func_codes(
     # Ensure that we have the proper number of prefixes.
     if prefixes:
         if len(funcs) != len(prefixes):
-            raise ValueError("Number of prefixes ({len(prefixes)} doesn't match the number of functions: {len(funcs)}")
+            msg = "Number of prefixes ({len(prefixes)} doesn't match the number of functions: {len(funcs)}"
+            raise ValueError(msg)
     else:
         # Create an empty prefix array so we can zip with it.
         prefixes = ["" for _ in funcs]
@@ -490,7 +484,7 @@ def merge_func_codes(
 
     # Retrieve all of the args.
     args = []
-    for f, pre in zip(funcs, prefixes):
+    for f, pre in zip(funcs, prefixes, strict=True):
         temp = []
         for arg in iminuit.util.describe(f):
             value = f"{pre}_{arg}" if pre and arg not in skip_prefix else arg
@@ -498,7 +492,7 @@ def merge_func_codes(
         args.append(temp)
 
     # Determine the unique arguments.
-    # We want to ensure that we maintain the oder, so we use dict.fromkeys to do so.
+    # We want to ensure that we maintain the order, so we use dict.fromkeys to do so.
     merged_args = list(dict.fromkeys(itertools.chain.from_iterable(args)))
 
     # Determine the map from merged arguments to arguments for each individual function.
@@ -517,8 +511,8 @@ def merge_func_codes(
 
 
 def _function_arguments_from_argument_positions(
-    argument_positions: T_ArgumentPositions, *args: Union[float, npt.NDArray[Any]]
-) -> Iterable[List[Union[float, npt.NDArray[Any]]]]:
+    argument_positions: T_ArgumentPositions, *args: float | npt.NDArray[Any]
+) -> Iterable[list[float | npt.NDArray[Any]]]:
     """Extract the function arguments from a larger set of arguments given the argument positions.
 
     It determines the arguments for calling functions stored in ``SimultaneousFit`` or ``AddPDF`` classes. Use it
@@ -553,7 +547,7 @@ def call_list_of_callables_with_operation(
     operation: Callable[[float, float], float],
     functions: Iterable[Callable[..., float]],
     argument_positions: T_ArgumentPositions,
-    *args: Union[float, npt.NDArray[Any]],
+    *args: float | npt.NDArray[Any],
 ) -> float:
     """Call and add a list of callables with the given args.
 
@@ -567,7 +561,9 @@ def call_list_of_callables_with_operation(
     values = []
     # We write it out explicitly instead of using a generator because it's long enough that it would be difficult
     # to understand.
-    for func, function_args in zip(functions, _function_arguments_from_argument_positions(argument_positions, *args)):
+    for func, function_args in zip(
+        functions, _function_arguments_from_argument_positions(argument_positions, *args), strict=True
+    ):
         values.append(func(*function_args))
     return functools.reduce(operation, values)
 

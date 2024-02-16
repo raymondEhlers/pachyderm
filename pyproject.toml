@@ -28,9 +28,6 @@ classifiers = [
   "Typing :: Typed",
 ]
 dynamic = ["version"]
-include = [
-    "pachyderm/alice/datasets/*.yaml",
-]
 dependencies = [
     "attrs >=21.2.0",
     "numpy >=1.21",
@@ -84,6 +81,9 @@ downloadALICERunByRun = "pachyderm.alice.download:run_download_run_by_run_train_
 [tool.hatch]
 version.source = "vcs"
 build.hooks.vcs.version-file = "src/pachyderm/_version.py"
+build.include = [
+    "src/pachyderm/alice/datasets/*.yaml",
+]
 
 [tool.hatch.envs.default]
 features = ["test"]
@@ -127,12 +127,13 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
 [[tool.mypy.overrides]]
-module = ["ROOT", "numba", "nox"]
+module = ["ROOT", "numba", "nox", "iminuit", "numdifftools", "scipy.*"]
 ignore_missing_imports = true
 
 
 [tool.ruff]
 src = ["src"]
+exclude = ["src/pachyderm/_version.py"]  # Automatically generated, so there's no point in linting it
 line-length = 120
 
 [tool.ruff.lint]
@@ -163,6 +164,7 @@ ignore = [
   "PLR2004",  # Magic value used in comparison
   "ISC001",   # Conflicts with formatter
   "G004",     # Logging format string. This isn't best practices, but I use it too much to change for now
+  "PLC0414",  # Messes with the re-export of imports needed from mypy
 ]
 unfixable = [
     "T20",    # Removes print statements
@@ -192,4 +194,9 @@ messages_control.disable = [
   "line-too-long",
   "missing-module-docstring",
   "wrong-import-position",
+  "logging-fstring-interpolation",  # See above. I use it too much
 ]
+
+
+[tool.codespell]
+ignore-words-list = "thn, nd"

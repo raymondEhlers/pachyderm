@@ -1,14 +1,15 @@
-#!/usr/bin/env python3
-
 """ Models for fitting.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import abc
+import itertools
 import logging
 import operator
-from typing import Any, Callable, Dict, Iterable, Iterator, TypeVar, Union
+from collections.abc import Callable, Iterable, Iterator
+from typing import Any, TypeVar
 
 import iminuit
 import numpy as np
@@ -18,14 +19,13 @@ import scipy.integrate
 from pachyderm import generic_class, histogram
 from pachyderm.fit import base as fit_base
 
-
 logger = logging.getLogger(__name__)
 
 T_CostFunction = TypeVar("T_CostFunction", bound="CostFunctionBase")
 
 
 def _quad(
-    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: Union[float, npt.NDArray[np.float64]]
+    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: float | npt.NDArray[np.float64]
 ) -> npt.NDArray[Any]:
     """Integrate over the given function using QUADPACK.
 
@@ -40,14 +40,14 @@ def _quad(
         Integral over each bin.
     """
     values = []
-    for lower, upper in zip(bin_edges[:-1], bin_edges[1:]):
+    for lower, upper in itertools.pairwise(bin_edges):
         res, _ = scipy.integrate.quad(func=f, a=lower, b=upper, args=tuple(args))
         values.append(res)
     return np.array(values)
 
 
 def _simpson_38(
-    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: Union[float, npt.NDArray[np.float64]]
+    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: float | npt.NDArray[np.float64]
 ) -> npt.NDArray[Any]:
     """Integrate over each histogram bin with the Simpson 3/8 rule.
 
@@ -67,11 +67,11 @@ def _simpson_38(
     a = bin_edges[:-1]
     b = bin_edges[1:]
     # Recall that bin_edges[1:] - bin_edges[:-1] is the bin widths
-    return (b - a) / 8 * (f(a, *args) + 3 * f((2 * a + b) / 3, *args) + 3 * f((a + 2 * b) / 3, *args) + f(b, *args))  # type: ignore
+    return (b - a) / 8 * (f(a, *args) + 3 * f((2 * a + b) / 3, *args) + 3 * f((a + 2 * b) / 3, *args) + f(b, *args))  # type: ignore[no-any-return]
 
 
 def _integrate_1D(
-    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: Union[float, npt.NDArray[np.float64]]
+    f: Callable[..., float], bin_edges: npt.NDArray[Any], *args: float | npt.NDArray[np.float64]
 ) -> npt.NDArray[Any]:
     """Integrate the given function over each bin in 1D.
 
@@ -94,12 +94,10 @@ def _integrate_1D(
     # QUADPACK is another option, but it's slow.
     # return _quad(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])
     # Simpson's 3/8 rule is better than the simple case, but faster than QUADPACK.
-    return _simpson_38(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])  # type: ignore
+    return _simpson_38(f, bin_edges, *args) / (bin_edges[1:] - bin_edges[:-1])  # type: ignore[no-any-return]
 
 
-def unravel_simultaneous_fits(
-    functions: Iterable[Union["CostFunctionBase", "SimultaneousFit"]]
-) -> Iterator["CostFunctionBase"]:
+def unravel_simultaneous_fits(functions: Iterable[CostFunctionBase | SimultaneousFit]) -> Iterator[CostFunctionBase]:
     """Unravel the cost functions from possible simultaneous fit objects.
 
     The functions are unravel by recursively retrieving the functions from existing ``SimultaneousFit`` objects
@@ -132,7 +130,7 @@ class SimultaneousFit(generic_class.EqualityMixin):
         argument_positions: Map of merged arguments to the arguments for each individual function.
     """
 
-    def __init__(self, *cost_functions: Union[T_CostFunction, "SimultaneousFit"]):
+    def __init__(self, *cost_functions: T_CostFunction | SimultaneousFit):
         # Validation
         # Ensure that we unravel any SimultaneousFit objects to their base cost functions.
         funcs = list(unravel_simultaneous_fits(list(cost_functions)))
@@ -144,15 +142,15 @@ class SimultaneousFit(generic_class.EqualityMixin):
         self.func_code = fit_base.FuncCode(merged_args)
         self.argument_positions = argument_positions
 
-    def __add__(self, other: Union[T_CostFunction, "SimultaneousFit"]) -> "SimultaneousFit":
+    def __add__(self, other: T_CostFunction | SimultaneousFit) -> SimultaneousFit:
         """Add a new function to the simultaneous fit."""
         return type(self)(self, other)
 
-    def __radd__(self, other: Union[T_CostFunction, "SimultaneousFit"]) -> "SimultaneousFit":
+    def __radd__(self, other: T_CostFunction | SimultaneousFit) -> SimultaneousFit:
         """For use with ``sum(...)``."""
         if other == 0:
             return self
-        else:
+        else:  # noqa: RET505
             return self + other
 
     def __call__(self, *args: float) -> float:
@@ -183,7 +181,7 @@ class CostFunctionBase(abc.ABC):
     def __init__(
         self,
         f: Callable[..., float],
-        data: Union[npt.NDArray[Any], histogram.Histogram1D],
+        data: npt.NDArray[Any] | histogram.Histogram1D,
         **additional_call_options: Any,
     ):
         # If using numba, we would need to JIT the function to be able to pass it to the cost function.
@@ -191,17 +189,19 @@ class CostFunctionBase(abc.ABC):
         # We need to drop the leading x argument
         self.func_code = fit_base.FuncCode(iminuit.util.describe(self.f)[1:])
         self.data = data
-        self._additional_call_options: Dict[str, Any] = additional_call_options
+        self._additional_call_options: dict[str, Any] = additional_call_options
 
     def __add__(self: T_CostFunction, other: T_CostFunction) -> SimultaneousFit:
         """Creates a simultaneous fit when added with another cost function."""
         return SimultaneousFit(self, other)
 
-    def __radd__(self: T_CostFunction, other: T_CostFunction) -> Union[T_CostFunction, SimultaneousFit]:
+    def __radd__(self: T_CostFunction, other: int | T_CostFunction) -> T_CostFunction | SimultaneousFit:
         """For use with ``sum(...)``."""
         if other == 0:
             return self
-        else:
+        else:  # noqa: RET505
+            # Help out mypy...
+            assert not isinstance(other, int)
             return self + other
 
     def __call__(self, *args: float) -> float:
@@ -212,9 +212,9 @@ class CostFunctionBase(abc.ABC):
     @abc.abstractmethod
     def _call_cost_function(
         cls,
-        data: Union[npt.NDArray[Any], histogram.Histogram1D],
+        data: npt.NDArray[Any] | histogram.Histogram1D,
         f: Callable[..., float],
-        *args: Union[float, npt.NDArray[Any]],
+        *args: float | npt.NDArray[Any],
         **kwargs: Any,
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
@@ -242,7 +242,7 @@ class StandaloneCostFunction(CostFunctionBase):
         f: The fit function.
         func_code: Function arguments derived from the fit function. They need to be separately specified
             to allow iminuit to determine the proper arguments.
-        data: Numpy array of all input values (not binned in any way). It's just a list of the values.
+        data: numpy array of all input values (not binned in any way). It's just a list of the values.
         _cost_function: Function to be used to calculate the actual cost function.
     """
 
@@ -255,9 +255,9 @@ class StandaloneCostFunction(CostFunctionBase):
     @classmethod
     def _call_cost_function(
         cls,
-        data: Union[histogram.Histogram1D, npt.NDArray[Any]],
+        data: histogram.Histogram1D | npt.NDArray[Any],
         f: Callable[..., float],
-        *args: Union[float, npt.NDArray[np.float64]],
+        *args: float | npt.NDArray[np.float64],
         **kwargs: Any,
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
@@ -282,7 +282,7 @@ class DataComparisonCostFunction(CostFunctionBase):
         f: The fit function.
         func_code: Function arguments derived from the fit function. They need to be separately specified
             to allow iminuit to determine the proper arguments.
-        data: Numpy array of all input values (not binned in any way). It's just a list of the values.
+        data: numpy array of all input values (not binned in any way). It's just a list of the values.
         _cost_function: Function to be used to calculate the actual cost function.
     """
 
@@ -294,7 +294,7 @@ class DataComparisonCostFunction(CostFunctionBase):
 
     @classmethod
     def _call_cost_function(
-        cls, data: Any, f: Callable[..., float], *args: Union[float, npt.NDArray[np.float64]], **kwargs: Any
+        cls, data: Any, f: Callable[..., float], *args: float | npt.NDArray[np.float64], **kwargs: Any
     ) -> float:
         """Wrapper to allow access to the method as if it's unbound.
 
@@ -359,7 +359,7 @@ class ChiSquared(DataComparisonCostFunction):
 
 
 def _binned_chi_squared(
-    x: npt.NDArray[Any],
+    x: npt.NDArray[Any],  # noqa: ARG001
     y: npt.NDArray[Any],
     errors: npt.NDArray[Any],
     bin_edges: npt.NDArray[Any],
@@ -397,7 +397,7 @@ def _binned_chi_squared(
 
 
 def binned_chi_squared_safe_for_zeros(
-    x: npt.NDArray[Any],
+    x: npt.NDArray[Any],  # noqa: ARG001
     y: npt.NDArray[Any],
     errors: npt.NDArray[Any],
     bin_edges: npt.NDArray[Any],
@@ -478,7 +478,7 @@ class LogLikelihood(StandaloneCostFunction):
 
 
 def _extended_binned_log_likelihood(
-    x: npt.NDArray[Any],
+    x: npt.NDArray[Any],  # noqa: ARG001
     y: npt.NDArray[Any],
     errors: npt.NDArray[Any],
     bin_edges: npt.NDArray[Any],
@@ -528,7 +528,7 @@ def _extended_binned_log_likelihood(
         Binned log likelihood.
     """
     # Need to normalize the contributions.
-    scale = y / errors ** 2 if use_weights else np.ones(len(y))
+    scale = y / errors**2 if use_weights else np.ones(len(y))
     expected_values = _integrate_1D(f, bin_edges, *args)
     # We don't use log rules to combine the log1p expressions (ie. log(expected_values / y)) because it appears
     # to create numerical issues (throwing NaN).
