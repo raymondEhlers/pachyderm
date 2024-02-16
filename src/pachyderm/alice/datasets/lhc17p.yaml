@@ -2,20 +2,20 @@
 # LHC17p: 2017 pp data at 5.02 TeV.
 period: "lhc17p"
 parameters:
-    system: "pp"
-    year: 2017
-    file_types:
-        ESD:
-            search_path: "/alice/{data_type}/{year}/{period}/{run}/pass1"
-            filename: "root_archive.zip"
-        AOD:
-            # AOD234:
-            # /alice/data/2017/LHC17p/000282343/pass1_FAST/AOD234/0001
-            search_path: "/alice/{data_type}/{year}/{period}/{run}/pass1_FAST/{file_type}{production_number}"
-            # We want the root achive for the track based skim.
-            filename: "root_archive.zip"
+  system: "pp"
+  year: 2017
+  file_types:
+    ESD:
+      search_path: "/alice/{data_type}/{year}/{period}/{run}/pass1"
+      filename: "root_archive.zip"
+    AOD:
+      # AOD234:
+      # /alice/data/2017/LHC17p/000282343/pass1_FAST/AOD234/0001
+      search_path: "/alice/{data_type}/{year}/{period}/{run}/pass1_FAST/{file_type}{production_number}"
+      # We want the root archive for the track based skim.
+      filename: "root_archive.zip"
 selections:
-    n_files_per_selection: 3
-    file_type: AOD
-    production_number: 234
-    runs: [282343]
+  n_files_per_selection: 3
+  file_type: AOD
+  production_number: 234
+  runs: [282343]

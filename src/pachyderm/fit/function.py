@@ -71,7 +71,10 @@ class CombinePDF(generic_class.EqualityMixin, abc.ABC):
         # We add in the x values into the function arguments here so we don't have to play tricks later
         # to get the function argument indices correct.
         return fit_base.call_list_of_callables_with_operation(
-            self._operation, self.functions, self.argument_positions, *[x, *merged_args]  # type: ignore[arg-type]
+            self._operation,
+            self.functions,
+            self.argument_positions,
+            *[x, *merged_args],  # type: ignore[arg-type]
         )
 
 
@@ -155,9 +158,7 @@ class DividePDF(CombinePDF):
     _operation = operator.truediv
 
 
-def gaussian(
-    x: npt.NDArray[np.float64] | float, mean: float, sigma: float
-) -> npt.NDArray[np.float64] | float:
+def gaussian(x: npt.NDArray[np.float64] | float, mean: float, sigma: float) -> npt.NDArray[np.float64] | float:
     r"""Normalized gaussian.
 
     .. math::

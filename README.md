@@ -37,7 +37,7 @@ analysis](https://github.com/raymondEhlers/alice-jet-hadron) package. This packa
 how pachyderm can be used in various analysis tasks.
 
 For further information on the capabilities, see the
-[docuemntation](https://readthedocs.org/projects/pachyderm-heavy-ion/badge/?version=latest).
+[documentation](https://readthedocs.org/projects/pachyderm-heavy-ion/badge/?version=latest).
 
 ## Installation
 

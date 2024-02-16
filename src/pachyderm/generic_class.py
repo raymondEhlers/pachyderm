@@ -21,7 +21,7 @@ class EqualityMixin:
     # which wants to return Any. This is apparently the preferred approach.
     # See: https://github.com/python/mypy/issues/2783
     def __eq__(self: _T, other: Any) -> bool:
-        """ Check for equality of members. """
+        """Check for equality of members."""
         # Check identity to avoid needing to perform the (potentially costly) dict comparison.
         if self is other:
             return True

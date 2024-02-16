@@ -2,18 +2,18 @@
 # LHC18r: 2018 Pb--Pb data at 5.02 TeV.
 period: "lhc18r"
 parameters:
-    system: "PbPb"
-    year: 2018
-    file_types:
-        ESD:
-            search_path: "/alice/{data_type}/{year}/{period}/{run}/pass3"
-            filename: "root_archive.zip"
-        AOD:
-            # AOD Pass 3: /alice/data/2018/LHC18r/000297595/pass3/AOD252/AOD
-            search_path: "/alice/{data_type}/{year}/{period}/{run}/pass3/{file_type}{production_number}/{file_type}"
-            filename: "aod_archive.zip"
+  system: "PbPb"
+  year: 2018
+  file_types:
+    ESD:
+      search_path: "/alice/{data_type}/{year}/{period}/{run}/pass3"
+      filename: "root_archive.zip"
+    AOD:
+      # AOD Pass 3: /alice/data/2018/LHC18r/000297595/pass3/AOD252/AOD
+      search_path: "/alice/{data_type}/{year}/{period}/{run}/pass3/{file_type}{production_number}/{file_type}"
+      filename: "aod_archive.zip"
 selections:
-    n_files_per_selection: 2
-    file_type: AOD
-    production_number: 252
-    runs: [297595]
+  n_files_per_selection: 2
+  file_type: AOD
+  production_number: 252
+  runs: [297595]
