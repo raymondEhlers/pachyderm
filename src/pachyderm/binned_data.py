@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """ Functionality related to binned data.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
@@ -12,8 +11,9 @@ import logging
 import operator
 import typing
 import uuid
+from collections.abc import Mapping, Sequence
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import attrs
 import numpy as np
@@ -54,11 +54,16 @@ def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
     # We specify the dtype here just to be safe.
     return np.ravel(np.array(value, dtype=np.float64))
 
-@typing.overload
-def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int: ...
 
 @typing.overload
-def find_bin(bin_edges: npt.NDArray[Any], value: npt.NDArray[Any]) -> npt.NDArray[np.int64]: ...
+def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int:
+    ...
+
+
+@typing.overload
+def find_bin(bin_edges: npt.NDArray[Any], value: npt.NDArray[Any]) -> npt.NDArray[np.int64]:
+    ...
+
 
 def find_bin(bin_edges: npt.NDArray[Any], value: float | npt.NDArray[Any]) -> int | npt.NDArray[np.int64]:
     """Determine the index position where the value should be inserted.
@@ -205,7 +210,9 @@ class Axis:
                 _msg = f"Lower edge doesn't match rebin. index: {start}, value: {self.bin_edges[start]}, rebin: {bin_edges}"
                 raise ValueError(_msg)
             if stop is not None and bin_edges[-1] != self.bin_edges[stop]:
-                _msg = f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}"
+                _msg = (
+                    f"Upper edge doesn't match rebin. index: {stop}, value: {self.bin_edges[stop]}, rebin: {bin_edges}"
+                )
                 raise ValueError(_msg)
 
             # Validate that the new binning lies within the old binning
@@ -220,7 +227,7 @@ class Axis:
                 np.any(
                     # Check isclose for each value of bin_edges
                     np.isclose(bin_edges[:, np.newaxis], self.bin_edges),
-                    axis=1
+                    axis=1,
                 )
             ):
                 _msg = f"New bin edges ({bin_edges}) aren't a subset of the old binning ({self.bin_edges}). We can't/don't want to handle this..."
@@ -273,7 +280,9 @@ class Axis:
             YAML representation of the Axis object.
         """
         # We want to include a serialization version so we can do a schema evolution later if necessary
-        representation = representer.represent_mapping(f"!{cls.__name__}", {"bin_edges": obj.bin_edges, "serialization_version": 1})
+        representation = representer.represent_mapping(
+            f"!{cls.__name__}", {"bin_edges": obj.bin_edges, "serialization_version": 1}
+        )
 
         # Finally, return the represented object.
         return cast(
@@ -307,7 +316,7 @@ class Axis:
             raise ValueError(_msg)
 
 
-class AxesTuple(Tuple[Axis, ...]):
+class AxesTuple(tuple[Axis, ...]):
     @property
     def bin_edges(self) -> tuple[npt.NDArray[Any], ...]:
         return tuple(a.bin_edges for a in self)
@@ -365,11 +374,7 @@ class AxesTuple(Tuple[Axis, ...]):
         """
         # We want to include a serialization version so we can do a schema evolution later if necessary
         representation = representer.represent_mapping(
-            f"!{cls.__name__}",
-            {
-                "obj": list(obj),
-                "serialization_version": 1
-            }
+            f"!{cls.__name__}", {"obj": list(obj), "serialization_version": 1}
         )
 
         # Finally, return the represented object.
@@ -419,7 +424,7 @@ class AxesTuple(Tuple[Axis, ...]):
 
 
 def _axes_tuple_from_axes_sequence(
-    axes: Axis | Sequence[Axis] | npt.NDArray[Any] | Sequence[npt.NDArray[Any]]
+    axes: Axis | Sequence[Axis] | npt.NDArray[Any] | Sequence[npt.NDArray[Any]],
 ) -> AxesTuple:
     """Workaround for mypy issue in creating an AxesTuple from axes.
 
@@ -441,9 +446,7 @@ def _axes_shared_memory_check(instance: BinnedData, attribute_name: str, value: 
     for a_i, b_i in itertools.combinations(range(len(value)), 2):
         if np.may_share_memory(value[a_i].bin_edges, value[b_i].bin_edges):
             found_shared_memory = True
-            logger.warning(
-                f"Axis at index {a_i} shares memory with axis at index {b_i}. Copying axis {a_i}!"
-            )
+            logger.warning(f"Axis at index {a_i} shares memory with axis at index {b_i}. Copying axis {a_i}!")
             value[a_i] = value[a_i].copy()  # type: ignore[index]
 
     # If we found some shared memory, be certain that we save the modified object
@@ -480,12 +483,12 @@ def _shared_memory_check(instance: BinnedData, attribute_name: str, value: npt.N
     # Define this array for convenience in accessing the members. This way, we're less likely to miss
     # newly added members.
     arrays = {
-        k: v for k, v in attrs.asdict(instance, recurse=False).items() if not k.startswith("_") and k != "metadata" and k != "axes" and k != attribute_name
+        k: v
+        for k, v in attrs.asdict(instance, recurse=False).items()
+        if not k.startswith("_") and k != "metadata" and k != "axes" and k != attribute_name
     }
     # Extract the axes to check those arrays too
-    arrays.update({
-        f"axis_{i}": v.bin_edges for i, v in enumerate(instance.axes)
-    })
+    arrays.update({f"axis_{i}": v.bin_edges for i, v in enumerate(instance.axes)})
     # Ensure the members don't point to one another (which can cause issues when performing operations in place).
     # Check the other values.
     for other_name, other_value in arrays.items():
@@ -497,7 +500,7 @@ def _shared_memory_check(instance: BinnedData, attribute_name: str, value: npt.N
             setattr(instance, attribute_name, value.copy())
 
 
-def _shape_array_check(instance: BinnedData, attribute_name: str , value: npt.NDArray[Any]) -> None:
+def _shape_array_check(instance: BinnedData, attribute_name: str, value: npt.NDArray[Any]) -> None:
     """Ensure that the arrays are shaped the same as the shape expected from the axes."""
     # If we're passed a flattened array, reshape it to follow the shape of the axes.
     # NOTE: One must be a bit careful with this to ensure that the it is formatted as expected.
@@ -518,13 +521,16 @@ def _shape_array_check(instance: BinnedData, attribute_name: str , value: npt.ND
 @attrs.define(eq=False)
 class BinnedData:
     axes: AxesTuple = attrs.field(
-        converter=_axes_tuple_from_axes_sequence, validator=[_validate_axes],
+        converter=_axes_tuple_from_axes_sequence,
+        validator=[_validate_axes],
     )
     values: npt.NDArray[Any] = attrs.field(
-        converter=np.asarray, validator=[_validate_arrays],
+        converter=np.asarray,
+        validator=[_validate_arrays],
     )
     variances: npt.NDArray[Any] = attrs.field(
-        converter=np.asarray, validator=[_validate_arrays],
+        converter=np.asarray,
+        validator=[_validate_arrays],
     )
     metadata: dict[str, Any] = attrs.field(factory=dict)
 
@@ -565,7 +571,7 @@ class BinnedData:
                 "variances": obj.variances,
                 "metadata": obj.metadata,
                 "serialization_version": 1,
-            }
+            },
         )
 
         # Finally, return the represented object.
@@ -708,10 +714,10 @@ class BinnedData:
         """Handles ``a *= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
-            assert isinstance(other, (float, int, np.number, np.ndarray))
+            assert isinstance(other, float | int | np.number | np.ndarray)
             # Scale data by a scalar
             self.values *= other
-            self.variances *= other ** 2
+            self.variances *= other**2
         else:
             # Help out mypy...
             assert isinstance(other, type(self))
@@ -726,7 +732,7 @@ class BinnedData:
             # NOTE: We need to calculate the errors_squared first because the depend on the existing y values
             # Errors are from ROOT::TH1::Multiply(const TH1 *h1)
             # NOTE: This is just error propagation, simplified with a = b * c!
-            self.variances = self.variances * other.values ** 2 + other.variances * self.values ** 2
+            self.variances = self.variances * other.values**2 + other.variances * self.values**2
             self.values *= other.values
         return self
 
@@ -740,7 +746,7 @@ class BinnedData:
         """Handles ``a /= b``."""
         if np.isscalar(other) or isinstance(other, np.ndarray):
             # Help out mypy...
-            assert isinstance(other, (float, int, np.number, np.ndarray))
+            assert isinstance(other, float | int | np.number | np.ndarray)
             # Scale data by a scalar
             self *= 1.0 / other
         else:
@@ -758,8 +764,8 @@ class BinnedData:
             # NOTE: This is just error propagation, simplified with a = b / c!
             # NOTE: We need to calculate the variances first before setting values because the variances depend on
             #       the existing values
-            variances_numerator = self.variances * other.values ** 2 + other.variances * self.values ** 2
-            variances_denominator = other.values ** 4
+            variances_numerator = self.variances * other.values**2 + other.variances * self.values**2
+            variances_denominator = other.values**4
             # NOTE: We have to be a bit clever when we divide to avoid dividing by bins with 0 entries. The
             #       approach taken here basically replaces any divide by 0s with a 0 in the output hist.
             #       For more info, see: https://stackoverflow.com/a/37977222
@@ -785,7 +791,11 @@ class BinnedData:
         # NOTE: allclose can't handle the axes or the metadata dictionary, so we skip it here
         #       and check it explicitly below.
         keys_to_exclude = ["axes", "metadata"]
-        agreement = [np.allclose(getattr(self, a), getattr(other, a), equal_nan=True) for a in attributes if a not in keys_to_exclude]
+        agreement = [
+            np.allclose(getattr(self, a), getattr(other, a), equal_nan=True)
+            for a in attributes
+            if a not in keys_to_exclude
+        ]
         # Check axes
         axes_agree = self.axes == other.axes
         # Check metadata
@@ -879,7 +889,7 @@ class BinnedData:
         # Otherwise, we have to use the metadata.
         metadata = {}
         if np.allclose(y_errors_low, y_errors_high):
-            variances = y_errors_low ** 2
+            variances = y_errors_low**2
         else:
             variances = np.ones_like(y_errors_low)
             metadata["y_errors"] = {"low": y_errors_low, "high": y_errors_high}
@@ -975,7 +985,7 @@ class BinnedData:
         if hasattr(hist, "BuildOptions"):
             errors = np.array([hist.GetBinError(i) for i in range(1, hist.GetXaxis().GetNbins() + 1)])
             # We expected variances (errors squared)
-            variances = errors ** 2
+            variances = errors**2
         else:
             # Cross check. If they don't match, something odd has almost certainly occurred.
             # We use lambdas so we don't go beyond the length of the axis unless we're certain
@@ -1063,6 +1073,7 @@ class BinnedData:
         """
         try:
             import ROOT  # pyright: ignore [reportMissingImports]
+
             # NOTE: This is really important to avoid a deadlock (appears to be on taking the gil according to lldb).
             #       In principle, it's redundant after the first import, but calling anything on the ROOT module deadlocks
             #       it's really annoying for debugging! So we just always call it.
@@ -1095,7 +1106,7 @@ class BinnedData:
         #       then increment the y bin, and iterate over x again, etc. We cast the arrays this via
         #       via a transpose.
         i = 1
-        for value, error in zip(h.values.T.flatten(), h.errors.T.flatten()):
+        for value, error in zip(h.values.T.flatten(), h.errors.T.flatten(), strict=True):
             # Sanity check.
             if i >= h_ROOT.GetNcells():
                 _msg = "Indexing is wrong..."
@@ -1201,11 +1212,13 @@ class BinnedData:
         # Build up map from old binning to new binning
         old_to_new_index = find_bin(new_axis.bin_edges, self.axes[0].bin_centers)
         # Unneeded, but it can be helpful to make this into a true map for debugging purposes.
-        #old_to_new_index_helper = dict(zip(range(len(self.axes[0].bin_edges)), find_bin(new_axis.bin_edges, self.axes[0].bin_centers)))
+        # old_to_new_index_helper = dict(zip(range(len(self.axes[0].bin_edges)), find_bin(new_axis.bin_edges, self.axes[0].bin_centers)))
 
         # Select and rebin the values and variances.
         new_values = _apply_rebin(old_to_new_index=old_to_new_index, values=self.values, n_bins_new_axis=len(new_axis))
-        new_variances = _apply_rebin(old_to_new_index=old_to_new_index, values=self.variances, n_bins_new_axis=len(new_axis))
+        new_variances = _apply_rebin(
+            old_to_new_index=old_to_new_index, values=self.variances, n_bins_new_axis=len(new_axis)
+        )
 
         return type(self)(
             axes=[new_axis],
@@ -1215,7 +1228,9 @@ class BinnedData:
         )
 
 
-def _apply_rebin(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np.float64], n_bins_new_axis: int) -> npt.NDArray[np.float64]:
+def _apply_rebin(
+    old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np.float64], n_bins_new_axis: int
+) -> npt.NDArray[np.float64]:
     """Apply rebinning to a set of values based on how the indices should be mapped.
 
     Note:
@@ -1246,15 +1261,22 @@ def _apply_rebin(old_to_new_index: npt.NDArray[np.int64], values: npt.NDArray[np
 
     # Only use numba if available
     f = _sum_values_for_rebin_numba if _sum_values_for_rebin_numba is not None else _sum_values_for_rebin
-    return f(n_bins_new_axis=n_bins_new_axis, values=values,  # type: ignore[no-any-return]
-             run_starts=run_starts, run_values=run_values, run_lengths=run_lengths)
+    return f(
+        n_bins_new_axis=n_bins_new_axis,
+        values=values,  # type: ignore[no-any-return]
+        run_starts=run_starts,
+        run_values=run_values,
+        run_lengths=run_lengths,
+    )
 
 
-def _sum_values_for_rebin(n_bins_new_axis: int,
-                          values: npt.NDArray[np.float64],
-                          run_starts: npt.NDArray[np.float64],
-                          run_values: npt.NDArray[np.float64],
-                          run_lengths: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+def _sum_values_for_rebin(
+    n_bins_new_axis: int,
+    values: npt.NDArray[np.float64],
+    run_starts: npt.NDArray[np.float64],
+    run_values: npt.NDArray[np.float64],
+    run_lengths: npt.NDArray[np.float64],
+) -> npt.NDArray[np.float64]:
     """Implementation of summing up values for the rebinning
 
     This translates the values from the old binning to the new binning.
@@ -1278,7 +1300,7 @@ def _sum_values_for_rebin(n_bins_new_axis: int,
     output = np.zeros(n_bins_new_axis, dtype=values.dtype)
 
     # For each run length that is a valid
-    for run_start, v_index, run_length in zip(run_starts, run_values, run_lengths):
+    for run_start, v_index, run_length in zip(run_starts, run_values, run_lengths, strict=True):
         # Only sum up values which are valid indices for the output
         # If it's below 0, it's in the underflow. If it's >= to the number of new bins,
         # it's in the overflow. In either case, we ignore them.
@@ -1286,7 +1308,7 @@ def _sum_values_for_rebin(n_bins_new_axis: int,
             continue
         # Sum up all of the values where the new binning index is the same. All
         # of those values are supposed to go into the same bin
-        output[v_index] = np.sum(values[run_start:run_start + run_length])
+        output[v_index] = np.sum(values[run_start : run_start + run_length])
 
     return output
 
