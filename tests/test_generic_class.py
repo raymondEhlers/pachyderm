@@ -1,13 +1,12 @@
-#!/usr/bin/env python
-
 """ Tests for generic class properties.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import pytest
 
@@ -15,12 +14,13 @@ from pachyderm import generic_class
 
 logger = logging.getLogger(__name__)
 
-@pytest.fixture  # type: ignore
-def setup_equality_mixin() -> Tuple[Any, Any]:
-    """ Create a basic class for tests of the equality mixin. """
+
+@pytest.fixture()
+def setup_equality_mixin() -> tuple[Any, Any]:
+    """Create a basic class for tests of the equality mixin."""
 
     class EqualityMixinTestClass(generic_class.EqualityMixin):
-        def __init__(self, aNumber: float, aString: str, aList: List[Any], aDict: Dict[str, Any]):
+        def __init__(self, aNumber: float, aString: str, aList: list[Any], aDict: dict[str, Any]):
             self.aNumber = aNumber
             self.aString = aString
             self.aList = aList
@@ -38,16 +38,17 @@ def setup_equality_mixin() -> Tuple[Any, Any]:
 
     return (test_class, expected_class)
 
-def test_equality_mixin(logging_mixin: Any, setup_equality_mixin: Any) -> None:
-    """ Test the equality mixin with the same classes. """
+
+def test_equality_mixin(setup_equality_mixin: Any) -> None:
+    """Test the equality mixin with the same classes."""
     test_class, expected_class = setup_equality_mixin
 
     # Check basic assertions
-    assert test_class is test_class
-    assert test_class == test_class
+    assert test_class is test_class  # noqa: PLR0124
+    assert test_class == test_class  # noqa: PLR0124
     # Check against an identical instance of the same class.
     assert test_class == expected_class
-    assert not test_class != expected_class
+    assert not test_class != expected_class  # noqa: SIM202
 
     # Modify the test class to make the classes unequal.
     # (We will work through a simple shift of the elements one member forward).
@@ -55,19 +56,19 @@ def test_equality_mixin(logging_mixin: Any, setup_equality_mixin: Any) -> None:
     # way to do it, so this will be fine)
     test_class.aNumber = expected_class.aDict
     assert test_class != expected_class
-    assert not test_class == expected_class
+    assert not test_class == expected_class  # noqa: SIM201
 
     test_class.aString = expected_class.aNumber
     assert test_class != expected_class
-    assert not test_class == expected_class
+    assert not test_class == expected_class  # noqa: SIM201
 
     test_class.aList = expected_class.aString
     assert test_class != expected_class
-    assert not test_class == expected_class
+    assert not test_class == expected_class  # noqa: SIM201
 
     test_class.aDict = expected_class.aList
     assert test_class != expected_class
-    assert not test_class == expected_class
+    assert not test_class == expected_class  # noqa: SIM201
 
     # Restore the changes so they can be used later (just to be certain)
     test_class.aNumber = expected_class.aNumber
@@ -75,16 +76,17 @@ def test_equality_mixin(logging_mixin: Any, setup_equality_mixin: Any) -> None:
     test_class.aList = expected_class.aList
     test_class.aDict = expected_class.aDict
 
-def test_equality_mixin_against_other_classes(logging_mixin: Any, setup_equality_mixin: Any) -> None:
-    """ Test the quality mixin against other classes, for which comparisons are not implemented. """
+
+def test_equality_mixin_against_other_classes(setup_equality_mixin: Any) -> None:
+    """Test the quality mixin against other classes, for which comparisons are not implemented."""
     test_class, expected_class = setup_equality_mixin
 
     # Create a dataclass object to compare against.
     TestClass = dataclasses.make_dataclass("TestClass", ["hello", "world"])
-    another_object = TestClass(hello = "hello", world = "world")
+    another_object = TestClass(hello="hello", world="world")
 
     # Can't catch NotImplemented, as it's a special type of raised value
     # that isn't handled the same way as other raised exceptions.
     # Instead, we just perform the assertions to cover tests against different objects.
-    assert not test_class == another_object
+    assert not test_class == another_object  # noqa: SIM201
     assert test_class != another_object

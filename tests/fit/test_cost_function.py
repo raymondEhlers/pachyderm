@@ -4,12 +4,14 @@
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import logging
+from typing import Any, Union
+
 import numpy as np
 import pytest
 import scipy.integrate
-from typing import Any, Dict, Tuple, Union
 
 import pachyderm.fit.base as fit_base
 import pachyderm.fit.integration as fit_integration
@@ -17,22 +19,21 @@ from pachyderm import histogram
 from pachyderm.fit import cost_function
 from pachyderm.typing_helpers import Hist
 
-
 logger = logging.getLogger(__name__)
 
 
 def func_1(x: float, a: float, b: float) -> float:
-    """ Test function. """
+    """Test function."""
     return x + a + b
 
 
 def func_2(x: float, c: float, d: float) -> float:
-    """ Test function 2. """
+    """Test function 2."""
     return x + c + d
 
 
 def test_integration(logging_mixin: Any) -> None:
-    """ Test our implementation of the Simpson 3/8 rule, along with some other integration methods. """
+    """Test our implementation of the Simpson 3/8 rule, along with some other integration methods."""
     # Setup
     f = func_1
     h = histogram.Histogram1D(bin_edges=np.array([0, 1, 2]), y=np.array([0, 1]), errors_squared=np.array([1, 2]))
@@ -66,10 +67,12 @@ def test_integration(logging_mixin: Any) -> None:
 
 
 def test_chi_squared(logging_mixin: Any) -> None:
-    """ Test the chi squared calculation. """
+    """Test the chi squared calculation."""
     # Setup
     h = histogram.Histogram1D(
-        bin_edges=np.array(np.arange(-0.5, 5.5)), y=np.array(np.ones(5)), errors_squared=np.ones(5),
+        bin_edges=np.array(np.arange(-0.5, 5.5)),
+        y=np.array(np.ones(5)),
+        errors_squared=np.ones(5),
     )
     chi_squared = cost_function.ChiSquared(f=func_1, data=h)
 
@@ -86,7 +89,7 @@ def test_chi_squared(logging_mixin: Any) -> None:
 # Testing cost functions against ROOT
 #####################################
 def parabola(x: float, scale: float) -> float:
-    """ Parabolic function.
+    """Parabolic function.
 
     Note:
         It returns a float, but numba can't handle cast. So we return ``Any`` and then cast the result.
@@ -100,9 +103,9 @@ def parabola(x: float, scale: float) -> float:
     return scale * np.square(x)  # type: ignore
 
 
-@pytest.fixture  # type: ignore
-def setup_parabola(logging_mixin: Any) -> Tuple[histogram.Histogram1D, Hist]:
-    """ Setup a parabola for tests of fitting procedures. """
+@pytest.fixture()  # type: ignore
+def setup_parabola(logging_mixin: Any) -> tuple[histogram.Histogram1D, Hist]:
+    """Setup a parabola for tests of fitting procedures."""
     ROOT = pytest.importorskip("ROOT")
 
     # Specify a seed so the test is reproducible.
@@ -148,11 +151,11 @@ def setup_parabola(logging_mixin: Any) -> Tuple[histogram.Histogram1D, Hist]:
 def test_binned_cost_functions_against_ROOT(
     logging_mixin: Any, cost_func: Any, fit_option: Any, setup_parabola: Any
 ) -> None:
-    """ Test the binned cost function implementations against ROOT. """
+    """Test the binned cost function implementations against ROOT."""
     # Setup
     h, h_ROOT = setup_parabola
     ROOT = pytest.importorskip("ROOT")
-    minuit_args: Dict[str, Union[float, Tuple[float, float]]] = {
+    minuit_args: dict[str, Union[float, tuple[float, float]]] = {
         "scale": 1,
         "error_scale": 0.1,
         "limit_scale": (-1000, 1000),
@@ -170,7 +173,7 @@ def test_binned_cost_functions_against_ROOT(
     logger.debug(f"ROOT: chi_2: {fit_result_ROOT.Chi2()}, ndf: {fit_result_ROOT.Ndf()}")
 
     # Fit with the defined cost function
-    args: Dict[str, Any] = {"f": parabola}
+    args: dict[str, Any] = {"f": parabola}
     if issubclass(cost_func, cost_function.CostFunctionBase):
         args.update({"data": h})
         # Test for weighted likelihood
@@ -212,7 +215,11 @@ def test_binned_cost_functions_against_ROOT(
     assert np.isclose(fit_result.nDOF, fit_result_ROOT.Ndf())
     # Check the parameters
     # Value
-    assert np.isclose(fit_result.values_at_minimum["scale"], fit_result_ROOT.Parameter(0), rtol=0.05,)
+    assert np.isclose(
+        fit_result.values_at_minimum["scale"],
+        fit_result_ROOT.Parameter(0),
+        rtol=0.05,
+    )
     # Error
     assert np.isclose(fit_result.errors_on_parameters["scale"], fit_result_ROOT.ParError(0), rtol=0.005)
     # Covariance matrix
@@ -254,11 +261,11 @@ def test_binned_cost_functions_against_ROOT(
 ##################
 
 
-@pytest.fixture  # type: ignore
+@pytest.fixture()  # type: ignore
 def setup_simultaneous_fit_data(
     logging_mixin: Any, setup_parabola: Any
-) -> Tuple[histogram.Histogram1D, histogram.Histogram1D, Hist, Hist]:
-    """ Setup the data for tests of a simultaneous fit. """
+) -> tuple[histogram.Histogram1D, histogram.Histogram1D, Hist, Hist]:
+    """Setup the data for tests of a simultaneous fit."""
     h, h_ROOT = setup_parabola
 
     # Create a new parabola that's shifted up by two.
@@ -271,7 +278,7 @@ def setup_simultaneous_fit_data(
 
 
 def test_simultaneous_fit_basic(logging_mixin: Any, setup_simultaneous_fit_data: Any) -> None:
-    """ Test basic Simultaneous fit functionality. """
+    """Test basic Simultaneous fit functionality."""
     # Setup
     h, h_shifted, _, _ = setup_simultaneous_fit_data
 
@@ -288,7 +295,7 @@ def test_simultaneous_fit_basic(logging_mixin: Any, setup_simultaneous_fit_data:
 
 
 def test_nested_simultaneous_fit_objects(logging_mixin: Any, setup_simultaneous_fit_data: Any) -> None:
-    """ Test for unraveling nested simultaneous fit objects. """
+    """Test for unraveling nested simultaneous fit objects."""
     # Setup
     h, h_shifted, _, _ = setup_simultaneous_fit_data
 
@@ -308,12 +315,12 @@ def test_nested_simultaneous_fit_objects(logging_mixin: Any, setup_simultaneous_
 
 
 def test_simultaneous_fit(logging_mixin: Any, setup_simultaneous_fit_data: Any) -> None:
-    """ Test Simultaneous Fit functionality vs probfit with an integration test. """
+    """Test Simultaneous Fit functionality vs probfit with an integration test."""
     # Setup
     h, h_shifted, _, _ = setup_simultaneous_fit_data
     cost_func1 = cost_function.ChiSquared(parabola, data=h)
     cost_func2 = cost_function.ChiSquared(parabola, data=h_shifted)
-    minuit_args: Dict[str, Union[float, Tuple[float, float]]] = {
+    minuit_args: dict[str, Union[float, tuple[float, float]]] = {
         "scale": 1.5,
         "error_scale": 0.15,
         "limit_scale": (-1000, 1000),

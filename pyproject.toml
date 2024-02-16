@@ -167,8 +167,8 @@ ignore = [
   "PLC0414",  # Messes with the re-export of imports needed from mypy
 ]
 unfixable = [
-    "T20",    # Removes print statements
-    "F841",   # Removes unused variables
+  "T20",      # Removes print statements
+  "F841",     # Removes unused variables
 ]
 
 [tool.ruff.lint.mccabe]

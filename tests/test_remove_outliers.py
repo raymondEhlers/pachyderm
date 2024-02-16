@@ -4,6 +4,7 @@
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
 import ctypes
 import logging
@@ -17,8 +18,9 @@ from pachyderm import projectors, remove_outliers
 # Setup logger
 logger = logging.getLogger(__name__)
 
+
 def test_mean_and_median(logging_mixin, test_root_hists):
-    """ Test calculating the mean and median of a histogram. """
+    """Test calculating the mean and median of a histogram."""
     ROOT = pytest.importorskip("ROOT")
     hist = test_root_hists.hist1D
     for i in range(1, 11):
@@ -37,19 +39,24 @@ def test_mean_and_median(logging_mixin, test_root_hists):
     assert np.isclose(mean, expected_mean)
     assert np.isclose(median, expected_median)
 
-@pytest.mark.parametrize("moving_average, expected_cut_index", [
-    # The expected cut axis here is where the array changes to 0, and then shifted
-    # to the index that corresponds to the moving average being calculated from the middle
-    # as opposed to only looking forward. See the function docs.
-    # The moving average drops below at 6, so the cut index is: 6 + 4 // 2 = 8
-    (np.array([2, 2, 2, 2, 2, 2, 0, 0, 0, 0]), 8),
-    # Have a non-zero entry early on, then no entries, then back below.
-    # It should ignore the early drop, and the moving average drops below
-    # at 12, so the cut index is: 12 + 4 // 2 = 14
-    (np.array([2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0]), 14),
-], ids = ["Constant until below", "Early bump above threshold"])
+
+@pytest.mark.parametrize(
+    "moving_average, expected_cut_index",
+    [
+        # The expected cut axis here is where the array changes to 0, and then shifted
+        # to the index that corresponds to the moving average being calculated from the middle
+        # as opposed to only looking forward. See the function docs.
+        # The moving average drops below at 6, so the cut index is: 6 + 4 // 2 = 8
+        (np.array([2, 2, 2, 2, 2, 2, 0, 0, 0, 0]), 8),
+        # Have a non-zero entry early on, then no entries, then back below.
+        # It should ignore the early drop, and the moving average drops below
+        # at 12, so the cut index is: 12 + 4 // 2 = 14
+        (np.array([2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0, 0, 0, 0]), 14),
+    ],
+    ids=["Constant until below", "Early bump above threshold"],
+)
 def test_outliers_determination_from_moving_average(logging_mixin, moving_average, expected_cut_index):
-    """ Test outliers determination for a pathological moving average.
+    """Test outliers determination for a pathological moving average.
 
     Note:
         Remember that this test uses values that are the moving averages directly - not
@@ -60,16 +67,17 @@ def test_outliers_determination_from_moving_average(logging_mixin, moving_averag
 
     # Determine the outliers.
     cut_index = remove_outliers._determine_outliers_for_moving_average(
-        moving_average = moving_average,
-        moving_average_threshold = 1.0,
-        number_of_values_to_search_ahead = 5,
-        limit_of_number_of_values_below_threshold = limit_of_number_of_values_below_threshold
+        moving_average=moving_average,
+        moving_average_threshold=1.0,
+        number_of_values_to_search_ahead=5,
+        limit_of_number_of_values_below_threshold=limit_of_number_of_values_below_threshold,
     )
 
     # Check the final result.
     assert cut_index == expected_cut_index
 
-@pytest.fixture(params = ["2D", "3D"])
+
+@pytest.fixture(params=["2D", "3D"])
 def setup_outliers_hist(request, logging_mixin):
     ROOT = pytest.importorskip("ROOT")
 
@@ -92,7 +100,7 @@ def setup_outliers_hist(request, logging_mixin):
 
     # Fill function as an power law.
     def f(x, y):
-        """ Power function to the power of -1.0
+        """Power function to the power of -1.0
 
         Normalization selected such that x = 50 is equal to 1.
 
@@ -113,7 +121,7 @@ def setup_outliers_hist(request, logging_mixin):
         z = ctypes.c_int(0)
         hist.GetBinXYZ(i, x, y, z)
 
-        #logger.debug(f"y: {y.value}, f: {f(x.value, y.value)}")
+        # logger.debug(f"y: {y.value}, f: {f(x.value, y.value)}")
 
         # Determine the appropriate values for filling.
         base_args = [x.value, y.value]
@@ -134,15 +142,20 @@ def setup_outliers_hist(request, logging_mixin):
     # Cleanup
     del hist
 
+
 class TestOutliersRemovalIntegration:
     ROOT = pytest.importorskip("ROOT")
 
-    @pytest.mark.parametrize("remove_entries", [
-        False,
-        True,
-    ], ids = ["Do not remove entry", "Remove early entries"])
+    @pytest.mark.parametrize(
+        "remove_entries",
+        [
+            False,
+            True,
+        ],
+        ids=["Do not remove entry", "Remove early entries"],
+    )
     def test_remove_outliers(self, logging_mixin, setup_outliers_hist, remove_entries):
-        """ Integration test for removing outliers.
+        """Integration test for removing outliers.
 
         We check a 2D and a 3D hist, both projecting to the y axis (arbitrarily selected).
         """
@@ -162,7 +175,9 @@ class TestOutliersRemovalIntegration:
 
         # Setup and run the manager.
         outliers_manager = remove_outliers.OutliersRemovalManager()
-        outliers_start_index = outliers_manager.run(outliers_removal_axis = projectors.TH1AxisType.y_axis, hist = input_hist)
+        outliers_start_index = outliers_manager.run(
+            outliers_removal_axis=projectors.TH1AxisType.y_axis, hist=input_hist
+        )
 
         # Now, check if the input_hist has been modified in place.
         # Since the function that we use is power law that isn't symmetric around a bin, it's
@@ -174,7 +189,7 @@ class TestOutliersRemovalIntegration:
         x = ctypes.c_int(0)
         y = ctypes.c_int(0)
         z = ctypes.c_int(0)
-        for index in range(0, initial_hist.GetNcells()):
+        for index in range(initial_hist.GetNcells()):
             # Get the bin x, y, z from the global bin
             initial_hist.GetBinXYZ(index, x, y, z)
 

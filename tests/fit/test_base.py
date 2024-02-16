@@ -4,8 +4,9 @@
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 import iminuit
 import numpy as np
@@ -13,8 +14,9 @@ import pytest
 
 import pachyderm.fit.base as fit_base
 
+
 def test_func_code(logging_mixin: Any, simple_test_functions: Any) -> None:
-    """ Test creating function codes with FuncCode. """
+    """Test creating function codes with FuncCode."""
     # Setup
     func_1, func_2 = simple_test_functions
 
@@ -27,26 +29,42 @@ def test_func_code(logging_mixin: Any, simple_test_functions: Any) -> None:
     func_code_2 = fit_base.FuncCode.from_function(func_1)
     assert func_code == func_code_2
 
-@pytest.mark.parametrize("function_list_names, expected_result, expected_argument_positions", [
-    ([1, 2], ["x", "a", "b", "c", "d"], [[0, 1, 2], [0, 3, 4]]),
-    ([2, 1], ["x", "c", "d", "a", "b"], [[0, 1, 2], [0, 3, 4]]),
-], ids = ["1, 2", "2, 1"])
-def test_merge_func_code(logging_mixin: Any, simple_test_functions: Any,
-                         function_list_names: List[int], expected_result: List[str],
-                         expected_argument_positions: List[List[int]]) -> None:
-    """ Test merging function codes for a list of functions. """
+
+@pytest.mark.parametrize(
+    "function_list_names, expected_result, expected_argument_positions",
+    [
+        ([1, 2], ["x", "a", "b", "c", "d"], [[0, 1, 2], [0, 3, 4]]),
+        ([2, 1], ["x", "c", "d", "a", "b"], [[0, 1, 2], [0, 3, 4]]),
+    ],
+    ids=["1, 2", "2, 1"],
+)
+def test_merge_func_code(
+    logging_mixin: Any,
+    simple_test_functions: Any,
+    function_list_names: list[int],
+    expected_result: list[str],
+    expected_argument_positions: list[list[int]],
+) -> None:
+    """Test merging function codes for a list of functions."""
     funcs = simple_test_functions
     function_list = [funcs[f_label - 1] for f_label in function_list_names]
     result, argument_positions = fit_base.merge_func_codes(function_list)
     assert result == expected_result
     assert argument_positions == expected_argument_positions
 
-@pytest.mark.parametrize("function_list_names", [
-    (1, 2),
-    (2, 1),
-], ids = ["1, 2", "2, 1"])
-def test_merge_func_code_against_probfit(logging_mixin: Any, simple_test_functions: Any, function_list_names: List[int]) -> None:
-    """ Test merging function codes against probfit. """
+
+@pytest.mark.parametrize(
+    "function_list_names",
+    [
+        (1, 2),
+        (2, 1),
+    ],
+    ids=["1, 2", "2, 1"],
+)
+def test_merge_func_code_against_probfit(
+    logging_mixin: Any, simple_test_functions: Any, function_list_names: list[int]
+) -> None:
+    """Test merging function codes against probfit."""
     # Setup
     funcs = simple_test_functions
     function_list = tuple([funcs[f_label - 1] for f_label in function_list_names])
