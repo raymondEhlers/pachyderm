@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import ctypes
 import logging
+import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -248,6 +249,9 @@ def setup_histogram_conversion() -> tuple[str, str, histogram.Histogram1D]:
         errors_squared=np.array([0, 0, 0, 4, 0, 0, 0, 0, 3, 0]),
     )
 
+    # NOTE: If we put UUIDs in the name and store the hist, we won't know how to retrieve it later.
+    #       Since we're writing to a file, I think we should be safe to use the same name since
+    #       they will be stored in different TDirectories.
     hist_name = "rootHist"
     p = Path(__file__).resolve().parent / "testFiles"
     filename = p / "convertHist.root"
@@ -693,7 +697,8 @@ class HistInfo:
         """
         ROOT = pytest.importorskip("ROOT")
 
-        hist = ROOT.TH1F("tempHist", "tempHist", len(bin_edges) - 1, bin_edges.astype(np.float64))
+        tag = uuid.uuid4()
+        hist = ROOT.TH1F(f"tempHist_{tag}", f"tempHist_{tag}", len(bin_edges) - 1, bin_edges.astype(np.float64))
         hist.Sumw2()
 
         # Exclude under- and overflow
@@ -1123,7 +1128,8 @@ class TestIntegrateHistogram1D:
         bins = np.array([1, 2, 3, 4, 6], dtype=np.float64)
         values = np.array([5, 6, 7, 8])
 
-        h_root = ROOT.TH1F("test", "test", 4, bins)
+        tag = uuid.uuid4()
+        h_root = ROOT.TH1F(f"test_{tag}", f"test_{tag}", 4, bins)
         h_root.Sumw2()
         for b, i in zip(bins, values, strict=False):
             for _ in range(i):

@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from typing import Any
 
 import numpy as np
@@ -109,7 +110,8 @@ def setup_parabola() -> tuple[histogram.Histogram1D, Hist]:  # pyright: ignore[r
     # Specify a seed so the test is reproducible.
     rng = np.random.default_rng(12345)
 
-    h_ROOT = ROOT.TH1F("test", "test", 42, -10.5, 10.5)
+    tag = uuid.uuid4()
+    h_ROOT = ROOT.TH1F(f"test_{tag}", f"test_{tag}", 42, -10.5, 10.5)
     h_ROOT.Sumw2()
     for x in np.linspace(-10.25, 10.25, 42):
         # Ensure that the bin at 0 is not precisely 0
@@ -162,7 +164,7 @@ def test_binned_cost_functions_against_ROOT(cost_func: Any, fit_option: Any, set
         cost_func = probfit.Chi2Regression
 
     # Fit with ROOT
-    fit_ROOT = ROOT.TF1("parabola", "[0] * TMath::Power(x, 2)", -10.5, 10.5)
+    fit_ROOT = ROOT.TF1("parabola", "[0] * TMath::Power(x, 2) + 1", -10.5, 10.5)
     # Expect it to be around 1.
     fit_ROOT.SetParameter(0, minuit_args["scale"])
     fit_result_ROOT = h_ROOT.Fit(fit_ROOT, fit_option + "0")

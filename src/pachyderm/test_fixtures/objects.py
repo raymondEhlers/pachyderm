@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -35,12 +36,17 @@ def test_root_hists() -> Any:
         hist3D: ROOT.TH3  # type: ignore[name-defined]
 
     # Define the hist to use for testing
-    hist = ROOT.TH1F("test", "test", 10, 0, 1)
+
+    tag = uuid.uuid4()
+    hist = ROOT.TH1F(f"test_{tag}", f"test_{tag}", 10, 0, 1)
     hist.Fill(0.1)
 
-    hist2D = ROOT.TH2F("test2", "test2", 10, 0, 1, 10, 0, 20)
+    tag = uuid.uuid4()
+    hist2D = ROOT.TH2F(f"test2_{tag}", f"test2_{tag}", 10, 0, 1, 10, 0, 20)
     hist2D.Fill(0.1, 1)
-    hist3D = ROOT.TH3F("test3", "test3", 10, 0, 1, 10, 0, 20, 10, 0, 100)
+
+    tag = uuid.uuid4()
+    hist3D = ROOT.TH3F(f"test3_{tag}", f"test3_{tag}", 10, 0, 1, 10, 0, 20, 10, 0, 100)
     hist3D.Fill(0.1, 1, 10)
 
     return RootHists(hist1D=hist, hist2D=hist2D, hist3D=hist3D)
