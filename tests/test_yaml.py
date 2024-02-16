@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Tests for the YAML module.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
@@ -31,10 +29,10 @@ def dump_and_load_yaml(yml: yaml.ruamel.yaml.YAML, input_value: list[Any]) -> An
         f.seek(0)
         result = yml.load(f)
 
-    return result
+    return result  # noqa: RET504
 
 
-def test_enum_with_yaml(logging_mixin: Any) -> None:
+def test_enum_with_yaml() -> None:
     """Test closure of reading and writing enum values to YAML."""
 
     # Setup
@@ -46,7 +44,7 @@ def test_enum_with_yaml(logging_mixin: Any) -> None:
             return str(self.name)
 
         to_yaml = classmethod(yaml.enum_to_yaml)
-        from_yaml = classmethod(yaml.enum_from_yaml)
+        from_yaml: Any = classmethod(yaml.enum_from_yaml)
 
     yml = yaml.yaml(classes_to_register=[TestEnum])
     input_value = TestEnum.a
@@ -57,7 +55,7 @@ def test_enum_with_yaml(logging_mixin: Any) -> None:
     assert result == [input_value]
 
 
-def test_numpy(logging_mixin: Any) -> None:
+def test_numpy() -> None:
     """Test reading and writing numpy to YAML."""
     # Setup
     yml = yaml.yaml()
@@ -70,7 +68,7 @@ def test_numpy(logging_mixin: Any) -> None:
     assert np.allclose(test_array, result)
 
 
-def test_hand_written_numpy(logging_mixin: Any) -> None:
+def test_hand_written_numpy() -> None:
     """Test constructing a numpy array from a hand written array.
 
     This is in contrast to machine written arrays, which will be encoded
@@ -95,7 +93,7 @@ x: !numpy_array {test_array.tolist()}
     assert np.allclose(result["x"], test_array)
 
 
-def test_numpy_float(logging_mixin: Any) -> None:
+def test_numpy_float() -> None:
     """Test reading and writing numpy floats to YAML."""
     # Setup
     yml = yaml.yaml()
@@ -108,7 +106,7 @@ def test_numpy_float(logging_mixin: Any) -> None:
     assert np.isclose(test_value, result)
 
 
-def test_hand_written_numpy_float(logging_mixin: Any) -> None:
+def test_hand_written_numpy_float() -> None:
     """Test constructing a numpy array from a hand written array.
 
     This is in contrast to machine written arrays, which will be encoded
@@ -133,7 +131,7 @@ x: !numpy_float64 {test_value}
     assert np.isclose(result["x"], test_value)
 
 
-def test_module_registration(logging_mixin: Any, mocker: Any) -> None:
+def test_module_registration(mocker: Any) -> None:
     """Test registering the classes in a module."""
 
     # Setup

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Objects related fixtures to aid testing.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@yale.edu>, Yale University
@@ -14,7 +12,7 @@ import numpy as np
 import pytest
 
 
-@pytest.fixture()  # type: ignore
+@pytest.fixture()
 def test_root_hists() -> Any:
     """Create minimal TH*F hists in 1D, 2D, and 3D. Each has been filled once.
 
@@ -32,9 +30,9 @@ def test_root_hists() -> Any:
         Just for convenience.
         """
 
-        hist1D: ROOT.TH1
-        hist2D: ROOT.TH2
-        hist3D: ROOT.TH3
+        hist1D: ROOT.TH1  # type: ignore[name-defined]
+        hist2D: ROOT.TH2  # type: ignore[name-defined]
+        hist3D: ROOT.TH3  # type: ignore[name-defined]
 
     # Define the hist to use for testing
     hist = ROOT.TH1F("test", "test", 10, 0, 1)
@@ -48,7 +46,7 @@ def test_root_hists() -> Any:
     return RootHists(hist1D=hist, hist2D=hist2D, hist3D=hist3D)
 
 
-@pytest.fixture()  # type: ignore
+@pytest.fixture()
 def setup_non_uniform_binning() -> Any:
     """Test a ROOT histogram with non-uniform binning.
 
@@ -66,7 +64,7 @@ def setup_non_uniform_binning() -> Any:
     return hist
 
 
-@pytest.fixture()  # type: ignore
+@pytest.fixture()
 def test_sparse() -> Any:
     """Create a THnSparseF for testing.
 
@@ -121,7 +119,7 @@ def test_sparse() -> Any:
     return (sparse, fill_values)
 
 
-@pytest.fixture()  # type: ignore
+@pytest.fixture()
 def simple_test_functions() -> tuple[Callable[[float, float, float], float], Callable[[float, float, float], float]]:
     """Define simple test functions for use in tests.
 

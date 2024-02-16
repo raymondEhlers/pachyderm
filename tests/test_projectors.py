@@ -770,7 +770,7 @@ class TestProjectorsWithRoot:
             ([hist_axis_ranges_without_entries.z_axis, hist_axis_ranges.x_axis], False),
             ([hist_axis_ranges_without_entries.z_axis, hist_axis_ranges_without_entries.x_axis], False),
         ],
-        ids=["PA with entries", "PA without entries due to x", "PA without entires due to z", "PA without entries"],
+        ids=["PA with entries", "PA without entries due to x", "PA without entries due to z", "PA without entries"],
     )
     def test_TH3_to_TH2_projection(
         self,

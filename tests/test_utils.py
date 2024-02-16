@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Tests for the utilities module.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
@@ -20,10 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize(
-    "inputs, expected",
+    ("inputs", "expected"),
     [
         (
-            (3, np.array([1, 2, 3, 4, 5, 4, 3, 2, 1])),  # type: ignore
+            (3, np.array([1, 2, 3, 4, 5, 4, 3, 2, 1])),
             np.array([6, 9, 12, 13, 12, 9, 6]),
         ),
         ((4, np.array([1, 2, 3, 4, 5, 4, 3, 2, 1])), np.array([10, 14, 16, 16, 14, 10])),
@@ -32,7 +30,7 @@ logger = logging.getLogger(__name__)
     ],
     ids=["n = 3 triangular values", "n = 4 triangular values", "n = 3 increasing values", "n = 3 decreasing values"],
 )
-def test_moving_average(logging_mixin, inputs, expected):
+def test_moving_average(inputs, expected):
     """Test the moving average calculation."""
     (n, arr) = inputs
     expected = expected / n
@@ -40,14 +38,14 @@ def test_moving_average(logging_mixin, inputs, expected):
 
 
 @pytest.mark.parametrize(
-    "path, expected",
+    ("path", "expected"),
     [
-        ("standard_attr", "standard_attr_value"),  # type: ignore
+        ("standard_attr", "standard_attr_value"),
         ("attr1.attr3.my_attr", "recursive_attr_value"),
     ],
     ids=["Standard attribute", "Recursive attribute"],
 )
-def test_recursive_getattr(logging_mixin, mocker, path, expected):
+def test_recursive_getattr(mocker, path, expected):
     """Tests for recursive getattr."""
     # Setup mock objects from which we will recursively grab attributes
     mock_obj1 = mocker.MagicMock(spec=["standard_attr", "attr1"])
@@ -64,13 +62,13 @@ def test_recursive_getattr(logging_mixin, mocker, path, expected):
     assert expected == utils.recursive_getattr(obj, path)
 
 
-def test_recursive_getattr_default_value(logging_mixin: Any, mocker: Any) -> None:
+def test_recursive_getattr_default_value(mocker: Any) -> None:
     """Test for retrieving a default value with getattr."""
     obj = mocker.MagicMock(spec=["sole_attr"])
     assert utils.recursive_getattr(obj, "nonexistent_attr", "default_value") == "default_value"
 
 
-def test_recursive_getattr_fail(logging_mixin: Any, mocker: Any) -> None:
+def test_recursive_getattr_fail(mocker: Any) -> None:
     """Test for failure of recursive getattr.
 
     It will fail the same was as the standard getattr.
@@ -82,11 +80,11 @@ def test_recursive_getattr_fail(logging_mixin: Any, mocker: Any) -> None:
     assert "nonexistent_attr" in exception_info.value.args[0]
 
 
-@pytest.fixture()  # type: ignore
-def setup_recursive_setattr(logging_mixin: Any) -> tuple[Any, str]:
+@pytest.fixture()
+def setup_recursive_setattr() -> tuple[Any, str]:
     """Setup an object for testing the recursive setattr."""
 
-    # We don't mock the objects because I'm not entirely sure how mock wll interact with setattr.
+    # We don't mock the objects because I'm not entirely sure how mock will interact with setattr.
     @dataclass
     class SecondLevel:
         attribute2: Any
@@ -125,8 +123,8 @@ def test_recursive_setattr_fail(setup_recursive_setattr: Any) -> None:
     assert "random" in exception_info.value.args[0]
 
 
-@pytest.fixture()  # type: ignore
-def setup_recursive_getitem(logging_mixin: Any) -> tuple[dict[str, dict[str, str]], list[str], str]:
+@pytest.fixture()
+def setup_recursive_getitem() -> tuple[dict[str, dict[str, str]], list[str], str]:
     """Setup a test dict for use with recursive_getitem."""
     expected = "hello"
     keys = ["a", "b"]

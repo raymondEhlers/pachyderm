@@ -20,21 +20,21 @@ def setup_equality_mixin() -> tuple[Any, Any]:
     """Create a basic class for tests of the equality mixin."""
 
     class EqualityMixinTestClass(generic_class.EqualityMixin):
-        def __init__(self, aNumber: float, aString: str, aList: list[Any], aDict: dict[str, Any]):
-            self.aNumber = aNumber
-            self.aString = aString
-            self.aList = aList
-            self.aDict = aDict
+        def __init__(self, a_number: float, a_string: str, a_list: list[Any], a_dict: dict[str, Any]):
+            self.a_number = a_number
+            self.a_string = a_string
+            self.a_list = a_list
+            self.a_dict = a_dict
 
     # Define some test values. We want them to be complicated enough
     # that we can test comparison of all of the relevant types.
-    aNumber = 10.3
-    aString = "hello world"
-    aList = [1, 2, 3, {"hello": "world"}]
-    aDict = {"string": "string", "list": [1, 2, 3], "dict": {"hello": "world"}}
+    a_number = 10.3
+    a_string = "hello world"
+    a_list = [1, 2, 3, {"hello": "world"}]
+    a_dict = {"string": "string", "list": [1, 2, 3], "dict": {"hello": "world"}}
 
-    test_class = EqualityMixinTestClass(aNumber, aString, aList, aDict)
-    expected_class = EqualityMixinTestClass(aNumber, aString, aList, aDict)
+    test_class = EqualityMixinTestClass(a_number, a_string, a_list, a_dict)
+    expected_class = EqualityMixinTestClass(a_number, a_string, a_list, a_dict)
 
     return (test_class, expected_class)
 
@@ -54,27 +54,27 @@ def test_equality_mixin(setup_equality_mixin: Any) -> None:
     # (We will work through a simple shift of the elements one member forward).
     # (I would do this with a parameterization, but I don't see any straightforward
     # way to do it, so this will be fine)
-    test_class.aNumber = expected_class.aDict
+    test_class.a_number = expected_class.a_dict
     assert test_class != expected_class
     assert not test_class == expected_class  # noqa: SIM201
 
-    test_class.aString = expected_class.aNumber
+    test_class.a_string = expected_class.a_number
     assert test_class != expected_class
     assert not test_class == expected_class  # noqa: SIM201
 
-    test_class.aList = expected_class.aString
+    test_class.a_list = expected_class.a_string
     assert test_class != expected_class
     assert not test_class == expected_class  # noqa: SIM201
 
-    test_class.aDict = expected_class.aList
+    test_class.a_dict = expected_class.a_list
     assert test_class != expected_class
     assert not test_class == expected_class  # noqa: SIM201
 
     # Restore the changes so they can be used later (just to be certain)
-    test_class.aNumber = expected_class.aNumber
-    test_class.aString = expected_class.aString
-    test_class.aList = expected_class.aList
-    test_class.aDict = expected_class.aDict
+    test_class.a_number = expected_class.a_number
+    test_class.a_string = expected_class.a_string
+    test_class.a_list = expected_class.a_list
+    test_class.a_dict = expected_class.a_dict
 
 
 def test_equality_mixin_against_other_classes(setup_equality_mixin: Any) -> None:

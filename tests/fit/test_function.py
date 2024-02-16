@@ -14,8 +14,9 @@ from pachyderm.fit import function
 
 logger = logging.getLogger(__name__)
 
+
 def test_gaussian() -> None:
-    """ Test the gaussian function. """
+    """Test the gaussian function."""
     # Setup
     x = np.arange(-10, 10, 0.1)
     mean = 0.5
@@ -68,19 +69,23 @@ def test_gaussian() -> None:
     # fmt: on
 
     # Calculate using our defined gaussian
-    results = function.gaussian(x = x, mean = mean, sigma = sigma)
+    results = function.gaussian(x=x, mean=mean, sigma=sigma)
 
     # Check the result.
     # We need a bit of extra tolerance because they are calculated at different times to float precision.
-    np.testing.assert_allclose(results, expected, atol = 1e-6)
+    np.testing.assert_allclose(results, expected, atol=1e-6)
 
-@pytest.mark.parametrize(("skip_prefixes", "expected_co_varnames"), [
-    (["x"], ["x", "f_a", "f_b", "g_c", "g_d"]),
-    (["x", "a"], ["x", "a", "f_b", "g_c", "g_d"]),
-], ids = ["No skipped prefixes", "Skipped x prefix"])
-def test_AddPDF(simple_test_functions: Any, skip_prefixes: list[str],
-                expected_co_varnames: list[str]) -> None:
-    """ Test for adding multiple functions with ``AddPDF``.
+
+@pytest.mark.parametrize(
+    ("skip_prefixes", "expected_co_varnames"),
+    [
+        (["x"], ["x", "f_a", "f_b", "g_c", "g_d"]),
+        (["x", "a"], ["x", "a", "f_b", "g_c", "g_d"]),
+    ],
+    ids=["No skipped prefixes", "Skipped x prefix"],
+)
+def test_AddPDF(simple_test_functions: Any, skip_prefixes: list[str], expected_co_varnames: list[str]) -> None:
+    """Test for adding multiple functions with ``AddPDF``.
 
     Note:
         This is effectively an integration test for most of the ``AddPDF`` features.
@@ -90,19 +95,23 @@ def test_AddPDF(simple_test_functions: Any, skip_prefixes: list[str],
 
     # Create added functions, prepending prefixes, and skipping a subset of the prefixes.
     # This is effectively an integration test.
-    added = function.AddPDF(func_1, func_2, prefixes = ["f", "g"], skip_prefixes = skip_prefixes)
+    added = function.AddPDF(func_1, func_2, prefixes=["f", "g"], skip_prefixes=skip_prefixes)
 
     # Check properties
     assert added.func_code.co_varnames == expected_co_varnames
-    np.testing.assert_allclose(added(np.array([1, 2]), *[1., 3, 3, 4]), [5 + 8, 6 + 9])
+    np.testing.assert_allclose(added(np.array([1, 2]), *[1.0, 3, 3, 4]), [5 + 8, 6 + 9])
 
-@pytest.mark.parametrize(("skip_prefixes", "expected_co_varnames"), [
-    (["x"], ["x", "f_a", "f_b", "g_c", "g_d"]),
-    (["x", "a"], ["x", "a", "f_b", "g_c", "g_d"]),
-], ids = ["No skipped prefixes", "Skipped x prefix"])
-def test_SubtractPDF(simple_test_functions: Any, skip_prefixes: list[str],
-                     expected_co_varnames: list[str]) -> None:
-    """ Test for subtracting multiple functions with ``SubtractPDF``.
+
+@pytest.mark.parametrize(
+    ("skip_prefixes", "expected_co_varnames"),
+    [
+        (["x"], ["x", "f_a", "f_b", "g_c", "g_d"]),
+        (["x", "a"], ["x", "a", "f_b", "g_c", "g_d"]),
+    ],
+    ids=["No skipped prefixes", "Skipped x prefix"],
+)
+def test_SubtractPDF(simple_test_functions: Any, skip_prefixes: list[str], expected_co_varnames: list[str]) -> None:
+    """Test for subtracting multiple functions with ``SubtractPDF``.
 
     Note:
         This is effectively an integration test for most of the ``SubtractPDF`` features.
@@ -112,19 +121,23 @@ def test_SubtractPDF(simple_test_functions: Any, skip_prefixes: list[str],
 
     # Create added functions, prepending prefixes, and skipping a subset of the prefixes.
     # This is effectively an integration test.
-    subtracted = function.SubtractPDF(func_1, func_2, prefixes = ["f", "g"], skip_prefixes = skip_prefixes)
+    subtracted = function.SubtractPDF(func_1, func_2, prefixes=["f", "g"], skip_prefixes=skip_prefixes)
 
     # Check properties
     assert subtracted.func_code.co_varnames == expected_co_varnames
-    np.testing.assert_allclose(subtracted(np.array([1, 2]), *[1., 3, 3, 4]), [5. - 8, 6. - 9])
+    np.testing.assert_allclose(subtracted(np.array([1, 2]), *[1.0, 3, 3, 4]), [5.0 - 8, 6.0 - 9])
 
-@pytest.mark.parametrize(("skip_prefixes", "expected_co_varnames"), [
-    (["x"], ["x", "f_a", "f_b", "g_c", "g_d"]),
-    (["x", "a"], ["x", "a", "f_b", "g_c", "g_d"]),
-], ids = ["No skipped prefixes", "Skipped x prefix"])
-def test_MultiplyPDF(simple_test_functions: Any, skip_prefixes: list[str],
-                     expected_co_varnames: list[str]) -> None:
-    """ Test for multiplying multiple functions with ``MultiplyPDF``.
+
+@pytest.mark.parametrize(
+    ("skip_prefixes", "expected_co_varnames"),
+    [
+        (["x"], ["x", "f_a", "f_b", "g_c", "g_d"]),
+        (["x", "a"], ["x", "a", "f_b", "g_c", "g_d"]),
+    ],
+    ids=["No skipped prefixes", "Skipped x prefix"],
+)
+def test_MultiplyPDF(simple_test_functions: Any, skip_prefixes: list[str], expected_co_varnames: list[str]) -> None:
+    """Test for multiplying multiple functions with ``MultiplyPDF``.
 
     Note:
         This is effectively an integration test for most of the ``MultiplyPDF`` features.
@@ -134,19 +147,23 @@ def test_MultiplyPDF(simple_test_functions: Any, skip_prefixes: list[str],
 
     # Create added functions, prepending prefixes, and skipping a subset of the prefixes.
     # This is effectively an integration test.
-    multiplied = function.MultiplyPDF(func_1, func_2, prefixes = ["f", "g"], skip_prefixes = skip_prefixes)
+    multiplied = function.MultiplyPDF(func_1, func_2, prefixes=["f", "g"], skip_prefixes=skip_prefixes)
 
     # Check properties
     assert multiplied.func_code.co_varnames == expected_co_varnames
-    np.testing.assert_allclose(multiplied(np.array([1, 2]), *[1., 3, 3, 4]), [5. * 8, 6. * 9])
+    np.testing.assert_allclose(multiplied(np.array([1, 2]), *[1.0, 3, 3, 4]), [5.0 * 8, 6.0 * 9])
 
-@pytest.mark.parametrize(("skip_prefixes", "expected_co_varnames"), [
-    (["x"], ["x", "f_a", "f_b", "g_c", "g_d"]),
-    (["x", "a"], ["x", "a", "f_b", "g_c", "g_d"]),
-], ids = ["No skipped prefixes", "Skipped x prefix"])
-def test_DividePDF(simple_test_functions: Any, skip_prefixes: list[str],
-                   expected_co_varnames: list[str]) -> None:
-    """ Test for dividing multiple functions with ``DividePDF``.
+
+@pytest.mark.parametrize(
+    ("skip_prefixes", "expected_co_varnames"),
+    [
+        (["x"], ["x", "f_a", "f_b", "g_c", "g_d"]),
+        (["x", "a"], ["x", "a", "f_b", "g_c", "g_d"]),
+    ],
+    ids=["No skipped prefixes", "Skipped x prefix"],
+)
+def test_DividePDF(simple_test_functions: Any, skip_prefixes: list[str], expected_co_varnames: list[str]) -> None:
+    """Test for dividing multiple functions with ``DividePDF``.
 
     Note:
         This is effectively an integration test for most of the ``DividePDF`` features.
@@ -156,8 +173,8 @@ def test_DividePDF(simple_test_functions: Any, skip_prefixes: list[str],
 
     # Create added functions, prepending prefixes, and skipping a subset of the prefixes.
     # This is effectively an integration test.
-    divided = function.DividePDF(func_1, func_2, prefixes = ["f", "g"], skip_prefixes = skip_prefixes)
+    divided = function.DividePDF(func_1, func_2, prefixes=["f", "g"], skip_prefixes=skip_prefixes)
 
     # Check properties
     assert divided.func_code.co_varnames == expected_co_varnames
-    np.testing.assert_allclose(divided(np.array([1, 2]), *[1., 3, 3, 4]), [5. / 8, 6. / 9])
+    np.testing.assert_allclose(divided(np.array([1, 2]), *[1.0, 3, 3, 4]), [5.0 / 8, 6.0 / 9])

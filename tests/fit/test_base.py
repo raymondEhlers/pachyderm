@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """ Tests for the base of the fit module.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
@@ -15,7 +13,7 @@ import pytest
 import pachyderm.fit.base as fit_base
 
 
-def test_func_code(logging_mixin: Any, simple_test_functions: Any) -> None:
+def test_func_code(simple_test_functions: Any) -> None:
     """Test creating function codes with FuncCode."""
     # Setup
     func_1, func_2 = simple_test_functions
@@ -31,7 +29,7 @@ def test_func_code(logging_mixin: Any, simple_test_functions: Any) -> None:
 
 
 @pytest.mark.parametrize(
-    "function_list_names, expected_result, expected_argument_positions",
+    ("function_list_names", "expected_result", "expected_argument_positions"),
     [
         ([1, 2], ["x", "a", "b", "c", "d"], [[0, 1, 2], [0, 3, 4]]),
         ([2, 1], ["x", "c", "d", "a", "b"], [[0, 1, 2], [0, 3, 4]]),
@@ -39,7 +37,6 @@ def test_func_code(logging_mixin: Any, simple_test_functions: Any) -> None:
     ids=["1, 2", "2, 1"],
 )
 def test_merge_func_code(
-    logging_mixin: Any,
     simple_test_functions: Any,
     function_list_names: list[int],
     expected_result: list[str],
@@ -62,7 +59,7 @@ def test_merge_func_code(
     ids=["1, 2", "2, 1"],
 )
 def test_merge_func_code_against_probfit(
-    logging_mixin: Any, simple_test_functions: Any, function_list_names: list[int]
+    simple_test_functions: Any, function_list_names: list[int]
 ) -> None:
     """Test merging function codes against probfit."""
     # Setup
