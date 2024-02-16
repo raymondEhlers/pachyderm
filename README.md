@@ -1,8 +1,33 @@
 # 🐘 Pachyderm
 
-[![Documentation Status](https://readthedocs.org/projects/pachyderm-heavy-ion/badge/?version=latest)](https://pachyderm-heavy-ion.readthedocs.io/en/latest/?badge=latest)
-[![Build Status](https://travis-ci.com/raymondEhlers/pachyderm.svg?branch=main)](https://travis-ci.com/raymondEhlers/pachyderm)
-[![codecov](https://codecov.io/gh/raymondEhlers/pachyderm/branch/main/graph/badge.svg)](https://codecov.io/gh/raymondEhlers/pachyderm)
+[![Actions Status][actions-badge]][actions-link]
+[![Documentation Status][rtd-badge]][rtd-link]
+[![Code Coverage][code-badge]][code-cov]
+
+[![PyPI version][pypi-version]][pypi-link]
+[![Conda-Forge][conda-badge]][conda-link]
+[![PyPI platforms][pypi-platforms]][pypi-link]
+
+[![GitHub Discussion][github-discussions-badge]][github-discussions-link]
+
+<!-- SPHINX-START -->
+
+<!-- prettier-ignore-start -->
+[actions-badge]:            https://github.com/raymondEhlers/pachyderm/workflows/CI/badge.svg
+[actions-link]:             https://github.com/raymondEhlers/pachyderm/actions
+[code-cov-link]:            https://codecov.io/gh/raymondEhlers/pachyderm
+[code-cov-badge]:           https://codecov.io/gh/raymondEhlers/pachyderm/branch/main/graph/badge.svg
+[conda-badge]:              https://img.shields.io/conda/vn/conda-forge/pachyderm
+[conda-link]:               https://github.com/conda-forge/pachyderm-feedstock
+[github-discussions-badge]: https://img.shields.io/static/v1?label=Discussions&message=Ask&color=blue&logo=github
+[github-discussions-link]:  https://github.com/raymondEhlers/pachyderm/discussions
+[pypi-link]:                https://pypi.org/project/pachyderm/
+[pypi-platforms]:           https://img.shields.io/pypi/pyversions/pachyderm
+[pypi-version]:             https://img.shields.io/pypi/v/pachyderm
+[rtd-badge]:                https://readthedocs.org/projects/pachyderm-heavy-ion/badge/?version=latest
+[rtd-link]:                 https://pachyderm-heavy-ion.readthedocs.io/en/latest/?badge=latest
+
+<!-- prettier-ignore-end -->
 
 Pachyderm[\*](#name-meaning) provides core functionality for heavy-ion physics analyses. The main
 functionality includes a generic histogram projection interface, a recursive configuration determination

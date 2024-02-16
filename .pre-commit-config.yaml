@@ -1,47 +1,96 @@
----
+ci:
+  autoupdate_commit_msg: "chore: update pre-commit hooks"
+  autofix_commit_msg: "style: pre-commit fixes"
+
 repos:
-    - repo: "https://gitlab.com/pycqa/flake8"
-      rev: 3.9.2  # 3.6.0 doesn't contain this configuration file.
-      hooks:
-          - id: flake8
-            additional_dependencies: ["flake8-colors"]
-    - repo: https://github.com/adrienverge/yamllint.git
-      rev: v1.26.1
-      hooks:
-          - id: yamllint
-    - repo: https://github.com/pre-commit/mirrors-mypy
-      rev: v0.910
-      hooks:
-          - id: mypy
-            # no-incremental helps with a bug in ruamel.yaml typing.
-            # See: https://sourceforge.net/p/ruamel-yaml/tickets/328/
-            args: ["--ignore-missing-imports", "--no-incremental"]
-            # A sufficiently new version of attrs is needed to keep mypy happy.
-            # Same with ruamel.yaml
-            additional_dependencies: ["attrs>=19.3.0", "ruamel.yaml>=0.16.10", "numpy>=1.21"]
-    - repo: https://github.com/pre-commit/pygrep-hooks
-      rev: v1.9.0
-      hooks:
-          - id: python-check-mock-methods
-          - id: rst-backticks
-    - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v4.0.1
-      hooks:
-          - id: check-added-large-files
-          - id: check-executables-have-shebangs
-          - id: check-merge-conflict
-          - id: check-case-conflict
-          - id: check-symlinks
-          - id: check-yaml
-          - id: mixed-line-ending
-          - id: trailing-whitespace
-    - repo: https://github.com/pre-commit/mirrors-isort
-      rev: v5.9.2
-      hooks:
-          - id: isort
-            additional_dependencies: ["toml"]
-    - repo: https://github.com/python/black
-      rev: 21.6b0
-      hooks:
-          - id: black
-            language_version: python3.7
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: "1.16.0"
+    hooks:
+      - id: blacken-docs
+        additional_dependencies: [black==23.*]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v4.5.0"
+    hooks:
+      - id: check-added-large-files
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-yaml
+      - id: debug-statements
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: name-tests-test
+        args: ["--pytest-test-first"]
+      - id: requirements-txt-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: "v1.10.0"
+    hooks:
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
+      - id: python-check-mock-methods
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: "v3.1.0"
+    hooks:
+      - id: prettier
+        types_or: [yaml, markdown, html, css, scss, javascript, json]
+        args: [--prose-wrap=always]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: "v0.1.14"
+    hooks:
+      - id: ruff
+        args: ["--fix", "--show-fixes"]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.8.0"
+    hooks:
+      - id: mypy
+        files: src|tests
+        # no-incremental helps with a bug in ruamel.yaml typing.
+        # See: https://sourceforge.net/p/ruamel-yaml/tickets/328/
+        #args: ["--ignore-missing-imports", "--no-incremental"]
+        args: []
+        # A sufficiently new version of attrs is needed to keep mypy happy.
+        # Same with ruamel.yaml
+        additional_dependencies:
+          - pytest
+          - "attrs>=19.3.0"
+          - "ruamel.yaml>=0.16.10"
+          - "numpy>=1.21"
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: "v2.2.6"
+    hooks:
+      - id: codespell
+
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: "v0.9.0.6"
+    hooks:
+      - id: shellcheck
+
+  - repo: local
+    hooks:
+      - id: disallow-caps
+        name: Disallow improper capitalization
+        language: pygrep
+        entry: PyBind|Numpy|Cmake|CCache|Github|PyTest
+        exclude: .pre-commit-config.yaml
+
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: "v0.16"
+    hooks:
+      - id: validate-pyproject
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: "0.27.3"
+    hooks:
+      - id: check-dependabot
+      - id: check-github-workflows
+      - id: check-readthedocs

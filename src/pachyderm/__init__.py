@@ -1,11 +1,13 @@
-#!/usr/bin/env python
+"""
+Copyright (c) 2024 Raymond Ehlers. All rights reserved.
 
-""" Physics Analysis Core for Heavy-Ions package, known as Pachyderm.
-
-.. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
+pachyderm: Physics Analysis Core for Heavy-Ions
 """
 
-__version__ = "3.1"
+
+from __future__ import annotations
+
+from ._version import version as __version__
 
 __all__ = [
     "__version__",
