@@ -28,12 +28,12 @@ jobs:
       - uses: pre-commit/action@v3.0.1
         with:
           extra_args: --hook-stage manual --all-files
-      # NOTE: We only parse for errors with pylint because it's so noisy. Otherwise, the CI
-      #       will practically always show as broken.
-      - name: Run PyLint
-        run: |
-          echo "::add-matcher::$GITHUB_WORKSPACE/.github/matchers/pylint.json"
-          pipx run nox -s pylint
+      # pylint is so noisy that there's no way the CI will ever pass if it's enabled.
+      # It's good to run when I think of it, but better to be a bit practical too. So I've disabled it for now
+      #- name: Run PyLint
+      #  run: |
+      #    echo "::add-matcher::$GITHUB_WORKSPACE/.github/matchers/pylint.json"
+      #    pipx run nox -s pylint
 
   checks:
     name: Check Python ${{ matrix.python-version }} on ${{ matrix.runs-on }}
