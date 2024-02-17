@@ -53,9 +53,6 @@ repos:
     hooks:
       - id: mypy
         files: src|tests
-        # no-incremental helps with a bug in ruamel.yaml typing.
-        # See: https://sourceforge.net/p/ruamel-yaml/tickets/328/
-        #args: ["--ignore-missing-imports", "--no-incremental"]
         args: []
         # A sufficiently new version of attrs is needed to keep mypy happy.
         # Same with ruamel.yaml

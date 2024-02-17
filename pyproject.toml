@@ -140,6 +140,7 @@ line-length = 120
 extend-select = [
   "B",        # flake8-bugbear
   "I",        # isort
+  "C901",     # mccabe
   "ARG",      # flake8-unused-arguments
   "C4",       # flake8-comprehensions
   "EM",       # flake8-errmsg
