@@ -11,6 +11,7 @@ from typing import Any
 
 import attrs
 import matplotlib.axes
+import matplotlib.cm
 import matplotlib.colors
 import numpy as np
 import numpy.typing as npt
