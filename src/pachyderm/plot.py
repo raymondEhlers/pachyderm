@@ -10,8 +10,8 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 import attrs
+import matplotlib as mpl
 import matplotlib.axes
-import matplotlib.cm
 import matplotlib.colors
 import numpy as np
 import numpy.typing as npt
@@ -311,7 +311,9 @@ def convert_mpl_color_scheme_to_ROOT(
         raise ValueError(_msg)
     # We select on the passed cmap rather than the name because we might use the name later.
     if cmap is None:
-        color_scheme = matplotlib.cm.get_cmap(name)
+        # Retrieve by name
+        assert name is not None
+        color_scheme = mpl.colormaps[name]
     elif not isinstance(cmap, matplotlib.colors.ListedColormap):
         color_scheme = matplotlib.colors.ListedColormap(cmap)  # type: ignore[arg-type]
     else:
