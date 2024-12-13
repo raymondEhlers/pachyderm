@@ -122,9 +122,7 @@ def does_period_contain_data(period: str) -> bool:
     Returns:
         True if the period contains data.
     """
-    if len(period) == 6:
-        return True
-    return False
+    return len(period) == 6
 
 
 _T = TypeVar("_T", bound="DataSet")

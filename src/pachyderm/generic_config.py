@@ -1,9 +1,10 @@
-""" Analysis configuration base module.
+"""Analysis configuration base module.
 
 For usage information, see ``jet_hadron.base.analysis_config``.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import copy
@@ -532,12 +533,13 @@ def iterate_with_selected_objects_in_order(
     ...     for b_val in b:
     ...         for c_val in c:
     ...             obj(a_val, b_val, c_val)
+    ...
     ```
 
     This will yield:
 
     ```pycon
-    >>> output = list(iterate_with_selected_objects_in_order(..., selection = ["a"]))
+    >>> output = list(iterate_with_selected_objects_in_order(..., selection=["a"]))
     [[("a1", "b1", "c1"), ("a2", "b1", "c1")], [("a1", "b2", "c1"), ("a2", "b2", "c1")], ...]
     ```
 

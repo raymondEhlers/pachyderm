@@ -427,7 +427,7 @@ class FuncCode(generic_class.EqualityMixin):
         co_argcount: Number of function arguments.
     """
 
-    __slots__ = ("co_varnames", "co_argcount")
+    __slots__ = ("co_argcount", "co_varnames")
 
     def __init__(self, args: list[str]):
         self.co_varnames = args

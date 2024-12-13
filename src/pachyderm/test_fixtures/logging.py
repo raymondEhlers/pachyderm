@@ -14,8 +14,8 @@ import pytest  # pylint: disable=import-error
 logging_level = logging.DEBUG
 
 
-@pytest.fixture()
-def logging_mixin(caplog: Any) -> None:  # noqa: PT004
+@pytest.fixture
+def logging_mixin(caplog: Any) -> None:
     """Logging mixin to capture logging messages from modules.
 
     It logs at the debug level, which is probably most useful for when a test fails.

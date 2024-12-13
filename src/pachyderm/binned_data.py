@@ -480,7 +480,7 @@ def _shared_memory_check(instance: BinnedData, attribute_name: str, value: npt.N
     arrays = {
         k: v
         for k, v in attrs.asdict(instance, recurse=False).items()
-        if not k.startswith("_") and k != "metadata" and k != "axes" and k != attribute_name
+        if not k.startswith("_") and k not in ("metadata", "axes", attribute_name)
     }
     # Extract the axes to check those arrays too
     arrays.update({f"axis_{i}": v.bin_edges for i, v in enumerate(instance.axes)})
@@ -795,7 +795,7 @@ class BinnedData:
         return all(agreement) and axes_agree and metadata_agree
 
     @classmethod
-    def from_hepdata(cls: type[BinnedData], hist: Mapping[str, Any]) -> list[BinnedData]:  # noqa: ARG003 # pylint: disable=unused-argument
+    def from_hepdata(cls: type[BinnedData], hist: Mapping[str, Any]) -> list[BinnedData]:  # pylint: disable=unused-argument
         """Convert (a set) of HEPdata histogram(s) to BinnedData objects.
 
         Will include any information that the extraction function extracts and returns.

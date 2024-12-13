@@ -200,4 +200,4 @@ messages_control.disable = [
 
 
 [tool.codespell]
-ignore-words-list = "thn, nd, ore"
+ignore-words-list = "thn, nd, ore, lements"
