@@ -23,7 +23,7 @@ from pachyderm.typing_helpers import Hist
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture()
+@pytest.fixture
 def retrieve_root_list(test_root_hists: Any) -> Iterator[tuple[str, Any, Any]]:
     """Create an set of lists to load for a ROOT file.
 
@@ -227,7 +227,7 @@ class TestRetrievingHistogramsFromAList:
         assert output == expected
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_histogram_conversion() -> tuple[str, str, histogram.Histogram1D]:
     """Setup expected values for histogram conversion tests.
 
@@ -569,7 +569,7 @@ class TestWithRootHists:
             assert np.isclose(hist_array[0][1], 0.0)
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_basic_hist() -> (
     tuple[histogram.Histogram1D, npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]
 ):

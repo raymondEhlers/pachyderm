@@ -1252,7 +1252,7 @@ def _apply_rebin(
 
     # Only use numba if available
     f = _sum_values_for_rebin_numba if _sum_values_for_rebin_numba is not None else _sum_values_for_rebin
-    return f(  # type: ignore[no-any-return]
+    return f(
         n_bins_new_axis=n_bins_new_axis,
         values=values,
         run_starts=run_starts,
@@ -1264,9 +1264,9 @@ def _apply_rebin(
 def _sum_values_for_rebin(
     n_bins_new_axis: int,
     values: npt.NDArray[np.float64],
-    run_starts: npt.NDArray[np.float64],
-    run_values: npt.NDArray[np.float64],
-    run_lengths: npt.NDArray[np.float64],
+    run_starts: npt.NDArray[np.int64],
+    run_values: npt.NDArray[np.int64],
+    run_lengths: npt.NDArray[np.int64],
 ) -> npt.NDArray[np.float64]:
     """Implementation of summing up values for the rebinning
 

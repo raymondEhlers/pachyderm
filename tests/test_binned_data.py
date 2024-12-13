@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 import numpy as np
@@ -11,6 +12,8 @@ import numpy.typing as npt
 import pytest
 
 from pachyderm import binned_data
+
+logger = logging.getLogger(__name__)
 
 
 def test_axis_slice_copy() -> None:
@@ -65,6 +68,7 @@ def test_axis_slice(
     hist = pytest.importorskip("hist")
     hist_s = slice(s.start, s.stop, hist.rebin(s.step) if s.step else s.step)
     hist_h = hist.Hist(hist.axis.Regular(10, 1, 11))
+    logger.info(f"{hist_h.axes[0].edges}")
     hist_sliced_axis = hist_h[hist_s].axes[0]
 
     np.testing.assert_allclose(sliced_axis.bin_edges, hist_sliced_axis.edges)
@@ -103,7 +107,7 @@ def test_axis_slice_rebin(
     np.testing.assert_allclose(sliced_axis.bin_edges, expected_bin_edges)
 
 
-@pytest.fixture()
+@pytest.fixture
 def hists_for_rebinning() -> tuple[npt.NDArray[np.float64], binned_data.BinnedData]:
     _values = []
     for i in range(2, 12):

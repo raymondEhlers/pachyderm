@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def test_gaussian() -> None:
     """Test the gaussian function."""
     # Setup
-    x = np.arange(-10, 10, 0.1)
+    x = np.arange(-10, 10, 0.1, dtype=np.float64)
     mean = 0.5
     sigma = 4.2
 

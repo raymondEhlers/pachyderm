@@ -144,7 +144,7 @@ class SimultaneousFit(generic_class.EqualityMixin):
 
     def __add__(self, other: T_CostFunction | SimultaneousFit) -> SimultaneousFit:
         """Add a new function to the simultaneous fit."""
-        return type(self)(self, other)
+        return type(self)(self, other)  # type: ignore[arg-type]
 
     def __radd__(self, other: T_CostFunction | SimultaneousFit) -> SimultaneousFit:
         """For use with ``sum(...)``."""

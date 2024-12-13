@@ -545,7 +545,7 @@ class Histogram1D:
         # Provide the opportunity to scale by bin width
         widths = np.ones(len(self.y))
         if multiply_by_bin_width:
-            widths = self.bin_widths
+            widths = self.bin_widths  # type: ignore[assignment]
 
         # Integrate by summing up all of the bins and the errors.
         # Perform the integral.
