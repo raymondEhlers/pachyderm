@@ -1,7 +1,8 @@
-""" Tests for the cost functions module.
+"""Tests for the cost functions module.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import logging
@@ -102,7 +103,7 @@ def parabola(x: float, scale: float) -> float:
     return scale * np.square(x)  # type: ignore[no-any-return]
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_parabola() -> tuple[histogram.Histogram1D, Hist]:  # pyright: ignore[reportInvalidTypeForm]
     """Setup a parabola for tests of fitting procedures."""
     ROOT = pytest.importorskip("ROOT")
@@ -265,7 +266,7 @@ def test_binned_cost_functions_against_ROOT(cost_func: Any, fit_option: Any, set
 ##################
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_simultaneous_fit_data(setup_parabola: Any) -> tuple[histogram.Histogram1D, histogram.Histogram1D, Hist, Hist]:  # pyright: ignore[reportInvalidTypeForm]
     """Setup the data for tests of a simultaneous fit."""
     h, h_ROOT = setup_parabola

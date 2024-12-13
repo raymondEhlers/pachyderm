@@ -1,7 +1,8 @@
-""" Tests for binned_data
+"""Tests for binned_data
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
+
 from __future__ import annotations
 
 import logging

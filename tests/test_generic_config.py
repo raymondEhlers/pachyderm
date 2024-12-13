@@ -1,7 +1,8 @@
-""" Tests for generic analysis configuration.
+"""Tests for generic analysis configuration.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import copy
@@ -28,7 +29,7 @@ def log_yaml_dump(yml: Any, config: dict[str, Any]) -> None:
     logger.debug(s.read())
 
 
-@pytest.fixture()
+@pytest.fixture
 def basic_config():
     """Basic YAML configuration to test overriding the configuration.
 
@@ -264,7 +265,7 @@ hello:
     # assert retrieved_string == yaml_string
 
 
-@pytest.fixture()
+@pytest.fixture
 def data_simplification_config():
     """Simple YAML config to test the data simplification functionality of the generic_config module.
 
@@ -351,7 +352,7 @@ class collision_energy(enum.Enum):
     fiveZeroTwo = 5.02
 
 
-@pytest.fixture()
+@pytest.fixture
 def object_creation_config():
     """Configuration to test creating objects based on the stored values."""
     config = """
@@ -449,7 +450,7 @@ def test_determine_selection_of_iterable_values_with_string_selection(object_cre
     assert exception_info.value.args[0] is str
 
 
-@pytest.fixture()
+@pytest.fixture
 def object_and_creation_args():
     """Create the object and args for object creation."""
     # Define fake object. We don't use a mock because we need to instantiate the object
@@ -540,7 +541,7 @@ def test_missing_iterable_for_object_creation(object_and_creation_args):
     assert exception_info.value.args[0] == iterables
 
 
-@pytest.fixture()
+@pytest.fixture
 def formatting_config():
     """Config for testing the formatting of strings after loading them.
 
@@ -603,7 +604,7 @@ def test_apply_formatting_skip_latex(formatting_config):
     assert config["latexLike"] == r"$latex_{like \mathrm{x}}$"
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_analysis_iterator():
     """Setup for testing iteration over analysis objects."""
     KeyIndex = dataclasses.make_dataclass("KeyIndex", ["a", "b", "c"], frozen=True)

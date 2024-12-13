@@ -1,7 +1,8 @@
-""" Functions for use with fitting.
+"""Functions for use with fitting.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import abc

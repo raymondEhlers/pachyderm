@@ -1,4 +1,4 @@
-""" Download data related to ALICE.
+"""Download data related to ALICE.
 
 Based on code from Markus Fasel's download train run-by-run output in parallel script.
 

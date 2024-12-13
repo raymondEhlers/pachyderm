@@ -1,7 +1,8 @@
-""" Broad collection of utility functions and constants.
+"""Broad collection of utility functions and constants.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import functools

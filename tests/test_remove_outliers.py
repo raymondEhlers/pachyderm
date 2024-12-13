@@ -1,7 +1,8 @@
-""" Tests for the outliers removal module.
+"""Tests for the outliers removal module.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import ctypes

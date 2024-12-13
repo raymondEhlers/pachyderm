@@ -1,9 +1,10 @@
-""" Copy some set of files from AliEn.
+"""Copy some set of files from AliEn.
 
 Uses some code from Markus' download train run-by-run output script.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
+
 from __future__ import annotations
 
 import hashlib

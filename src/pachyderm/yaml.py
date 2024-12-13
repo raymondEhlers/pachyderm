@@ -1,4 +1,4 @@
-""" Module related to YAML.
+"""Module related to YAML.
 
 Contains a way to construct the main YAML object, as well as relevant mixins and classes.
 
@@ -31,6 +31,7 @@ Note:
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import base64

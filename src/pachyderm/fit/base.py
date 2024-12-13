@@ -1,9 +1,10 @@
 # 1/usr/bin/env python3
 
-""" Base module for performing fits with Minuit.
+"""Base module for performing fits with Minuit.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import functools

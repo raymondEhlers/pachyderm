@@ -1,7 +1,8 @@
-""" Tests for the plot module.
+"""Tests for the plot module.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -12,8 +13,8 @@ import pytest
 import pachyderm.plot as pplot
 
 
-@pytest.fixture()
-def reset_matplotlib_options() -> None:  # noqa: PT004
+@pytest.fixture
+def reset_matplotlib_options() -> None:
     """Setup for matplotlib options testing by resetting the options."""
     mpl.rcParams.update(mpl.rcParamsDefault)
 

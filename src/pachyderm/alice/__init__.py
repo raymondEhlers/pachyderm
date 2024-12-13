@@ -1,7 +1,8 @@
-""" ALICE related utilities and functionality.
+"""ALICE related utilities and functionality.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
+
 from __future__ import annotations
 
 __all__ = [

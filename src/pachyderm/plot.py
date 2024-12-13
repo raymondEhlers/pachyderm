@@ -1,4 +1,4 @@
-""" Plotting styling and utilities.
+"""Plotting styling and utilities.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University + Oak Ridge National Lab
 """

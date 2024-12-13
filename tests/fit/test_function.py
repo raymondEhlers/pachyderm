@@ -1,7 +1,8 @@
-""" Tests for functions related to fitting.
+"""Tests for functions related to fitting.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import logging

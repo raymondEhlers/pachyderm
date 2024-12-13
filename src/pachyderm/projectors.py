@@ -1,7 +1,8 @@
-""" Handle generic TH1 and THn projections.
+"""Handle generic TH1 and THn projections.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import copy

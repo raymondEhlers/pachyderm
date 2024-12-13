@@ -1,7 +1,8 @@
-""" Tests for the utilities module.
+"""Tests for the utilities module.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import ctypes

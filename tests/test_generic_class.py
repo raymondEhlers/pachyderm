@@ -1,7 +1,8 @@
-""" Tests for generic class properties.
+"""Tests for generic class properties.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import dataclasses
@@ -15,7 +16,7 @@ from pachyderm import generic_class
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_equality_mixin() -> tuple[Any, Any]:
     """Create a basic class for tests of the equality mixin."""
 

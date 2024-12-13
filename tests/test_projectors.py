@@ -1,7 +1,8 @@
-""" Test projector functionality.
+"""Test projector functionality.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import copy
@@ -25,7 +26,7 @@ class SparseAxisLabels(enum.Enum):
     axis_five = 5
 
 
-@pytest.fixture()
+@pytest.fixture
 def create_hist_axis_range():
     """Create a HistAxisRange object to use for testing."""
     object_args: dict[str, Any] = {

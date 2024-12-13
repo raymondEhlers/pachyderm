@@ -1,7 +1,8 @@
-""" Tests for integration of functionality in the fit modules.
+"""Tests for integration of functionality in the fit modules.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import logging

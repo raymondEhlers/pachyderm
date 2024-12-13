@@ -1,7 +1,8 @@
-""" Histogram related classes and functionality.
+"""Histogram related classes and functionality.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import collections

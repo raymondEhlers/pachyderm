@@ -1,7 +1,8 @@
-""" Integration of functionality in the fit modules.
+"""Integration of functionality in the fit modules.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import abc
@@ -31,17 +32,16 @@ class FitFunction(Protocol):
     __name__: str
 
     @overload
-    def __call__(self, *args: float, **kwargs: float) -> float:
-        ...
+    def __call__(self, *args: float, **kwargs: float) -> float: ...
 
     @overload
-    def __call__(self, *args: npt.NDArray[np.float64], **kwargs: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
-        ...
+    def __call__(
+        self, *args: npt.NDArray[np.float64], **kwargs: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]: ...
 
     def __call__(
         self, *args: float | npt.NDArray[np.float64], **kwargs: float | npt.NDArray[np.float64]
-    ) -> float | npt.NDArray[np.float64]:
-        ...
+    ) -> float | npt.NDArray[np.float64]: ...
 
 
 class Fit(abc.ABC, generic_class.EqualityMixin):

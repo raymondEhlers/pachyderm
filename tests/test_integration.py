@@ -1,6 +1,5 @@
-""" Test the integration between various classes.
+"""Test the integration between various classes."""
 
-"""
 from __future__ import annotations
 
 import logging

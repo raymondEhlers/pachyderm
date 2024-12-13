@@ -1,7 +1,8 @@
-""" Objects related fixtures to aid testing.
+"""Objects related fixtures to aid testing.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@yale.edu>, Yale University
 """
+
 from __future__ import annotations
 
 import uuid

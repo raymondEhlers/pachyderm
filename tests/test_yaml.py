@@ -1,7 +1,8 @@
-""" Tests for the YAML module.
+"""Tests for the YAML module.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import enum

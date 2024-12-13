@@ -1,4 +1,4 @@
-""" Functionality related to binned data.
+"""Functionality related to binned data.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, ORNL
 """
@@ -56,13 +56,11 @@ def _axis_bin_edges_converter(value: Any) -> npt.NDArray[Any]:
 
 
 @typing.overload
-def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int:
-    ...
+def find_bin(bin_edges: npt.NDArray[Any], value: float) -> int: ...
 
 
 @typing.overload
-def find_bin(bin_edges: npt.NDArray[Any], value: npt.NDArray[Any]) -> npt.NDArray[np.int64]:
-    ...
+def find_bin(bin_edges: npt.NDArray[Any], value: npt.NDArray[Any]) -> npt.NDArray[np.int64]: ...
 
 
 def find_bin(bin_edges: npt.NDArray[Any], value: float | npt.NDArray[Any]) -> int | npt.NDArray[np.int64]:

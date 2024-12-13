@@ -1,7 +1,8 @@
-""" Provides outliers removal methods.
+"""Provides outliers removal methods.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@yale.edu>, Yale University
 """
+
 from __future__ import annotations
 
 import ctypes

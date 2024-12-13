@@ -1,7 +1,8 @@
-""" Typing helpers for package.
+"""Typing helpers for package.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 from typing import Any, Union

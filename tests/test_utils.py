@@ -1,7 +1,8 @@
-""" Tests for the utilities module.
+"""Tests for the utilities module.
 
 .. codeauthor:: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 import logging
@@ -80,7 +81,7 @@ def test_recursive_getattr_fail(mocker: Any) -> None:
     assert "nonexistent_attr" in exception_info.value.args[0]
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_recursive_setattr() -> tuple[Any, str]:
     """Setup an object for testing the recursive setattr."""
 
@@ -123,7 +124,7 @@ def test_recursive_setattr_fail(setup_recursive_setattr: Any) -> None:
     assert "random" in exception_info.value.args[0]
 
 
-@pytest.fixture()
+@pytest.fixture
 def setup_recursive_getitem() -> tuple[dict[str, dict[str, str]], list[str], str]:
     """Setup a test dict for use with recursive_getitem."""
     expected = "hello"

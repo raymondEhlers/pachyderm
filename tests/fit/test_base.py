@@ -1,7 +1,8 @@
-""" Tests for the base of the fit module.
+"""Tests for the base of the fit module.
 
 .. code-author: Raymond Ehlers <raymond.ehlers@cern.ch>, Yale University
 """
+
 from __future__ import annotations
 
 from typing import Any

@@ -4,7 +4,6 @@ Copyright (c) 2024 Raymond Ehlers. All rights reserved.
 pachyderm: Physics Analysis Core for Heavy-Ions
 """
 
-
 from __future__ import annotations
 
 from ._version import version as __version__
