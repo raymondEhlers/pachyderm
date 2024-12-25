@@ -45,7 +45,7 @@ def test_enum_with_yaml() -> None:
             return str(self.name)
 
         to_yaml = classmethod(yaml.enum_to_yaml)
-        from_yaml: Any = classmethod(yaml.enum_from_yaml)
+        from_yaml = classmethod(yaml.enum_from_yaml)  # type: ignore[var-annotated]
 
     yml = yaml.yaml(classes_to_register=[TestEnum])
     input_value = TestEnum.a
