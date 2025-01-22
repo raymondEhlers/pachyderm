@@ -571,9 +571,9 @@ class TestWithRootHists:
 
 
 @pytest.fixture
-def setup_basic_hist() -> (
-    tuple[histogram.Histogram1D, npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]]
-):
+def setup_basic_hist() -> tuple[
+    histogram.Histogram1D, npt.NDArray[np.float64], npt.NDArray[np.float64], npt.NDArray[np.float64]
+]:
     """Setup a basic `Histogram1D` for basic tests.
 
     This histogram contains 4 bins, with edges of [0, 1, 2, 3, 5], values of [2, 2, 3, 0], with
@@ -1247,7 +1247,7 @@ def test_convert_HEPdata_hist() -> None:
     hepdata_path = Path(__file__).parent / "testFiles" / "pionHadron.yaml"
     print(hepdata_path)
 
-    # Load the HEP data.
+    # Load the HEPdata.
     from pachyderm import yaml
 
     y = yaml.yaml()

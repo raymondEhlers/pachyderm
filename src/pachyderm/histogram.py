@@ -191,9 +191,7 @@ def _extract_values_from_hepdata_dependent_variable(var: Mapping[str, Any]) -> T
 
     # Validate the collected values.
     if len(hist_stat_errors) == 0:
-        msg = (
-            f"Could not retrieve statistical errors for dependent var {var}.\n" f" hist_stat_errors: {hist_stat_errors}"
-        )
+        msg = f"Could not retrieve statistical errors for dependent var {var}.\n hist_stat_errors: {hist_stat_errors}"
         raise ValueError(msg)
     if len(hist_values) != len(hist_stat_errors):
         msg = (
@@ -546,7 +544,7 @@ class Histogram1D:
         # Provide the opportunity to scale by bin width
         widths = np.ones(len(self.y))
         if multiply_by_bin_width:
-            widths = self.bin_widths
+            widths = self.bin_widths  # type: ignore[assignment]
 
         # Integrate by summing up all of the bins and the errors.
         # Perform the integral.
@@ -813,7 +811,7 @@ class Histogram1D:
         Returns:
             List of Histogram1D constructed from the input HEPdata.
         """
-        # HEP Data is just a map containing the data.
+        # HEPData is just a map containing the data.
         if not isinstance(hist, collections.abc.Mapping):
             msg = f"Does not appear to be valid HEPdata. Must pass a map with the HEPdata information. Passed: {hist}"  # type: ignore[unreachable]
             raise TypeError(msg)

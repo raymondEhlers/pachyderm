@@ -403,7 +403,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
     #       parameters. So we just accept the inefficiency.
     partial_derivative_result: npt.NDArray[Any] = partial_derivative_func(list(args_at_minimum.values()), x)
     end = time.time()
-    logger.debug(f"Finished calculating the gradient in {end-start} seconds.")
+    logger.debug(f"Finished calculating the gradient in {end - start} seconds.")
 
     # If we are only in 1D, we need to promote to a 2D (shape of 1D, 1) to get the indexing correct below.
     # This only occurs if we only have one parameter that is varied.
