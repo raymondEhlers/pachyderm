@@ -10,6 +10,7 @@ import uuid
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 import pytest
 import scipy.integrate
 
@@ -22,12 +23,12 @@ from pachyderm.typing_helpers import Hist
 logger = logging.getLogger(__name__)
 
 
-def func_1(x: float, a: float, b: float) -> float:
+def func_1(x: Any, a: float | np.float64, b: float | np.float64) -> float | Any:
     """Test function."""
     return x + a + b
 
 
-def func_2(x: float, c: float, d: float) -> float:
+def func_2(x: Any, c: float | np.float64, d: float | np.float64) -> float | Any:
     """Test function 2."""
     return x + c + d
 
