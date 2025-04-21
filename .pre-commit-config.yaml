@@ -59,7 +59,7 @@ repos:
         additional_dependencies:
           - pytest
           - "attrs>=21.2.0"
-          - "numpy>=2.0"
+          - "numpy>=2.2.1"
           - "ruamel.yaml>=0.17.10"
           - "boost-histogram>=1.4"
           - "hist>=2.7.1"

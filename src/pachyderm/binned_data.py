@@ -1141,8 +1141,8 @@ class BinnedData:
         # Need to shape the array properly so that it will actually be able to assign to the boost histogram.
         arr = np.zeros(shape=h.view().shape, dtype=h.view().dtype)
         # NOTE: We're relying on the h.view() supporting structured arrays. Surprisingly, this seems to work.
-        arr["value"] = self.values
-        arr["variance"] = self.variances
+        arr["value"] = self.values  # type: ignore[call-overload]
+        arr["variance"] = self.variances  # type: ignore[call-overload]
         h[...] = arr
 
         return h
