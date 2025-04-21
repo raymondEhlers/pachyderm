@@ -687,7 +687,7 @@ class RunByRunTrainOutputFiller(QueueFiller):
             train_base = run_dir / self._lego_train
             train_runs = utils.list_alien_dir(train_base)
             train_dir = [x for x in train_runs if self._extract_train_ID(x) == self._train_run]
-            if not len(train_dir):
+            if not train_dir:
                 logger.error(f"Train run {self._train_run} not found for run {r}")
                 continue
 
