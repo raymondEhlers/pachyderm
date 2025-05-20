@@ -50,9 +50,8 @@ $ pip install pachyderm
 
 ## Dependencies
 
-All dependencies are specified in the `setup.py` (and will be handled automatically when installed via pip)
-except for ROOT. The package can be installed without ROOT with limited functionality, but for full
-functionality, ROOT must be available.
+All dependencies are specified in the `pyproject.toml` (and will be handled automatically when installed via pip)
+except for ROOT. The package can be installed without ROOT, with limited functionality disabled.
 
 ### Dockerfile
 
@@ -68,7 +67,7 @@ I recommend setting up the development environment as follows:
 
 ```bash
 # Setup
-$ poetry install
+$ pdm install -d
 # Setup git pre-commit hooks to reduce errors
 $ pre-commit install
 # develop develop develop...
@@ -82,7 +81,7 @@ also be built locally using:
 
 ```bash
 # Setup
-$ poetry install
+$ pdm install
 # Create the docs
 $ pushd doc && make html && popd
 # Open the created docs
