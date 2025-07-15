@@ -47,7 +47,6 @@ test = [
     "pytest-sugar >=1.0.0",
 ]
 dev = [
-    "pre-commit >=2.13.0",
     "ruff >=0.0.209",
     "mypy >=0.931",
     "pytest >=6",
