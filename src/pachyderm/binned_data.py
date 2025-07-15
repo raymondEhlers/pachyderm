@@ -175,6 +175,9 @@ class Axis:
             return np.allclose(self.bin_edges, other.bin_edges)
         return False
 
+    # Hashing is not suitable here since numpy arrays are not hashable.
+    __hash__ = None  # type: ignore[assignment]
+
     def __getitem__(self, selection: int | slice) -> Axis:
         """Select a subset of the axis.
 
@@ -351,6 +354,9 @@ class AxesTuple(tuple[Axis, ...]):
         if other:
             return all(a == b for a, b in itertools.zip_longest(self, other))
         return False
+
+    # Hashing is not suitable here since numpy arrays are not hashable.
+    __hash__ = None  # type: ignore[assignment]
 
     @classmethod
     def to_yaml(
@@ -791,6 +797,9 @@ class BinnedData:
         metadata_agree = self.metadata == other.metadata
         # All arrays and the metadata must agree.
         return all(agreement) and axes_agree and metadata_agree
+
+    # Hashing is not suitable here since numpy arrays are not hashable.
+    __hash__ = None  # type: ignore[assignment]
 
     @classmethod
     def from_hepdata(cls: type[BinnedData], hist: Mapping[str, Any]) -> list[BinnedData]:  # pylint: disable=unused-argument

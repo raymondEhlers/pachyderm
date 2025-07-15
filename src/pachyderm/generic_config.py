@@ -100,22 +100,22 @@ def override_options(
                 if isinstance(config[k], list):
                     # Clear out the existing list entries
                     del config[k][:]
-                    if isinstance(override_dict[k], str | int | float | bool):
+                    if isinstance(v, str | int | float | bool):
                         # We have to treat str carefully because it is an iterable, but it will be expanded as
                         # individual characters if it's treated the same as a list, which is not the desired
                         # behavior! If we wrap it in [], then it will be treated as the only entry in the list
                         # NOTE: We also treat the basic types this way because they will be passed this way if
                         #       overriding indirectly with anchors (since the basic scalar types don't yet support
                         #       reassignment while maintaining their anchors).
-                        config[k].append(override_dict[k])
+                        config[k].append(v)
                     else:
                         # Here we just assign all entries of the list to all entries of override_dict[k]
-                        config[k].extend(override_dict[k])
+                        config[k].extend(v)
                 elif isinstance(config[k], dict):
                     # Clear out the existing entries because we are trying to replace everything
                     # Then we can simply update the dict with our new values
                     config[k].clear()
-                    config[k].update(override_dict[k])
+                    config[k].update(v)
                 elif isinstance(config[k], int | float | bool):
                     # This isn't really very good (since we lose information), but there's nothing that can be done
                     # about it at the moment (Dec 2018)

@@ -544,7 +544,7 @@ class Histogram1D:
         # Provide the opportunity to scale by bin width
         widths = np.ones(len(self.y))
         if multiply_by_bin_width:
-            widths = self.bin_widths  # type: ignore[assignment]
+            widths = self.bin_widths
 
         # Integrate by summing up all of the bins and the errors.
         # Perform the integral.
@@ -751,6 +751,9 @@ class Histogram1D:
         metadata_agree = metadata_agree and (metadata == other_metadata)
         # All arrays and the metadata must agree.
         return all(agreement) and metadata_agree
+
+    # Hashing is not suitable here since numpy arrays are not hashable.
+    __hash__ = None  # type: ignore[assignment]
 
     @staticmethod
     def _from_uproot(hist: Any) -> tuple[npt.NDArray[Any], npt.NDArray[Any], npt.NDArray[Any], dict[str, Any]]:

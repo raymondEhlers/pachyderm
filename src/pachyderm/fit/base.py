@@ -86,7 +86,7 @@ class BaseFitResult:
         """
         try:
             # We attempt to cache the covariance matrix, so first try to return that.
-            return self._correlation_matrix
+            return self._correlation_matrix  # type: ignore[no-any-return,has-type]
         except AttributeError:
 
             def corr(i_name: str, j_name: str) -> float:
@@ -266,6 +266,9 @@ class FitResult(BaseFitResult):
                 values_agree = [False]
             return keys_agree and all(values_agree)
         return NotImplemented
+
+    # Hashing is not suitable here since numpy arrays are not hashable.
+    __hash__ = None  # type: ignore[assignment]
 
 
 def extract_function_values(func: Callable[..., float], fit_result: BaseFitResult) -> tuple[dict[str, Any], list[str]]:

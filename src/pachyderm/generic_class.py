@@ -10,7 +10,7 @@ from typing import Any, TypeVar, cast
 _T = TypeVar("_T", bound="EqualityMixin")
 
 
-class EqualityMixin:
+class EqualityMixin:  # noqa: PLW1641
     """Mixin generic comparison operations using `__dict__`.
 
     Can then be mixed into any other class using multiple inheritance.

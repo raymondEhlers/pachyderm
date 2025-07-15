@@ -165,6 +165,7 @@ ignore = [
   "ISC001",   # Conflicts with formatter
   "G004",     # Logging format string. This isn't best practices, but I use it too much to change for now
   "PLC0414",  # Messes with the re-export of imports needed from mypy
+  "PLC0415",  # Wants all imports at the top of file, but it's often very convenient to delay them
 ]
 unfixable = [
   "T20",      # Removes print statements
