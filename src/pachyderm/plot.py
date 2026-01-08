@@ -455,6 +455,11 @@ class TextConfig:
             self.alignment = f"{ud} {lr}"
 
         alignments = {
+            "center": {
+                "horizontalalignment": "center",
+                "verticalalignment": "center",
+                "multialignment": "center",
+            },
             "upper right": {
                 "horizontalalignment": "right",
                 "verticalalignment": "top",
