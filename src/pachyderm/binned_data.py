@@ -181,6 +181,10 @@ class Axis:
     def __getitem__(self, selection: int | slice) -> Axis:
         """Select a subset of the axis.
 
+        Note:
+            For the selection of data, standard integers are treated as bins, while complex integers
+            are treated as data coordinates (same convention as hist).
+
         Args:
             selection: Selection of the axis.
 
@@ -650,7 +654,6 @@ class BinnedData:
             metadata=self.metadata.copy(),
         )
 
-    # TODO: Add integral: Need to devise how best to pass axis limits.
     # TODO: Stats
 
     def __add__(self: BinnedData, other: BinnedData) -> BinnedData:
@@ -1189,6 +1192,10 @@ class BinnedData:
 
     def __getitem__(self, selection: int | slice) -> BinnedData:
         """Select a subset of data, including rebinning.
+
+        Note:
+            For the selection of data, standard integers are treated as bins, while complex integers
+            are treated as data coordinates (same convention as hist).
 
         Args:
             selection: Selection of the data.
