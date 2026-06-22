@@ -588,8 +588,8 @@ def iterate_with_selected_objects_in_order(
         selected_analysis_objects = []
         for selected_values in itertools.product(*selected_iterators):
             for key_index, obj in analysis_objects.items():
-                selected_via_analysis_iterables = all(getattr(key_index, k) == v for k, v in values)  # type: ignore[misc,has-type]
-                selected_via_selected_iterators = all(getattr(key_index, k) == v for k, v in selected_values)  # type: ignore[misc,has-type]
+                selected_via_analysis_iterables = all(getattr(key_index, k) == v for k, v in values)  # type: ignore[str-unpack]
+                selected_via_selected_iterators = all(getattr(key_index, k) == v for k, v in selected_values)  # type: ignore[str-unpack]
                 selected_obj = selected_via_analysis_iterables and selected_via_selected_iterators
 
                 if selected_obj:

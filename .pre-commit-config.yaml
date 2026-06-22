@@ -52,7 +52,7 @@ repos:
     rev: "v1.16.1"
     hooks:
       - id: mypy
-        files: src|tests
+        files: ^(src|tests)/
         args: []
         # A sufficiently new version of attrs is needed to keep mypy happy.
         # Same with ruamel.yaml

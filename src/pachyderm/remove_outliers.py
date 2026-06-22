@@ -362,7 +362,7 @@ class OutliersRemovalManager:
                 )
             )
 
-        outliers_start_index: int = np.max(outliers_indices)
+        outliers_start_index: int = int(np.max(outliers_indices))
         logger.debug(f"outliers_start_index: {outliers_start_index}")
 
         for hist_name, _hist in hists.items():

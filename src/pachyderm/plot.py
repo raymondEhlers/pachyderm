@@ -15,6 +15,7 @@ import matplotlib.axes
 import matplotlib.colors
 import numpy as np
 import numpy.typing as npt
+from matplotlib.typing import RcKeyType
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -136,7 +137,7 @@ def configure(disable_interactive_backend: bool = False) -> None:
             matplotlib.rcParams["text.latex.preamble"],
         ]
     )
-    params = {
+    params: dict[RcKeyType, Any] = {
         # Enable latex
         "text.usetex": True,
         # Enable tex preview, which improves the alignment of the baseline
@@ -537,7 +538,7 @@ class LegendConfig:
         if legend_labels:
             kwargs["labels"] = legend_labels
 
-        return ax.legend(
+        return ax.legend(  # type: ignore[call-overload,no-any-return,misc]
             loc=self.location,
             bbox_to_anchor=self.anchor,
             # If we specify an anchor, we want to reduce an additional padding

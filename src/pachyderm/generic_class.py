@@ -28,5 +28,5 @@ class EqualityMixin:  # noqa: PLW1641
             return True
         # Compare via the member values.
         if type(other) is type(self):
-            return cast(bool, self.__dict__ == other.__dict__)
+            return self.__dict__ == other.__dict__
         return NotImplemented
