@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from typing import Any, TypeVar, cast
+from typing import Any, TypeVar
 
 _T = TypeVar("_T", bound="EqualityMixin")
 

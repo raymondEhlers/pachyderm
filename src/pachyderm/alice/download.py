@@ -644,7 +644,7 @@ class RunByRunTrainOutputFiller(QueueFiller):
         return does_period_contain_data(self._dataset)
 
     def _extract_train_ID(self, idstring: str) -> int:
-        trainid = idstring.split("_")[0]
+        trainid = idstring.split("_")[0]  # noqa: PLC0207
         if trainid.isdigit():
             return int(trainid)
         return 0

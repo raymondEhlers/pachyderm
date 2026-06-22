@@ -365,7 +365,7 @@ def evaluate_gradient(func: Callable[..., float], fit_result: BaseFitResult, x: 
     """
     # Setup the parameters needed to execute the function.
     # Determine the arguments for the fit function and the parameters to use in calculating the fit errors.
-    args_at_minimum, free_parameters = extract_function_values(func, fit_result)
+    args_at_minimum, _free_parameters = extract_function_values(func, fit_result)
 
     # To take the gradient, ``numdifftools`` requires a particular function signature. The first argument
     # must contain a list of values that it will vary when taking the gradient. The rest of the args are

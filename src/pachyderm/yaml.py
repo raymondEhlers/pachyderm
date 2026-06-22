@@ -279,7 +279,7 @@ def numpy_float64_from_yaml(
     return return_value
 
 
-def enum_to_yaml(
+def enum_to_yaml[T_EnumToYAML: enum.Enum](
     cls: type[T_EnumToYAML], representer: ruamel.yaml.representer.BaseRepresenter, data: T_EnumToYAML
 ) -> ruamel.yaml.nodes.ScalarNode:
     """Encodes YAML representation.
@@ -306,7 +306,7 @@ def enum_to_yaml(
     return representer.represent_scalar(f"!{cls.__name__}", f"{data!s}")
 
 
-def enum_from_yaml(
+def enum_from_yaml[T_EnumFromYAML: enum.Enum](
     cls: type[T_EnumFromYAML],
     constructor: ruamel.yaml.constructor.BaseConstructor,  # noqa: ARG001
     node: ruamel.yaml.nodes.ScalarNode,

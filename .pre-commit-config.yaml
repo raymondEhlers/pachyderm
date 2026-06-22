@@ -42,7 +42,7 @@ repos:
         args: ["--prose-wrap=preserve", "--print-width=120"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.12.3"
+    rev: "v0.15.18"
     hooks:
       - id: ruff-check
         args: ["--fix", "--show-fixes"]
