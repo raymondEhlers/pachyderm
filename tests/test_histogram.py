@@ -110,7 +110,7 @@ class TestOpenRootFile:
     def test_open_file(self, retrieve_root_list: Any) -> None:
         """Test for context manager for opening ROOT files."""
         ROOT = pytest.importorskip("ROOT")  # noqa: F841
-        filename, root_list, expected = retrieve_root_list
+        filename, _root_list, expected = retrieve_root_list
 
         output: dict[str, Any] = {}
         with histogram.RootOpen(filename=filename) as f:
@@ -156,7 +156,7 @@ class TestRetrievingHistogramsFromAList:
 
     def test_get_histograms_in_file(self, retrieve_root_list: Any) -> None:
         """Test for retrieving all of the histograms in a ROOT file."""
-        (filename, root_list, expected) = retrieve_root_list
+        (filename, _root_list, expected) = retrieve_root_list
 
         output = histogram.get_histograms_in_file(filename=filename)
         logger.info(f"{output}")
@@ -181,7 +181,7 @@ class TestRetrievingHistogramsFromAList:
 
     def test_get_histograms_in_list(self, retrieve_root_list: Any) -> None:
         """Test for retrieving a list of histograms from a ROOT file."""
-        (filename, root_list, expected) = retrieve_root_list
+        (filename, _root_list, expected) = retrieve_root_list
 
         output = histogram.get_histograms_in_list(filename, "mainList")
 
@@ -201,7 +201,7 @@ class TestRetrievingHistogramsFromAList:
 
     def test_get_non_existent_list(self, retrieve_root_list: Any) -> None:
         """Test for retrieving a list which doesn't exist from a ROOT file."""
-        (filename, root_list, expected) = retrieve_root_list
+        (filename, _root_list, _expected) = retrieve_root_list
 
         with pytest.raises(ValueError, match="nonExistent"):
             histogram.get_histograms_in_list(filename, "nonExistent")
@@ -213,7 +213,7 @@ class TestRetrievingHistogramsFromAList:
               this is actually taken care of in `get_histograms_in_list()`, so we need to avoid
               doing it in the tests here.
         """
-        (filename, root_list, expected) = retrieve_root_list
+        (_filename, root_list, expected) = retrieve_root_list
 
         # Did we actually get histograms? Used when debugging ROOT memory issues that seem to occur after
         # an exception is raised...
@@ -652,7 +652,7 @@ def test_find_bin(setup_basic_hist, value, expected_bin):
 )
 def test_histogram1D_equality(setup_basic_hist, test_equality, access_attributes_which_are_stored):
     """Test for Histogram1D equality."""
-    h, bin_edges, y, errors_squared = setup_basic_hist
+    _h, bin_edges, y, errors_squared = setup_basic_hist
 
     h1 = histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=errors_squared)
     h2 = histogram.Histogram1D(bin_edges=bin_edges, y=y, errors_squared=errors_squared)
@@ -771,7 +771,7 @@ class TestHistogramOperators:
     def test_addition(self, setup_addition: Any) -> None:
         """Test addition in ``Histogram1D``."""
         # Setup
-        h1_info, h2_info, expected, h1, h2 = setup_addition
+        _h1_info, _h2_info, expected, h1, h2 = setup_addition
 
         # Operation
         h3 = h1 + h2
@@ -785,7 +785,7 @@ class TestHistogramOperators:
         """Compare the result of ``Histogram1D`` addition vs ROOT."""
         # Setup
         ROOT = pytest.importorskip("ROOT")  # noqa: F841
-        h1_info, h2_info, expected, h1, h2 = setup_addition
+        h1_info, h2_info, _expected, h1, h2 = setup_addition
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
         h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
@@ -799,7 +799,7 @@ class TestHistogramOperators:
     def test_sum_function(self, setup_addition: Any) -> None:
         """Test addition using sum(...) with ``Histogram1D``."""
         # Setup
-        h1_info, h2_info, expected, h1, h2 = setup_addition
+        _h1_info, _h2_info, expected, h1, h2 = setup_addition
 
         # Operation
         h3 = sum([h1, h2])
@@ -847,7 +847,7 @@ class TestHistogramOperators:
     def test_subtraction(self, setup_subtraction: Any) -> None:
         """Test subtraction."""
         # Setup
-        h1_info, h2_info, expected, h1, h2 = setup_subtraction
+        _h1_info, _h2_info, expected, h1, h2 = setup_subtraction
 
         # Operation
         h3 = h2 - h1
@@ -861,7 +861,7 @@ class TestHistogramOperators:
         """Compare the result of ``Histogram1D`` subtraction vs ROOT."""
         # Setup
         ROOT = pytest.importorskip("ROOT")  # noqa: F841
-        h1_info, h2_info, expected, h1, h2 = setup_subtraction
+        h1_info, h2_info, _expected, h1, h2 = setup_subtraction
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
         h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
@@ -908,7 +908,7 @@ class TestHistogramOperators:
     def test_multiplication(self, setup_multiplication: Any) -> None:
         """Test multiplication."""
         # Setup
-        h1_info, h2_info, expected, h1, h2 = setup_multiplication
+        _h1_info, _h2_info, expected, h1, h2 = setup_multiplication
 
         # Operation
         h3 = h2 * h1
@@ -922,7 +922,7 @@ class TestHistogramOperators:
         """Compare the result of ``Histogram1D`` multiplication vs ROOT."""
         # Setup
         ROOT = pytest.importorskip("ROOT")  # noqa: F841
-        h1_info, h2_info, expected, h1, h2 = setup_multiplication
+        h1_info, h2_info, _expected, h1, h2 = setup_multiplication
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
         h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
@@ -960,7 +960,7 @@ class TestHistogramOperators:
     def test_scalar_multiplication(self, setup_scalar_multiplication: Any) -> None:
         """Test scalar multiplication."""
         # Setup
-        h1_info, scalar, expected, h1 = setup_scalar_multiplication
+        _h1_info, scalar, expected, h1 = setup_scalar_multiplication
 
         # Operation
         h3 = h1 * scalar
@@ -974,7 +974,7 @@ class TestHistogramOperators:
         """Compare the results of ``Histogram1D`` multiplication vs ROOT."""
         # Setup
         ROOT = pytest.importorskip("ROOT")  # noqa: F841
-        h1_info, scalar, expected, h1 = setup_scalar_multiplication
+        h1_info, scalar, _expected, h1 = setup_scalar_multiplication
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
         # Operation
@@ -1020,7 +1020,7 @@ class TestHistogramOperators:
     def test_division(self, setup_division: Any) -> None:
         """Test division."""
         # Setup
-        h1_info, h2_info, expected, h1, h2 = setup_division
+        _h1_info, _h2_info, expected, h1, h2 = setup_division
 
         # Operation
         h3 = h2 / h1
@@ -1034,7 +1034,7 @@ class TestHistogramOperators:
         """Compare the result of ``Histogram1D`` division vs ROOT."""
         # Setup
         ROOT = pytest.importorskip("ROOT")  # noqa: F841
-        h1_info, h2_info, expected, h1, h2 = setup_division
+        h1_info, h2_info, _expected, h1, h2 = setup_division
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
         h2_root = h2_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
@@ -1072,7 +1072,7 @@ class TestHistogramOperators:
     def test_scalar_division(self, setup_scalar_division: Any) -> None:
         """Test scalar division."""
         # Setup
-        h1_info, scalar, expected, h1 = setup_scalar_division
+        _h1_info, scalar, expected, h1 = setup_scalar_division
 
         # Operation
         h3 = h1 / scalar
@@ -1086,7 +1086,7 @@ class TestHistogramOperators:
         """Compare the results of ``Histogram1D`` division vs ROOT."""
         # Setup
         ROOT = pytest.importorskip("ROOT")  # noqa: F841
-        h1_info, scalar, expected, h1 = setup_scalar_division
+        h1_info, scalar, _expected, h1 = setup_scalar_division
         h1_root = h1_info.convert_to_ROOT_hist(bin_edges=self._bin_edges)
 
         # Operation

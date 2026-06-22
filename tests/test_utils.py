@@ -115,7 +115,7 @@ def test_recursive_setattr(setup_recursive_setattr: Any) -> None:
 def test_recursive_setattr_fail(setup_recursive_setattr: Any) -> None:
     """Test failing to set an attribute with recursive setattr."""
     # Setup
-    obj, path = setup_recursive_setattr
+    obj, _path = setup_recursive_setattr
 
     # Use a random path, which should fail.
     with pytest.raises(AttributeError) as exception_info:
@@ -143,14 +143,14 @@ def test_recursive_getitem(setup_recursive_getitem: Any) -> None:
 
 def test_recursive_getitem_single_key(setup_recursive_getitem: Any) -> None:
     """Tests for recursive getitem with a single key."""
-    d, keys, expected = setup_recursive_getitem
+    d, _keys, expected = setup_recursive_getitem
 
     assert utils.recursive_getitem(d["a"], "b") == expected
 
 
 def test_recursive_getitem_fail(setup_recursive_getitem: Any) -> None:
     """Tests failing for recursive getitem."""
-    d, keys, expected = setup_recursive_getitem
+    d, _keys, _expected = setup_recursive_getitem
 
     # Use a random set of keys, which will fail.
     with pytest.raises(KeyError) as exception_info:

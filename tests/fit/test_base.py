@@ -17,7 +17,7 @@ import pachyderm.fit.base as fit_base
 def test_func_code(simple_test_functions: Any) -> None:
     """Test creating function codes with FuncCode."""
     # Setup
-    func_1, func_2 = simple_test_functions
+    func_1, _func_2 = simple_test_functions
 
     # Define the func code and check the properties
     func_code = fit_base.FuncCode(iminuit.util.describe(func_1))

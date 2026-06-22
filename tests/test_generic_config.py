@@ -140,7 +140,7 @@ def override_data(config: dict[str, Any]) -> dict[str, Any]:
 
 def test_override_retrieve_unrelated_value(basic_config):
     """Test retrieving a basic value unrelated to the overridden data."""
-    (basic_config, yaml_string) = basic_config
+    (basic_config, _yaml_string) = basic_config
 
     value_name = "test1"
     value_before_override = basic_config[value_name]
@@ -151,7 +151,7 @@ def test_override_retrieve_unrelated_value(basic_config):
 
 def test_override_with_basic_config(basic_config):
     """Test override with the basic config."""
-    (basic_config, yaml_string) = basic_config
+    (basic_config, _yaml_string) = basic_config
     basic_config = override_data(basic_config)
 
     # This value is overridden directly
@@ -163,7 +163,7 @@ def test_basic_anchor_override(basic_config):
 
     When an anchor reference is overridden, we expect that the anchor value is updated.
     """
-    (basic_config, yaml_string) = basic_config
+    (basic_config, _yaml_string) = basic_config
     basic_config = override_data(basic_config)
 
     # Test all of the basic types. It is important to tests str, float, int, bool, etc
@@ -190,7 +190,7 @@ def test_advanced_anchor_override(basic_config):
 
     When an override value is using an anchor value, we expect that value to propagate fully.
     """
-    (basic_config, yaml_string) = basic_config
+    (basic_config, _yaml_string) = basic_config
     basic_config = override_data(basic_config)
 
     # This value is overridden indirectly, from another referenced value.
@@ -202,7 +202,7 @@ def test_for_unmatched_keys(basic_config):
 
     Such an unmatched key should cause a `KeyError` exception, which we catch.
     """
-    (basic_config, yaml_string) = basic_config
+    (basic_config, _yaml_string) = basic_config
     # Add entry that will cause the exception.
     basic_config = basic_config_exception(basic_config)
 
@@ -218,7 +218,7 @@ def test_complex_object_override(basic_config):
 
     In particular, test with lists, dicts.
     """
-    (basic_config, yaml_string) = basic_config
+    (basic_config, _yaml_string) = basic_config
     basic_config = override_data(basic_config)
 
     assert basic_config["testList"] == [3, 4]
@@ -425,7 +425,7 @@ def test_determine_selection_of_iterable_values_from_config_list_of_values(objec
 
 def test_determine_selection_of_iterable_values_with_undefined_iterable(object_creation_config):
     """Test determining which values of an iterable to use when an iterable is not defined."""
-    (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
+    (config, possible_iterables, (_reaction_plane_orientations, _qvectors)) = object_creation_config
 
     del possible_iterables["qVector"]
     with pytest.raises(KeyError) as exception_info:
@@ -440,7 +440,7 @@ def test_determine_selection_of_iterable_values_with_string_selection(object_cre
 
     This is not allowed, so it should raise an exception.
     """
-    (config, possible_iterables, (reaction_plane_orientations, qvectors)) = object_creation_config
+    (config, possible_iterables, (_reaction_plane_orientations, _qvectors)) = object_creation_config
 
     config["iterables"]["qVector"] = "True"
     with pytest.raises(TypeError) as exception_info:
@@ -599,7 +599,7 @@ def test_apply_formatting_to_iterable_types(formatting_config):
 
 def test_apply_formatting_skip_latex(formatting_config):
     """Test skipping the application of the formatting to strings which look like latex."""
-    config, formatting_dict = formatting_config
+    config, _formatting_dict = formatting_config
 
     assert config["latexLike"] == r"$latex_{like \mathrm{x}}$"
 

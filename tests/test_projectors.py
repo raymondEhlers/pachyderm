@@ -89,7 +89,7 @@ def test_TH1Axis_determination(create_hist_axis_range, axis_type, axis, hist_to_
     }
     axis = axis_map[axis]
     # Get the HistAxisRange object
-    obj, object_args = create_hist_axis_range
+    obj, _object_args = create_hist_axis_range
     # Insert the proper axis type
     obj.axis_type = axis_type
     # Determine the test hist
@@ -114,7 +114,7 @@ def test_THn_axis_determination(axis_selection, create_hist_axis_range, test_spa
     # Retrieve sparse.
     sparse, _ = test_sparse
     # Retrieve object and setup.
-    obj, object_args = create_hist_axis_range
+    obj, _object_args = create_hist_axis_range
     obj.axis_type = axis_selection
 
     axis_value = axis_selection.value if isinstance(axis_selection, enum.Enum) else axis_selection
@@ -426,7 +426,7 @@ class TestProjectorsWithRoot:
 
         # Args
         projection_name_format = "{test} world"
-        kwdargs, observable, output_observable = determine_projector_input_args(
+        kwdargs, _observable, _output_observable = determine_projector_input_args(
             single_observable=single_observable,
             hist=None,
             hist_label="histogram",

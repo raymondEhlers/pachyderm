@@ -80,7 +80,7 @@ def test_equality_mixin(setup_equality_mixin: Any) -> None:
 
 def test_equality_mixin_against_other_classes(setup_equality_mixin: Any) -> None:
     """Test the quality mixin against other classes, for which comparisons are not implemented."""
-    test_class, expected_class = setup_equality_mixin
+    test_class, _expected_class = setup_equality_mixin
 
     # Create a dataclass object to compare against.
     TestClass = dataclasses.make_dataclass("TestClass", ["hello", "world"])
